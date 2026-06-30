@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS public.consent_records (
   owns_or_has_permission BOOLEAN NOT NULL CHECK (owns_or_has_permission = TRUE),
   accepts_cataloging BOOLEAN NOT NULL CHECK (accepts_cataloging = TRUE),
   consent_text_version TEXT NOT NULL,
+  consent_file_path TEXT,
   accepted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

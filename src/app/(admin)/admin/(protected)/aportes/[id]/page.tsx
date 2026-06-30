@@ -55,19 +55,31 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     })
   );
 
-  // Generar Signed URL para el archivo de consentimiento de respaldo si existe
-  let consentSignedUrl = null;
-  if (contribution.consent_file_path) {
-    const { data: consentSignedData, error: consentSignedError } = await supabase.storage
-      .from('historical-uploads')
-      .createSignedUrl(contribution.consent_file_path, 900);
+  // Generar historial de consentimientos ordenados por fecha y obtener sus Signed URLs si tienen archivo
+  const consentHistory = await Promise.all(
+    (contribution.consent_records || [])
+      .sort((a: any, b: any) => new Date(b.accepted_at).getTime() - new Date(a.accepted_at).getTime())
+      .map(async (record: any) => {
+        let signedUrl = null;
+        if (record.consent_file_path) {
+          const { data, error: signedError } = await supabase.storage
+            .from('historical-uploads')
+            .createSignedUrl(record.consent_file_path, 900);
 
-    if (consentSignedError) {
-      console.error('Error al generar Signed URL para el consentimiento:', consentSignedError.message);
-    } else {
-      consentSignedUrl = consentSignedData?.signedUrl || null;
-    }
-  }
+          if (signedError) {
+            console.error(`Error al generar Signed URL para consentimiento histórico ${record.id}:`, signedError.message);
+          } else {
+            signedUrl = data?.signedUrl || null;
+          }
+        }
+        return {
+          ...record,
+          signedUrl
+        };
+      })
+  );
+
+  const consentSignedUrl = consentHistory[0]?.signedUrl || null;
 
   // 3. Obtener el historial de cambios (audit_logs)
   let auditLogs: any[] = [];
@@ -529,32 +541,66 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 )}
               </div>
 
-              {/* Documento de Respaldo Firmado */}
-              <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-                {consentSignedUrl ? (
-                  <a
-                    href={consentSignedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-outline"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.8rem',
-                      width: '100%',
-                      justifyContent: 'center',
-                      height: '36px'
-                    }}
-                  >
-                    📄 Ver Documento de Autorización ↗
-                  </a>
-                ) : (
+              {/* Historial de Consentimientos (Bitácora de Cesión) */}
+              {consentHistory.length > 0 ? (
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                    Historial de Firmas / Convenios:
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {consentHistory.map((record: any, idx: number) => (
+                      <div key={record.id} style={{
+                        fontSize: '0.8rem',
+                        padding: '0.6rem 0.75rem',
+                        backgroundColor: idx === 0 ? '#f0fdf4' : '#f8fafc',
+                        border: idx === 0 ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                        borderRadius: '6px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 'bold', color: idx === 0 ? '#15803d' : 'var(--text-primary)' }}>
+                            Nivel {record.authorization_level} {idx === 0 && ' (Activo)'}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                            {new Date(record.accepted_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                          Créditos: {record.credit_preference}
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                          {record.consent_text_version}
+                        </div>
+                        {record.signedUrl && (
+                          <div style={{ marginTop: '0.5rem', paddingTop: '0.25rem', borderTop: '1px dashed #e2e8f0' }}>
+                            <a
+                              href={record.signedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: 'var(--primary-blue)',
+                                fontWeight: 'bold',
+                                fontSize: '0.75rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                textDecoration: 'none'
+                              }}
+                            >
+                              📄 Ver Planilla Firmada ↗
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
                     No se adjuntó archivo de respaldo físico (se autorizó digitalmente mediante el portal web).
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -565,6 +611,8 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               initialStatus={contribution.editorial_status}
               initialNotes={contribution.internal_notes}
               initialConsentVerified={contribution.consent_verified || false}
+              initialLevel={contribution.authorization_level}
+              initialCredits={contribution.credit_preference}
             />
           </div>
 

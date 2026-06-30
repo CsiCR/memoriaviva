@@ -205,41 +205,26 @@ export default function AdminAportesNuevo() {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
-        {/* SECCIÓN 1: RESPALDO LEGAL Y CONSENTIMIENTO */}
+        {/* SECCIÓN 1: DATOS DE LA INGESTA (APORTANTE O INSTITUCIÓN) */}
         <div className="card" style={{ padding: '2rem' }}>
           <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
-            <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> 1. Respaldo Legal y Consentimiento
+            <User size={20} style={{ color: 'var(--primary-blue)' }} /> 1. Datos de la Ingesta (Aportante)
           </h2>
 
-          <div className="grid grid-2">
-            <div className="form-group">
-              <label className="form-label form-label-required">Origen del Consentimiento</label>
-              <select
-                name="consent_source"
-                required
-                className="form-select"
-                value={formData.consent_source}
-                onChange={handleInputChange}
-                disabled={loading}
-              >
-                <option value="signed_paper">Caso 2: Planilla Firmada en Papel (Digitalizada)</option>
-                <option value="institutional_agreement">Caso 3: Convenio Institucional (Biblioteca/Archivo)</option>
-                <option value="web_form">Caso 1: Formulario Web (Carga retroactiva)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Código de Referencia / Expediente</label>
-              <input
-                type="text"
-                name="consent_reference"
-                className="form-input"
-                placeholder={formData.consent_source === 'institutional_agreement' ? 'Ej. Convenio Biblioteca-2026' : 'Ej. Folio 45-B'}
-                value={formData.consent_reference}
-                onChange={handleInputChange}
-                disabled={loading}
-              />
-            </div>
+          <div className="form-group">
+            <label className="form-label form-label-required">Origen del Aporte</label>
+            <select
+              name="consent_source"
+              required
+              className="form-select"
+              value={formData.consent_source}
+              onChange={handleInputChange}
+              disabled={loading}
+            >
+              <option value="signed_paper">Caso 2: Planilla Firmada en Papel (Digitalizada)</option>
+              <option value="institutional_agreement">Caso 3: Convenio Institucional (Biblioteca/Archivo)</option>
+              <option value="web_form">Caso 1: Formulario Web (Carga retroactiva)</option>
+            </select>
           </div>
 
           {/* CASO 1 Y 2: DATOS DEL VECINO APORTANTE */}
@@ -264,29 +249,16 @@ export default function AdminAportesNuevo() {
 
                 <div className="form-group">
                   <label className="form-label form-label-required">Nombre y Apellido</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input
-                      type="text"
-                      name="full_name"
-                      required
-                      className="form-input"
-                      placeholder="Ej. Juan Pérez"
-                      value={formData.full_name}
-                      onChange={handleInputChange}
-                      disabled={loading}
-                    />
-                    {formData.consent_source === 'signed_paper' && (
-                      <button
-                        type="button"
-                        onClick={printConsentForm}
-                        className="btn btn-outline"
-                        title="Imprimir Planilla pre-rellenada para firma"
-                        style={{ height: '40px', padding: '0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}
-                      >
-                        <Printer size={16} /> Imprimir
-                      </button>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    name="full_name"
+                    required
+                    className="form-input"
+                    placeholder="Ej. Juan Pérez"
+                    value={formData.full_name}
+                    onChange={handleInputChange}
+                    disabled={loading}
+                  />
                 </div>
               </div>
 
@@ -372,92 +344,6 @@ export default function AdminAportesNuevo() {
               </div>
             </div>
           )}
-
-          {/* SUBIR ARCHIVO DE RESPALDO LEGAL (Casos 2 y 3) */}
-          {formData.consent_source !== 'web_form' && (
-            <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f8fafc', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-              <label className="form-label form-label-required" style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>
-                {formData.consent_source === 'signed_paper' 
-                  ? 'Subir Foto/PDF de la Planilla Firmada' 
-                  : 'Subir PDF del Convenio de Respaldo'}
-              </label>
-              
-              {!consentFile ? (
-                <div>
-                  <input
-                    type="file"
-                    ref={consentInputRef}
-                    onChange={handleConsentFileChange}
-                    accept="image/*,application/pdf"
-                    style={{ display: 'none' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => consentInputRef.current?.click()}
-                    className="btn btn-outline btn-sm"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                    disabled={loading}
-                  >
-                    <Upload size={14} /> Seleccionar documento legal
-                  </button>
-                  {consentError && <div style={{ color: 'var(--danger-color)', fontSize: '0.85rem', marginTop: '0.25rem' }}>{consentError}</div>}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.85rem' }}>
-                  <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                    📄 {consentFile.name} <span style={{ color: 'var(--text-secondary)' }}>({(consentFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={removeConsentFile}
-                    style={{ background: 'none', border: 'none', color: 'var(--neutral-grey)', cursor: 'pointer' }}
-                    disabled={loading}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* CONFIGURACIÓN DE CRÉDITOS Y NIVELES */}
-          <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '1.5rem', paddingTop: '1.5rem' }}>
-            <div className="grid grid-2">
-              <div className="form-group">
-                <label className="form-label form-label-required">Nivel de autorización de uso</label>
-                <select
-                  name="authorization_level"
-                  required
-                  className="form-select"
-                  value={formData.authorization_level}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                >
-                  <option value="A">Nivel A: Público (Web y Catálogos)</option>
-                  <option value="B">Nivel B: Educativo y Académico</option>
-                  <option value="C">Nivel C: Interno (Solo consulta en Archivo)</option>
-                  <option value="D">Nivel D: Restringido (Solo preservación)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label form-label-required">Preferencia de créditos</label>
-                <select
-                  name="credit_preference"
-                  required
-                  className="form-select"
-                  value={formData.credit_preference}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                >
-                  <option value="Nombre completo">Nombre completo (Aporte de [Nombre])</option>
-                  <option value="Iniciales">Iniciales (Aporte de [Iniciales])</option>
-                  <option value="Familia aportante">Familia aportante (Donación Familia [Barrio/Inst])</option>
-                  <option value="Anónimo">Anónimo</option>
-                </select>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* SECCIÓN 2: DETALLES DEL APORTE */}
@@ -678,6 +564,130 @@ export default function AdminAportesNuevo() {
               onChange={handleInputChange}
               disabled={loading}
             />
+          </div>
+        </div>
+
+        {/* SECCIÓN 3: CONSENTIMIENTO LEGAL Y RESPALDOS */}
+        <div className="card" style={{ padding: '2rem' }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> 3. Consentimiento Legal y Respaldos
+          </h2>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', backgroundColor: 'var(--primary-blue-light)', padding: '1rem 1.5rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid var(--primary-blue-light)' }}>
+            <div style={{ flexGrow: 1 }}>
+              <strong style={{ color: 'var(--text-primary)', display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Planilla de Consentimiento Pre-rellenada</strong>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                Genera el documento A4 oficial con el nombre y DNI del aportante listo para imprimir y firmar.
+              </span>
+            </div>
+            {formData.consent_source === 'signed_paper' && (
+              <button
+                type="button"
+                onClick={printConsentForm}
+                className="btn btn-outline"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '40px', padding: '0 1rem' }}
+                disabled={loading}
+              >
+                <Printer size={16} /> Imprimir Planilla A4
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-2">
+            <div className="form-group">
+              <label className="form-label form-label-required">Nivel de autorización de uso</label>
+              <select
+                name="authorization_level"
+                required
+                className="form-select"
+                value={formData.authorization_level}
+                onChange={handleInputChange}
+                disabled={loading}
+              >
+                <option value="A">Nivel A: Público (Web y Catálogos)</option>
+                <option value="B">Nivel B: Educativo y Académico</option>
+                <option value="C">Nivel C: Interno (Solo consulta en Archivo)</option>
+                <option value="D">Nivel D: Restringido (Solo preservación)</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label form-label-required">Preferencia de créditos</label>
+              <select
+                name="credit_preference"
+                required
+                className="form-select"
+                value={formData.credit_preference}
+                onChange={handleInputChange}
+                disabled={loading}
+              >
+                <option value="Nombre completo">Nombre completo (Aporte de [Nombre])</option>
+                <option value="Iniciales">Iniciales (Aporte de [Iniciales])</option>
+                <option value="Familia aportante">Familia aportante (Donación Familia [Barrio/Inst])</option>
+                <option value="Anónimo">Anónimo</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-2">
+            <div className="form-group">
+              <label className="form-label">Código de Referencia / Expediente Físico</label>
+              <input
+                type="text"
+                name="consent_reference"
+                className="form-input"
+                placeholder={formData.consent_source === 'institutional_agreement' ? 'Ej. Convenio Biblioteca-2026' : 'Ej. Folio 45-B'}
+                value={formData.consent_reference}
+                onChange={handleInputChange}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Subir archivo de respaldo legal (Casos 2 y 3) */}
+            {formData.consent_source !== 'web_form' && (
+              <div className="form-group">
+                <label className="form-label form-label-required" style={{ fontWeight: 600 }}>
+                  {formData.consent_source === 'signed_paper' 
+                    ? 'Subir Foto/PDF de Planilla Firmada' 
+                    : 'Subir PDF del Convenio de Respaldo'}
+                </label>
+                {!consentFile ? (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <input
+                      type="file"
+                      ref={consentInputRef}
+                      onChange={handleConsentFileChange}
+                      accept="image/*,application/pdf"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => consentInputRef.current?.click()}
+                      className="btn btn-outline"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '40px', justifyContent: 'center' }}
+                      disabled={loading}
+                    >
+                      <Upload size={16} /> Seleccionar Archivo Firmado
+                    </button>
+                    {consentError && <div style={{ color: 'var(--danger-color)', fontSize: '0.8rem', marginTop: '0.25rem' }}>{consentError}</div>}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.85rem', height: '40px' }}>
+                    <span style={{ fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                      📄 {consentFile.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={removeConsentFile}
+                      style={{ background: 'none', border: 'none', color: 'var(--neutral-grey)', cursor: 'pointer' }}
+                      disabled={loading}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

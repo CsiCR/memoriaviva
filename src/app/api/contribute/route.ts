@@ -196,20 +196,7 @@ export async function POST(req: NextRequest) {
       uploadedFilesSummary.push({ name: file.name, path: filePath });
     }
 
-    // E. Generar un registro de auditoría del aporte recién ingresado
-    const { error: auditError } = await supabase
-      .from('audit_logs')
-      .insert({
-        user_id: null, // Insertado de forma anónima desde el portal público
-        action: 'INSERT',
-        table_name: 'contributions',
-        record_id: contributionId,
-        new_value: contributionData
-      });
 
-    if (auditError) {
-      console.error('Error al escribir registro de auditoría:', auditError);
-    }
 
     return NextResponse.json({
       success: true,

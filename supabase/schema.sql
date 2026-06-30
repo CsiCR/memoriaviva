@@ -43,6 +43,10 @@ CREATE TABLE IF NOT EXISTS public.contributions (
     'Aprobado para e-book', 'Restringido', 'Rechazado', 'Archivado'
   )),
   internal_notes TEXT,
+  consent_source TEXT NOT NULL DEFAULT 'web_form' CHECK (consent_source IN ('web_form', 'signed_paper', 'institutional_agreement')),
+  consent_reference TEXT,
+  consent_file_path TEXT,
+  consent_verified BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

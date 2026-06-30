@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
-import { FileText, Search, Filter, RefreshCw } from 'lucide-react';
+import { FileText, Search, Filter, RefreshCw, Plus } from 'lucide-react';
 
 export const revalidate = 0; // Evitar caché
 
@@ -69,11 +69,23 @@ export default async function AdminAportes({ searchParams }: PageProps) {
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem', color: '#0f172a' }}>Archivo de Aportes</h1>
-        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-          Revisa, edita los estados editoriales y audita los materiales históricos enviados por la comunidad.
-        </p>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        marginBottom: '2rem'
+      }}>
+        <div>
+          <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem', color: '#0f172a' }}>Archivo de Aportes</h1>
+          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+            Revisa, edita los estados editoriales y audita los materiales históricos enviados por la comunidad.
+          </p>
+        </div>
+        <Link href="/admin/aportes/nuevo" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '40px', padding: '0 1.25rem' }}>
+          <Plus size={18} /> Cargar Aporte Administrativo
+        </Link>
       </div>
 
       {/* Contenedor de Filtros */}

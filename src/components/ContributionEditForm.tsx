@@ -8,15 +8,18 @@ interface ContributionEditFormProps {
   id: string;
   initialStatus: string;
   initialNotes: string | null;
+  initialConsentVerified: boolean;
 }
 
 export default function ContributionEditForm({
   id,
   initialStatus,
   initialNotes,
+  initialConsentVerified,
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
+  const [consentVerified, setConsentVerified] = useState(initialConsentVerified);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export default function ContributionEditForm({
     const formData = new FormData();
     formData.append('editorial_status', status);
     formData.append('internal_notes', notes);
+    formData.append('consent_verified', String(consentVerified));
 
     try {
       await updateContributionStatus(id, formData);
@@ -94,6 +98,19 @@ export default function ContributionEditForm({
           disabled={saving}
           style={{ minHeight: '100px', fontSize: '0.9rem' }}
         />
+      </div>
+
+      <div className="form-group" style={{ margin: 0 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={consentVerified}
+            onChange={(e) => setConsentVerified(e.target.checked)}
+            disabled={saving}
+            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+          />
+          <span>Firma / Convenio de autorización física verificado</span>
+        </label>
       </div>
 
       <button

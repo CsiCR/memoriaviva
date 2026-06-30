@@ -28,6 +28,7 @@ export async function updateContributionStatus(
 
   const editorialStatus = formData.get('editorial_status') as string;
   const internalNotes = formData.get('internal_notes') as string;
+  const consentVerified = formData.get('consent_verified') === 'true';
 
   if (!editorialStatus) {
     throw new Error('El estado editorial es requerido.');
@@ -39,6 +40,7 @@ export async function updateContributionStatus(
     .update({
       editorial_status: editorialStatus,
       internal_notes: internalNotes || null,
+      consent_verified: consentVerified,
       updated_at: new Date().toISOString()
     })
     .eq('id', id);

@@ -55,6 +55,20 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     })
   );
 
+  // Generar Signed URL para el archivo de consentimiento de respaldo si existe
+  let consentSignedUrl = null;
+  if (contribution.consent_file_path) {
+    const { data: consentSignedData, error: consentSignedError } = await supabase.storage
+      .from('historical-uploads')
+      .createSignedUrl(contribution.consent_file_path, 900);
+
+    if (consentSignedError) {
+      console.error('Error al generar Signed URL para el consentimiento:', consentSignedError.message);
+    } else {
+      consentSignedUrl = consentSignedData?.signedUrl || null;
+    }
+  }
+
   // 3. Obtener el historial de cambios (audit_logs)
   let auditLogs: any[] = [];
   const { data: rawAuditLogs, error: auditError } = await supabase
@@ -456,12 +470,101 @@ export default async function AdminContributionDetail({ params, searchParams }: 
             )}
           </div>
 
-          {/* Ficha 5: Formulario de Modificación de Estado y Notas */}
+          {/* Ficha 5: Soporte Legal y Respaldos */}
+          <div className="card" style={{ padding: '2rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+              <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> Soporte Legal y Respaldos
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Origen del Consentimiento:</span>
+                <strong style={{ fontSize: '0.95rem' }}>
+                  {contribution.consent_source === 'signed_paper' && 'Caso 2: Planilla Firmada en Papel (Digitalizada)'}
+                  {contribution.consent_source === 'institutional_agreement' && 'Caso 3: Convenio Institucional'}
+                  {contribution.consent_source === 'web_form' && 'Caso 1: Formulario Web (Aceptación Digital)'}
+                  {!contribution.consent_source && 'Caso 1: Formulario Web (Aceptación Digital)'}
+                </strong>
+              </div>
+
+              {contribution.consent_reference && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Referencia de Planilla / Convenio:</span>
+                  <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{contribution.consent_reference}</strong>
+                </div>
+              )}
+
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Estado de la Firma/Convenio:</span>
+                {contribution.consent_verified ? (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    backgroundColor: 'var(--hope-green-light)',
+                    color: 'var(--hope-green)',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '4px',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    marginTop: '0.25rem'
+                  }}>
+                    ✓ Firma/Convenio Verificado
+                  </span>
+                ) : (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    backgroundColor: '#fef3c7',
+                    color: '#b45309',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '4px',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    marginTop: '0.25rem'
+                  }}>
+                    ⚠️ Pendiente de verificación por el editor
+                  </span>
+                )}
+              </div>
+
+              {/* Documento de Respaldo Firmado */}
+              <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                {consentSignedUrl ? (
+                  <a
+                    href={consentSignedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.8rem',
+                      width: '100%',
+                      justifyContent: 'center',
+                      height: '36px'
+                    }}
+                  >
+                    📄 Ver Documento de Autorización ↗
+                  </a>
+                ) : (
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                    No se adjuntó archivo de respaldo físico (se autorizó digitalmente mediante el portal web).
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Ficha 6: Formulario de Modificación de Estado y Notas */}
           <div className="card" style={{ padding: '2rem' }}>
             <ContributionEditForm
               id={contribution.id}
               initialStatus={contribution.editorial_status}
               initialNotes={contribution.internal_notes}
+              initialConsentVerified={contribution.consent_verified || false}
             />
           </div>
 

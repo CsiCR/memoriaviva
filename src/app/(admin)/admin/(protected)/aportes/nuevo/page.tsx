@@ -123,7 +123,7 @@ export default function AdminAportesNuevo() {
       alert('Por favor, ingresa el Nombre y el DNI del aportante para pre-rellenar la planilla.');
       return;
     }
-    const url = `/admin/aportes/nuevo/print?name=${encodeURIComponent(formData.full_name)}&dni=${encodeURIComponent(formData.dni)}&title=${encodeURIComponent(formData.title || 'Material Histórico')}`;
+    const url = `/admin/print?name=${encodeURIComponent(formData.full_name)}&dni=${encodeURIComponent(formData.dni)}&title=${encodeURIComponent(formData.title || '')}`;
     window.open(url, '_blank');
   };
 

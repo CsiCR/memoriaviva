@@ -10,7 +10,7 @@ function PrintFormContent() {
   const title = searchParams.get('title') || '________________________________________';
 
   useEffect(() => {
-    // Pequeño retardo para asegurar que los estilos carguen antes de imprimir
+    // Retardo pequeño para asegurar la renderización
     const timer = setTimeout(() => {
       window.print();
     }, 500);
@@ -48,7 +48,7 @@ function PrintFormContent() {
       {/* Datos del Aportante */}
       <div style={{ marginBottom: '2rem' }}>
         <p style={{ textIndent: '2rem', textAlign: 'justify', marginBottom: '1rem' }}>
-          Por medio de la presente, yo <strong>{name}</strong>, con DNI N.º <strong>{dni}</strong>, en mi carácter de propietario, autor/a y/o derechohabiente legítimo de los materiales históricos que aporto al archivo comunitario, declaro ceder y autorizar el uso del material detallado a continuación:
+          Por medio de la presente, yo <strong>{name}</strong>, con DNI N.º <strong>{dni}</strong>, en mi carácter de propietario, autor/a y/o de derecho habiente legítimo de los materiales históricos que aporto al archivo comunitario, declaro ceder y autorizar el uso del material detallado a continuación:
         </p>
         <p style={{ paddingLeft: '2rem', margin: '1rem 0' }}>
           <strong>Título/Identificación del Material:</strong> {title}
@@ -56,7 +56,7 @@ function PrintFormContent() {
       </div>
 
       {/* Declaración de Autoría */}
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '2.5rem' }}>
         <h3 style={{ fontSize: '11pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
           1. Declaraciones del Aportante (Obligatorio)
         </h3>
@@ -68,7 +68,7 @@ function PrintFormContent() {
       </div>
 
       {/* Niveles de Autorización */}
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '2.5rem' }}>
         <h3 style={{ fontSize: '11pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
           2. Nivel de Autorización Seleccionado (Marque con una X la opción elegida)
         </h3>
@@ -107,7 +107,7 @@ function PrintFormContent() {
       </div>
 
       {/* Preferencia de Créditos */}
-      <div style={{ marginBottom: '3rem' }}>
+      <div style={{ marginBottom: '4rem' }}>
         <h3 style={{ fontSize: '11pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
           3. Preferencia de Créditos al Publicar (Marque con una X la opción elegida)
         </h3>
@@ -119,26 +119,28 @@ function PrintFormContent() {
         </div>
       </div>
 
-      {/* Firmas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '4rem' }}>
+      {/* Firmas y DNI */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '5rem' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ borderBottom: '1px solid #000000', height: '40px', marginBottom: '0.5rem' }}></div>
+          <div style={{ borderBottom: '1px solid #000000', height: '45px', marginBottom: '0.5rem' }}></div>
           <span style={{ fontSize: '9.5pt', fontWeight: 'bold', display: 'block' }}>Firma del Aportante</span>
-          <span style={{ fontSize: '8.5pt', color: '#555555' }}>Aclaración: ___________________________________</span>
+          <span style={{ fontSize: '8.5pt', color: '#333333', display: 'block', marginTop: '0.25rem' }}>Aclaración: ___________________________________</span>
+          <span style={{ fontSize: '8.5pt', color: '#333333', display: 'block', marginTop: '0.25rem' }}>DNI N.º: <strong>{dni}</strong></span>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ borderBottom: '1px solid #000000', height: '40px', marginBottom: '0.5rem' }}></div>
+          <div style={{ borderBottom: '1px solid #000000', height: '45px', marginBottom: '0.5rem' }}></div>
           <span style={{ fontSize: '9.5pt', fontWeight: 'bold', display: 'block' }}>Recepción del Operador</span>
-          <span style={{ fontSize: '8.5pt', color: '#555555' }}>Fecha: _____ / _____ / 202___</span>
+          <span style={{ fontSize: '8.5pt', color: '#333333', display: 'block', marginTop: '0.25rem' }}>Aclaración/Firma: ____________________________</span>
+          <span style={{ fontSize: '8.5pt', color: '#333333', display: 'block', marginTop: '0.25rem' }}>Fecha: _____ / _____ / 202___</span>
         </div>
       </div>
     </div>
   );
 }
 
-export default function PrintFormPage() {
+export default function PrintFormClient() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>Cargando plantilla de impresión...</div>}>
+    <Suspense fallback={<div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>Cargando planilla de impresión...</div>}>
       <PrintFormContent />
     </Suspense>
   );

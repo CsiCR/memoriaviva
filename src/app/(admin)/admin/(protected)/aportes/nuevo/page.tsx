@@ -141,19 +141,19 @@ export default function AdminAportesNuevo() {
     if (formData.new_agreement_name && formData.new_agreement_institution) {
       setAgreementText(`CONVENIO DE CESIÓN Y COLABORACIÓN PATRIMONIAL
 
-Por la presente, entre el ARCHIVO HISTÓRICO COMUNITARIO "MEMORIA VIVA" de la ciudad de Pico Truncado, y por la otra parte la institución cooperadora "${formData.new_agreement_institution}", acuerdan formalizar el convenio de resguardo y acceso documental bajo la denominación "${formData.new_agreement_name}":
+Por la presente, entre el ARCHIVO HISTÓRICO COMUNITARIO "MEMORIA VIVA PICO TRUNCADO" de la ciudad de Pico Truncado, y por la otra parte la institución cooperadora "${formData.new_agreement_institution}", acuerdan formalizar el convenio de resguardo y acceso documental bajo la denominación "${formData.new_agreement_name}":
 
-PRIMERA: La institución cede copias digitalizadas de sus fondos documentales y piezas de valor patrimonial histórico local para su catalogación, indexación y preservación a largo plazo en la plataforma "Memoria Viva".
+PRIMERA: La institución cede copias digitalizadas de sus fondos documentales y piezas de valor patrimonial histórico local para su catalogación, indexación y preservación a largo plazo en la plataforma "Memoria Viva Pico Truncado".
 
-SEGUNDA: Las partes acuerdan que el acceso a estos materiales estará regido por la autorización de uso establecida en sus fichas (Nivel A: Público General, Nivel B: Fines Pedagógicos/Escolares, Nivel C: Consulta Interna en Archivo). El archivo se compromete a respetar en todos los casos la preferencia de atribución de créditos de origen.
+SEGUNDA: Las partes acuerdan que el acceso a estos materiales estará regido por la autorización de uso establecida en sus fichas (Nivel A: Público General, Nivel B: Fines Pedagógicos/Escolares, Nivel C: Consulta Interna en Archivo). El archivo se compromete a atribuir los créditos de origen de forma destacada.
 
-TERCERA: La institución declara tener la titularidad o autorización de las piezas cedidas, eximiendo a "Memoria Viva" de cualquier reclamo por propiedad intelectual de terceros.
+TERCERA: La institución declara tener la titularidad o autorización de las piezas cedidas, eximiendo a "Memoria Viva Pico Truncado" de cualquier reclamo por propiedad intelectual de terceros.
 
 En prueba de conformidad, se firman dos ejemplares del mismo tenor en la ciudad de Pico Truncado, a los ___ días de ___________ de 202___.
 
 
 _______________________________               _______________________________
-   Por la Institución Firmante                   Por el Archivo Memoria Viva
+   Por la Institución Firmante                   Por el Archivo Memoria Viva Pico Truncado
 Nombre/Cargo:                                 Firma/Aclaración
 DNI/Representación:
 `);
@@ -326,7 +326,7 @@ DNI/Representación:
             <div class="header-left">
               <img src="/icon-192.png" alt="Logo" style="height: 50px; width: auto;" />
               <div>
-                <h1 class="header-title">Memoria Viva</h1>
+                <h1 class="header-title">Memoria Viva Pico Truncado</h1>
                 <span class="header-subtitle">Archivo Histórico Comunitario de Pico Truncado</span>
               </div>
             </div>

@@ -31,7 +31,7 @@ function PrintFormContent() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img src="/icon-192.png" alt="Logo" style={{ height: '50px', width: 'auto' }} />
           <div>
-            <h1 style={{ fontSize: '14pt', margin: 0, fontWeight: 'bold' }}>Memoria Viva</h1>
+            <h1 style={{ fontSize: '14pt', margin: 0, fontWeight: 'bold' }}>Memoria Viva Pico Truncado</h1>
             <span style={{ fontSize: '8.5pt', color: '#555555' }}>Archivo Histórico Comunitario de Pico Truncado</span>
           </div>
         </div>
@@ -64,7 +64,7 @@ function PrintFormContent() {
         <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', margin: 0 }}>
           <li>Declaro bajo juramento ser el legítimo propietario o poseer la autorización correspondiente del titular de los derechos de autor para realizar este aporte.</li>
           <li>Acepto que el material sea digitalizado, catalogado y archivado por el equipo editorial del proyecto.</li>
-          <li>Libero de toda responsabilidad al proyecto Memoria Viva ante reclamos de terceros sobre la titularidad del material aportado.</li>
+          <li>Libero de toda responsabilidad al proyecto Memoria Viva Pico Truncado ante reclamos de terceros sobre la titularidad del material aportado.</li>
         </ul>
       </div>
 

@@ -11,6 +11,7 @@ interface ContributionEditFormProps {
   initialConsentVerified: boolean;
   initialLevel: string;
   initialCredits: string;
+  consentSource: string;
 }
 
 export default function ContributionEditForm({
@@ -20,6 +21,7 @@ export default function ContributionEditForm({
   initialConsentVerified,
   initialLevel,
   initialCredits,
+  consentSource,
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
@@ -141,21 +143,32 @@ export default function ContributionEditForm({
         </div>
 
         <div className="form-group" style={{ margin: 0 }}>
-          <label className="form-label">Subir Nueva Firma / Consentimiento (Revalidación)</label>
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                setConsentFile(e.target.files[0]);
-              } else {
-                setConsentFile(null);
-              }
-            }}
-            className="form-input"
-            disabled={saving}
-            style={{ height: '40px', padding: '4px 8px', fontSize: '0.85rem' }}
-          />
+          {consentSource === 'web_form' ? (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <label className="form-label">Soporte Legal</label>
+              <div style={{ padding: '0.6rem 0.75rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '0.8rem', color: '#166534', height: '40px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                <span>✓ Autorización Digital (No requiere archivo físico)</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <label className="form-label">Subir Nueva Firma / Consentimiento (Revalidación)</label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setConsentFile(e.target.files[0]);
+                  } else {
+                    setConsentFile(null);
+                  }
+                }}
+                className="form-input"
+                disabled={saving}
+                style={{ height: '40px', padding: '4px 8px', fontSize: '0.85rem' }}
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -171,18 +184,20 @@ export default function ContributionEditForm({
         />
       </div>
 
-      <div className="form-group" style={{ margin: 0 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={consentVerified}
-            onChange={(e) => setConsentVerified(e.target.checked)}
-            disabled={saving}
-            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-          />
-          <span>Firma / Convenio de autorización física verificado</span>
-        </label>
-      </div>
+      {consentSource !== 'web_form' && (
+        <div className="form-group" style={{ margin: 0 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={consentVerified}
+              onChange={(e) => setConsentVerified(e.target.checked)}
+              disabled={saving}
+              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            <span>Firma / Convenio de autorización física verificado</span>
+          </label>
+        </div>
+      )}
 
       <button
         type="submit"

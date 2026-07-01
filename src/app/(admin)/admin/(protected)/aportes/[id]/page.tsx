@@ -361,7 +361,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                     {/* Contenido del evento */}
                     <div style={{ flexGrow: 1 }}>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        <strong>{new Date(log.created_at).toLocaleString('es-AR')}</strong> — por {log.profiles?.full_name || 'Sistema / Desconocido'}
+                        <strong>{new Date(log.created_at).toLocaleString('es-AR')}</strong> — por {log.profiles?.full_name || (log.action === 'INSERT' ? 'Vecino Aportante (Carga Web)' : 'Sistema / Desconocido')}
                       </div>
                       <div style={{ fontSize: '0.85rem', marginTop: '0.25rem', color: '#0f172a', lineHeight: '1.4' }}>
                         {renderAuditLogDescription(log)}
@@ -512,7 +512,22 @@ export default async function AdminContributionDetail({ params, searchParams }: 
 
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Estado de la Firma/Convenio:</span>
-                {contribution.consent_verified ? (
+                {(contribution.consent_source === 'web_form' || !contribution.consent_source) ? (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    backgroundColor: '#ecfdf5',
+                    color: '#059669',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '4px',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    marginTop: '0.25rem'
+                  }}>
+                    ✓ Aceptación Digital (Web)
+                  </span>
+                ) : contribution.consent_verified ? (
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -617,6 +632,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               initialConsentVerified={contribution.consent_verified || false}
               initialLevel={contribution.authorization_level}
               initialCredits={contribution.credit_preference}
+              consentSource={contribution.consent_source || 'web_form'}
             />
           </div>
 

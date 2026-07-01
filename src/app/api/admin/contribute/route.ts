@@ -151,30 +151,33 @@ export async function POST(req: NextRequest) {
         const newAgreementInstitution = formData.get('new_agreement_institution') as string;
         const newAgreementFile = formData.get('new_agreement_file') as File | null;
 
-        if (!newAgreementName || !newAgreementInstitution || !newAgreementFile || newAgreementFile.size === 0) {
+        if (!newAgreementName || !newAgreementInstitution) {
           return NextResponse.json({ error: 'Faltan datos obligatorios para registrar el nuevo convenio.' }, { status: 400 });
         }
 
-        const extension = newAgreementFile.name.split('.').pop()?.toLowerCase();
-        if (!extension || extension !== 'pdf') {
-          return NextResponse.json({ error: 'El archivo del convenio institucional debe ser un documento PDF.' }, { status: 400 });
-        }
+        let filePath = null;
+        if (newAgreementFile && newAgreementFile.size > 0) {
+          const extension = newAgreementFile.name.split('.').pop()?.toLowerCase();
+          if (!extension || extension !== 'pdf') {
+            return NextResponse.json({ error: 'El archivo del convenio institucional debe ser un documento PDF.' }, { status: 400 });
+          }
 
-        // Subir convenio
-        const uniqueFileName = `${Date.now()}_agreement_${Math.random().toString(36).substring(2, 9)}.pdf`;
-        const filePath = `agreements/${uniqueFileName}`;
-        const buffer = Buffer.from(await newAgreementFile.arrayBuffer());
+          // Subir convenio
+          const uniqueFileName = `${Date.now()}_agreement_${Math.random().toString(36).substring(2, 9)}.pdf`;
+          filePath = `agreements/${uniqueFileName}`;
+          const buffer = Buffer.from(await newAgreementFile.arrayBuffer());
 
-        const { error: uploadError } = await adminSupabase.storage
-          .from('historical-uploads')
-          .upload(filePath, buffer, {
-            contentType: 'application/pdf',
-            duplex: 'half'
-          });
+          const { error: uploadError } = await adminSupabase.storage
+            .from('historical-uploads')
+            .upload(filePath, buffer, {
+              contentType: 'application/pdf',
+              duplex: 'half'
+            });
 
-        if (uploadError) {
-          console.error('Error al subir PDF de convenio:', uploadError);
-          return NextResponse.json({ error: 'Error al subir el PDF del convenio.' }, { status: 500 });
+          if (uploadError) {
+            console.error('Error al subir PDF de convenio:', uploadError);
+            return NextResponse.json({ error: 'Error al subir el PDF del convenio.' }, { status: 500 });
+          }
         }
 
         // Insertar convenio en BD

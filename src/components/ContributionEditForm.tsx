@@ -152,7 +152,11 @@ export default function ContributionEditForm({
             </div>
           ) : (
             <>
-              <label className="form-label">Subir Nueva Firma / Consentimiento (Revalidación)</label>
+              <label className="form-label">
+                {consentSource === 'institutional_agreement' 
+                  ? 'Subir PDF del Convenio Firmado (Completar carga)' 
+                  : 'Subir Nueva Firma / Consentimiento (Revalidación)'}
+              </label>
               <input
                 type="file"
                 accept="image/*,application/pdf"

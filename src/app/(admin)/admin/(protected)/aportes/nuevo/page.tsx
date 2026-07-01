@@ -425,11 +425,6 @@ DNI/Representación:
           setLoading(false);
           return;
         }
-        if (!newAgreementFile) {
-          setErrorMsg('Debes subir el PDF firmado del nuevo convenio institucional.');
-          setLoading(false);
-          return;
-        }
       }
     }
 
@@ -1152,8 +1147,8 @@ DNI/Representación:
               {formData.consent_source === 'institutional_agreement' && formData.institutional_agreement_id === 'new' && (
                 <div className="grid grid-2" style={{ gap: '1.5rem', alignItems: 'center' }}>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label form-label-required" style={{ fontWeight: 600 }}>
-                      Subir PDF de Convenio Firmado*
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      Subir PDF de Convenio Firmado (Opcional)
                     </label>
                     {!newAgreementFile ? (
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1194,7 +1189,7 @@ DNI/Representación:
 
                   <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.75rem 1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Shield size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
-                    <span>Sube el PDF firmado del convenio generado (con signatura sugerida <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong>).</span>
+                    <span>Opcional. Sube el PDF firmado. Si está en revisión por la institución, puedes guardarlo en blanco y subirlo luego en la ficha del aporte.</span>
                   </div>
                 </div>
               )}

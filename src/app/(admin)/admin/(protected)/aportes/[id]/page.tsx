@@ -27,7 +27,8 @@ export default async function AdminContributionDetail({ params, searchParams }: 
       *,
       contributors ( * ),
       contribution_files ( * ),
-      consent_records ( * )
+      consent_records ( * ),
+      institutional_agreements ( * )
     `)
     .eq('id', id)
     .single();
@@ -533,36 +534,100 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                   }}>
                     ✓ Aceptación Digital (Web)
                   </span>
-                ) : contribution.consent_verified ? (
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    backgroundColor: 'var(--hope-green-light)',
-                    color: 'var(--hope-green)',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '4px',
-                    fontWeight: 'bold',
-                    fontSize: '0.75rem',
-                    marginTop: '0.25rem'
-                  }}>
-                    ✓ Firma/Convenio Verificado
-                  </span>
+                ) : (contribution.consent_source === 'institutional_agreement') ? (
+                  !(contribution.consent_file_path || contribution.institutional_agreements?.file_path) ? (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      backgroundColor: '#fee2e2',
+                      color: '#dc2626',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.75rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      ⚠️ Falta subir convenio firmado
+                    </span>
+                  ) : contribution.consent_verified ? (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      backgroundColor: 'var(--hope-green-light)',
+                      color: 'var(--hope-green)',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.75rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      ✓ Convenio Verificado
+                    </span>
+                  ) : (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      backgroundColor: '#fef3c7',
+                      color: '#b45309',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.75rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      ⚠️ Convenio pendiente de verificación
+                    </span>
+                  )
                 ) : (
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    backgroundColor: '#fef3c7',
-                    color: '#b45309',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '4px',
-                    fontWeight: 'bold',
-                    fontSize: '0.75rem',
-                    marginTop: '0.25rem'
-                  }}>
-                    ⚠️ Pendiente de verificación por el editor
-                  </span>
+                  !contribution.consent_file_path ? (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      backgroundColor: '#fee2e2',
+                      color: '#dc2626',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.75rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      ⚠️ Falta subir planilla firmada
+                    </span>
+                  ) : contribution.consent_verified ? (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      backgroundColor: 'var(--hope-green-light)',
+                      color: 'var(--hope-green)',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.75rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      ✓ Firma/Convenio Verificado
+                    </span>
+                  ) : (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      backgroundColor: '#fef3c7',
+                      color: '#b45309',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.75rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      ⚠️ Pendiente de verificación por el editor
+                    </span>
+                  )
                 )}
               </div>
 

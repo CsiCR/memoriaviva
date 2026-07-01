@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.institutional_agreements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   institution TEXT NOT NULL,
-  file_path TEXT NOT NULL,
+  file_path TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

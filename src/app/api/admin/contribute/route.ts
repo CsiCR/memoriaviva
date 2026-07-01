@@ -245,7 +245,33 @@ export async function POST(req: NextRequest) {
 
     const contributorId = contributorData.id;
 
-    // B. Insertar Aporte
+    // B. Insertar Aporte (Calcular catalog_code en Next.js por seguridad como fallback)
+    const yearVal = new Date().getFullYear();
+    const typeCodeMap: Record<string, string> = {
+      'Testimonio escrito': 'TXT',
+      'Fotografía': 'FOT',
+      'Documento': 'DOC',
+      'Audio': 'AUD',
+      'Video': 'VID'
+    };
+    const typeCode = typeCodeMap[contributionType] || 'GEN';
+    
+    const { count } = await adminSupabase
+      .from('contributions')
+      .select('*', { count: 'exact', head: true })
+      .eq('contribution_type', contributionType)
+      .gte('created_at', `${yearVal}-01-01T00:00:00Z`)
+      .lte('created_at', `${yearVal}-12-31T23:59:59Z`);
+
+    const nextNum = (count || 0) + 1;
+    const finalCatalogCode = `MV-${typeCode}-${yearVal}-${String(nextNum).padStart(4, '0')}`;
+
+    // Si es Caso 2 (signed_paper) y la referencia está vacía, hacerla igual a la signatura
+    let refValue = finalConsentReference;
+    if (consentSource === 'signed_paper' && (!refValue || refValue.trim() === '')) {
+      refValue = finalCatalogCode;
+    }
+
     const exactDate = exactDateStr ? exactDateStr : null;
 
     const { data: contributionData, error: contributionError } = await adminSupabase
@@ -264,9 +290,10 @@ export async function POST(req: NextRequest) {
         authorization_level: authorizationLevel,
         credit_preference: creditPreference,
         consent_source: consentSource,
-        consent_reference: finalConsentReference || null,
+        consent_reference: refValue || null,
         consent_file_path: finalConsentFilePath,
         institutional_agreement_id: finalAgreementId,
+        catalog_code: finalCatalogCode,
         consent_verified: false,
         editorial_status: 'Recibido'
       })

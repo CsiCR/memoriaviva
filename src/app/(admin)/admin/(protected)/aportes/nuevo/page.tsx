@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, X, Shield, FileText, User, Printer, ArrowLeft, AlertCircle, Check, ChevronRight, ChevronLeft, Calendar, MapPin } from 'lucide-react';
+import { Upload, X, Shield, FileText, User, Printer, ArrowLeft, AlertCircle, Check, ChevronRight, ChevronLeft } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'wav', 'm4a', 'mp4', 'mov'];
@@ -16,6 +16,11 @@ export default function AdminAportesNuevo() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const consentInputRef = useRef<HTMLInputElement>(null);
   const newAgreementFileRef = useRef<HTMLInputElement>(null);
+
+  // Referencias para Auto-Focus del primer elemento del paso
+  const step1FirstInputRef = useRef<HTMLSelectElement>(null);
+  const step2FirstInputRef = useRef<HTMLInputElement>(null);
+  const step3FirstInputRef = useRef<HTMLSelectElement>(null);
 
   // Control del Wizard
   const [currentStep, setCurrentStep] = useState(1);
@@ -61,6 +66,9 @@ export default function AdminAportesNuevo() {
   const [newAgreementFile, setNewAgreementFile] = useState<File | null>(null);
   const [agreements, setAgreements] = useState<any[]>([]);
 
+  // Signatura calculada de forma dinámica en cliente
+  const [suggestedCatalogCode, setSuggestedCatalogCode] = useState('');
+
   // Texto editable sugerido de convenio para Caso 3 (Nuevo)
   const [agreementText, setAgreementText] = useState('');
 
@@ -91,6 +99,43 @@ export default function AdminAportesNuevo() {
     fetchAgreements();
   }, []);
 
+  // Calcular la signatura/código de catálogo sugerido dinámicamente cuando cambia el tipo
+  useEffect(() => {
+    if (!formData.contribution_type) {
+      setSuggestedCatalogCode('');
+      return;
+    }
+
+    const fetchNextCode = async () => {
+      try {
+        const supabase = createClient();
+        const yearVal = new Date().getFullYear();
+        const { count } = await supabase
+          .from('contributions')
+          .select('*', { count: 'exact', head: true })
+          .eq('contribution_type', formData.contribution_type)
+          .gte('created_at', `${yearVal}-01-01T00:00:00Z`)
+          .lte('created_at', `${yearVal}-12-31T23:59:59Z`);
+
+        const typeCodeMap: Record<string, string> = {
+          'Testimonio escrito': 'TXT',
+          'Fotografía': 'FOT',
+          'Documento': 'DOC',
+          'Audio': 'AUD',
+          'Video': 'VID'
+        };
+        const typeCode = typeCodeMap[formData.contribution_type] || 'GEN';
+        const nextNum = (count || 0) + 1;
+        const code = `MV-${typeCode}-${yearVal}-${String(nextNum).padStart(4, '0')}`;
+        setSuggestedCatalogCode(code);
+      } catch (err) {
+        console.error('Error al calcular signatura temporal:', err);
+      }
+    };
+
+    fetchNextCode();
+  }, [formData.contribution_type]);
+
   // Sincronizar convenio sugerido cuando cambian los datos
   useEffect(() => {
     if (formData.new_agreement_name && formData.new_agreement_institution) {
@@ -100,7 +145,7 @@ Por la presente, entre el ARCHIVO HISTÓRICO COMUNITARIO "MEMORIA VIVA" de la ci
 
 PRIMERA: La institución cede copias digitalizadas de sus fondos documentales y piezas de valor patrimonial histórico local para su catalogación, indexación y preservación a largo plazo en la plataforma "Memoria Viva".
 
-SEGUNDA: Las partes acuerdan que el acceso a estos materiales estará regido por la autorización de uso establecida en sus fichas (Nivel A: Público General, Nivel B: Fines Pedagógicos/Escolares, Nivel C: Consulta Interna en Archivo). El archivo se compromete a atribuir los créditos de origen de forma destacada.
+SEGUNDA: Las partes acuerdan que el acceso a estos materiales estará regido por la autorización de uso establecida en sus fichas (Nivel A: Público General, Nivel B: Fines Pedagógicos/Escolares, Nivel C: Consulta Interna en Archivo). El archivo se compromete a respetar en todos los casos la preferencia de atribución de créditos de origen.
 
 TERCERA: La institución declara tener la titularidad o autorización de las piezas cedidas, eximiendo a "Memoria Viva" de cualquier reclamo por propiedad intelectual de terceros.
 
@@ -114,6 +159,17 @@ DNI/Representación:
 `);
     }
   }, [formData.new_agreement_name, formData.new_agreement_institution]);
+
+  // Efecto para enfocar el primer elemento del paso actual
+  useEffect(() => {
+    if (currentStep === 1) {
+      step1FirstInputRef.current?.focus();
+    } else if (currentStep === 2) {
+      step2FirstInputRef.current?.focus();
+    } else if (currentStep === 3) {
+      step3FirstInputRef.current?.focus();
+    }
+  }, [currentStep]);
 
   // Handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -209,7 +265,7 @@ DNI/Representación:
       alert('Por favor, ingresa el Nombre y el DNI del aportante en el Paso 1 para poder pre-rellenar la planilla.');
       return;
     }
-    const url = `/admin/print?name=${encodeURIComponent(formData.full_name)}&dni=${encodeURIComponent(formData.dni)}&title=${encodeURIComponent(formData.title || '')}`;
+    const url = `/admin/print?name=${encodeURIComponent(formData.full_name)}&dni=${encodeURIComponent(formData.dni)}&title=${encodeURIComponent(formData.title || '')}&code=${encodeURIComponent(suggestedCatalogCode)}`;
     window.open(url, '_blank');
   };
 
@@ -219,7 +275,7 @@ DNI/Representación:
     printWindow.document.write(`
       <html>
         <head>
-          <title>Convenio sugerido - Memoria Viva</title>
+          <title>Convenio de Cesión - Memoria Viva</title>
           <style>
             body {
               font-family: 'Courier New', Courier, monospace;
@@ -229,22 +285,55 @@ DNI/Representación:
               font-size: 11pt;
             }
             .header {
-              text-align: center;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              border-bottom: 2px solid #000000;
+              padding-bottom: 0.75rem;
+              margin-bottom: 1.5rem;
+            }
+            .header-left {
+              display: flex;
+              align-items: center;
+              gap: 0.75rem;
+            }
+            .header-title {
+              font-size: 14pt;
+              margin: 0;
               font-weight: bold;
-              text-transform: uppercase;
-              margin-bottom: 2rem;
-              border-bottom: 2px solid #000;
-              padding-bottom: 1rem;
+              font-family: sans-serif;
+            }
+            .header-subtitle {
+              font-size: 8.5pt;
+              color: #555555;
+              font-family: sans-serif;
+            }
+            .header-right {
+              text-align: right;
+              font-size: 8.5pt;
+              color: #555555;
+              font-family: sans-serif;
             }
             .content {
               white-space: pre-wrap;
               text-align: justify;
+              margin-top: 1.5rem;
             }
           </style>
         </head>
         <body>
           <div class="header">
-            Convenio de Cesión y Colaboración Patrimonial
+            <div class="header-left">
+              <img src="/icon-192.png" alt="Logo" style="height: 50px; width: auto;" />
+              <div>
+                <h1 class="header-title">Memoria Viva</h1>
+                <span class="header-subtitle">Archivo Histórico Comunitario de Pico Truncado</span>
+              </div>
+            </div>
+            <div class="header-right">
+              <div>Convenio de Cesión y Colaboración</div>
+              <strong style="font-size: 10pt; color: #000; font-family: monospace;">${suggestedCatalogCode || 'MV-PENDIENTE'}</strong>
+            </div>
           </div>
           <div class="content">${text.replace(/\n/g, '<br>')}</div>
           <script>
@@ -287,7 +376,7 @@ DNI/Representación:
     setErrorMsg(null);
     if (currentStep === 1) {
       if (!validateStep1()) {
-        setErrorMsg('Faltan completar campos obligatorios del aportante o del convenio.');
+        setErrorMsg('Faltan completar campos obligatorios (*) en la identificación del aportante o convenio.');
         return;
       }
       setCurrentStep(2);
@@ -295,8 +384,8 @@ DNI/Representación:
       if (!validateStep2()) {
         setErrorMsg(
           formData.contribution_type !== 'Testimonio escrito' && files.length === 0
-            ? 'Debes adjuntar al menos un archivo histórico antes de continuar.'
-            : 'Faltan completar campos obligatorios del material (título, tipo, descripción, lugar).'
+            ? 'Debes adjuntar al menos un archivo histórico (*) para guardar esta contribución.'
+            : 'Faltan completar campos obligatorios (*) en el detalle del material.'
         );
         return;
       }
@@ -381,10 +470,10 @@ DNI/Representación:
         </Link>
       </div>
 
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '2.5rem' }}>
         <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem', color: '#0f172a' }}>Cargar Aporte Administrativo</h1>
-        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-          Ingresar material histórico digitalizado directamente al catálogo del archivo.
+        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>
+          Ingresar material histórico digitalizado directamente al catálogo del archivo. Los campos marcados con asterisco (<strong>*</strong>) son obligatorios.
         </p>
       </div>
 
@@ -418,13 +507,6 @@ DNI/Representación:
         </div>
       </div>
 
-      {errorMsg && (
-        <div className="alert alert-danger" style={{ marginBottom: '2rem' }}>
-          <AlertCircle size={20} />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
         {/* ========================================================================= */}
@@ -432,14 +514,18 @@ DNI/Representación:
         {/* ========================================================================= */}
         {currentStep === 1 && (
           <div className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <User size={20} style={{ color: 'var(--primary-blue)' }} /> Paso 1: Identificación de Ingesta y Caso Legal
             </h2>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              💡 Nota: Todos los campos marcados con asterisco (<strong>*</strong>) son requeridos para pasar al siguiente paso.
+            </div>
 
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label className="form-label form-label-required">Origen y Respaldo Legal (Caso)</label>
+              <label className="form-label form-label-required">Origen y Respaldo Legal (Caso)*</label>
               <select
                 name="consent_source"
+                ref={step1FirstInputRef}
                 required
                 className="form-select"
                 value={formData.consent_source}
@@ -463,7 +549,7 @@ DNI/Representación:
                 
                 <div className="grid grid-2">
                   <div className="form-group">
-                    <label className="form-label form-label-required">DNI (Documento Nacional de Identidad)</label>
+                    <label className="form-label form-label-required">DNI (Documento Nacional de Identidad)*</label>
                     <input
                       type="text"
                       name="dni"
@@ -477,7 +563,7 @@ DNI/Representación:
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label form-label-required">Nombre y Apellido del Aportante</label>
+                    <label className="form-label form-label-required">Nombre y Apellido del Aportante*</label>
                     <input
                       type="text"
                       name="full_name"
@@ -521,7 +607,7 @@ DNI/Representación:
 
                 <div className="grid grid-2">
                   <div className="form-group">
-                    <label className="form-label form-label-required">Relación con Pico Truncado</label>
+                    <label className="form-label form-label-required">Relación con Pico Truncado*</label>
                     <select
                       name="relation_to_city"
                       required
@@ -540,7 +626,7 @@ DNI/Representación:
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label form-label-required">Barrio / Institución</label>
+                    <label className="form-label form-label-required">Barrio / Institución*</label>
                     <input
                       type="text"
                       name="neighborhood_or_institution"
@@ -590,7 +676,7 @@ DNI/Representación:
                 
                 <div className="grid grid-2">
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label form-label-required">Convenio Colectivo / Institucional</label>
+                    <label className="form-label form-label-required">Convenio Colectivo / Institucional*</label>
                     <select
                       name="institutional_agreement_id"
                       required
@@ -619,7 +705,7 @@ DNI/Representación:
                     
                     <div className="grid grid-2">
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label form-label-required">Nombre del Convenio</label>
+                        <label className="form-label form-label-required">Nombre del Convenio*</label>
                         <input
                           type="text"
                           name="new_agreement_name"
@@ -633,7 +719,7 @@ DNI/Representación:
                       </div>
 
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label form-label-required">Institución Firmante</label>
+                        <label className="form-label form-label-required">Institución Firmante*</label>
                         <input
                           type="text"
                           name="new_agreement_institution"
@@ -684,16 +770,20 @@ DNI/Representación:
         {/* ========================================================================= */}
         {currentStep === 2 && (
           <div className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <FileText size={20} style={{ color: 'var(--primary-blue)' }} /> Paso 2: Detalles del Material Histórico
             </h2>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              💡 Nota: Todos los campos marcados con asterisco (<strong>*</strong>) son requeridos. El Código de Catálogo temporal asignado es: <strong style={{ color: 'var(--primary-blue)', fontFamily: 'monospace' }}>{suggestedCatalogCode || '(Seleccione un tipo)'}</strong>
+            </div>
 
             <div className="grid grid-2">
               <div className="form-group">
-                <label className="form-label form-label-required">Título / Identificación del Recuerdo</label>
+                <label className="form-label form-label-required">Título / Identificación del Recuerdo*</label>
                 <input
                   type="text"
                   name="title"
+                  ref={step2FirstInputRef}
                   required
                   className="form-input"
                   placeholder="Ej. Escuela Primaria Nº 14 - Grupo escolar de alumnos"
@@ -704,7 +794,7 @@ DNI/Representación:
               </div>
 
               <div className="form-group">
-                <label className="form-label form-label-required">Tipo de Material</label>
+                <label className="form-label form-label-required">Tipo de Material*</label>
                 <select
                   name="contribution_type"
                   required
@@ -728,7 +818,7 @@ DNI/Representación:
             </div>
 
             <div className="form-group">
-              <label className="form-label form-label-required">Descripción del Material (Catalogación básica)</label>
+              <label className="form-label form-label-required">Descripción del Material (Catalogación básica)*</label>
               <textarea
                 name="description"
                 required
@@ -807,7 +897,7 @@ DNI/Representación:
 
             <div className="grid grid-2">
               <div className="form-group">
-                <label className="form-label form-label-required">Lugar del recuerdo / Relación geográfica</label>
+                <label className="form-label form-label-required">Lugar del recuerdo / Relación geográfica*</label>
                 <input
                   type="text"
                   name="related_place"
@@ -851,7 +941,7 @@ DNI/Representación:
             {formData.contribution_type !== 'Testimonio escrito' && (
               <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
                 <label className="form-label form-label-required" style={{ fontWeight: 600, display: 'block', marginBottom: '0.75rem' }}>
-                  Archivos del Material Histórico Digitalizado
+                  Archivos del Material Histórico Digitalizado*
                 </label>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -912,9 +1002,12 @@ DNI/Representación:
         {/* ========================================================================= */}
         {currentStep === 3 && (
           <div className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> Paso 3: Condiciones Legales y Respaldos Firmados
             </h2>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              💡 Nota: Completa los parámetros de cesión y sube el respaldo correspondiente para finalizar la carga.
+            </div>
 
             {/* Impresión de Planilla A4 (Solo Caso 2) */}
             {formData.consent_source === 'signed_paper' && (
@@ -922,7 +1015,7 @@ DNI/Representación:
                 <div style={{ flexGrow: 1 }}>
                   <strong style={{ color: 'var(--text-primary)', display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Planilla de Consentimiento Pre-rellenada</strong>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                    Genera el documento A4 pre-rellenado con los datos del aportante cargados en el Paso 1.
+                    Genera el documento A4 oficial con la signatura <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong> pre-rellenada.
                   </span>
                 </div>
                 <button
@@ -939,9 +1032,10 @@ DNI/Representación:
 
             <div className="grid grid-2" style={{ marginBottom: '1.5rem' }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label form-label-required">Nivel de autorización acordado</label>
+                <label className="form-label form-label-required">Nivel de autorización acordado*</label>
                 <select
                   name="authorization_level"
+                  ref={step3FirstInputRef}
                   required
                   className="form-select"
                   value={formData.authorization_level}
@@ -957,7 +1051,7 @@ DNI/Representación:
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label form-label-required">Preferencia de créditos acordada</label>
+                <label className="form-label form-label-required">Preferencia de créditos acordada*</label>
                 <select
                   name="credit_preference"
                   required
@@ -975,20 +1069,15 @@ DNI/Representación:
               </div>
             </div>
 
-            {/* SECCIÓN CONDICIONAL DE ARCHIVO FIRMADO SEGÚN CASO */}
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginTop: '1rem' }}>
+            {/* SECCIÓN UNIFICADA DE ARCHIVO FIRMADO JUNTADO AL COMBO (Fila 2) */}
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
               
               {/* Caso 2: Planilla Firmada */}
               {formData.consent_source === 'signed_paper' && (
                 <div className="grid grid-2" style={{ gap: '1.5rem', alignItems: 'center' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#64748b', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Shield size={20} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
-                    <span>Sube la planilla que imprimiste y firmó el vecino. El <strong>Código de Referencia</strong> se asignará de manera automática.</span>
-                  </div>
-
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label form-label-required" style={{ fontWeight: 600 }}>
-                      Subir Foto/PDF de Planilla Firmada
+                      Subir Foto/PDF de Planilla Firmada*
                     </label>
                     {!consentFile ? (
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1026,20 +1115,20 @@ DNI/Representación:
                       </div>
                     )}
                   </div>
+
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.75rem 1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Shield size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
+                    <span>El <strong>Código de Referencia</strong> se asignará automáticamente como <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong> al guardar.</span>
+                  </div>
                 </div>
               )}
 
               {/* Caso 3: Convenio Nuevo - Subida obligatoria de convenio PDF firmado */}
               {formData.consent_source === 'institutional_agreement' && formData.institutional_agreement_id === 'new' && (
                 <div className="grid grid-2" style={{ gap: '1.5rem', alignItems: 'center' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#64748b', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Shield size={20} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
-                    <span>Sube el PDF firmado del convenio generado en el Paso 1. Se guardará permanentemente en el archivo central.</span>
-                  </div>
-
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label form-label-required" style={{ fontWeight: 600 }}>
-                      Subir PDF de Convenio Firmado
+                      Subir PDF de Convenio Firmado*
                     </label>
                     {!newAgreementFile ? (
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1077,6 +1166,11 @@ DNI/Representación:
                       </div>
                     )}
                   </div>
+
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.75rem 1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Shield size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
+                    <span>Sube el PDF firmado del convenio generado en el Paso 1 (con signatura sugerida <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong>).</span>
+                  </div>
                 </div>
               )}
 
@@ -1087,7 +1181,7 @@ DNI/Representación:
                   <div>
                     <strong style={{ color: '#166534', display: 'block', fontSize: '0.9rem' }}>Convenio Institucional Vinculado</strong>
                     <span style={{ fontSize: '0.8rem', color: '#14532d' }}>
-                      Este material hereda automáticamente el respaldo legal y convenio pre-existente. No es necesario volver a subir archivos firmados.
+                      Este material hereda automáticamente el respaldo legal del convenio existente. No es necesario subir un nuevo documento físico.
                     </span>
                   </div>
                 </div>
@@ -1113,54 +1207,65 @@ DNI/Representación:
         {/* ========================================================================= */}
         {/* BOTONES DE CONTROL DE PASOS */}
         {/* ========================================================================= */}
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-          {currentStep > 1 && (
-            <button
-              type="button"
-              onClick={handlePrevStep}
-              className="btn btn-outline"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '40px', padding: '0 1rem' }}
-              disabled={loading}
-            >
-              <ChevronLeft size={16} /> Atrás
-            </button>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
           
-          {currentStep === 1 && (
-            <Link href="/admin/aportes" className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', height: '40px', padding: '0 1.25rem' }}>
-              Cancelar
-            </Link>
+          {/* Mensaje de Error (Movido aquí, más cerca del botón de acción) */}
+          {errorMsg && (
+            <div className="alert alert-danger" style={{ margin: 0, padding: '0.75rem 1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={18} />
+              <span>{errorMsg}</span>
+            </div>
           )}
 
-          {currentStep < 3 ? (
-            <button
-              type="button"
-              onClick={handleNextStep}
-              className="btn btn-primary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '40px', padding: '0 1.25rem' }}
-              disabled={loading}
-            >
-              Siguiente <ChevronRight size={16} />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '40px', padding: '0 1.5rem' }}
-            >
-              {loading ? (
-                <>
-                  <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', marginRight: '0.25rem' }}></span>
-                  {uploadProgress}
-                </>
-              ) : (
-                <>
-                  <Check size={18} /> Guardar Aporte en Sistema
-                </>
-              )}
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="btn btn-outline"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '40px', padding: '0 1rem' }}
+                disabled={loading}
+              >
+                <ChevronLeft size={16} /> Atrás
+              </button>
+            )}
+            
+            {currentStep === 1 && (
+              <Link href="/admin/aportes" className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', height: '40px', padding: '0 1.25rem' }}>
+                Cancelar
+              </Link>
+            )}
+
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={handleNextStep}
+                className="btn btn-primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '40px', padding: '0 1.25rem' }}
+                disabled={loading}
+              >
+                Siguiente <ChevronRight size={16} />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '40px', padding: '0 1.5rem' }}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', marginRight: '0.25rem' }}></span>
+                    {uploadProgress}
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} /> Guardar Aporte en Sistema
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
       </form>

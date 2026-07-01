@@ -8,6 +8,7 @@ function PrintFormContent() {
   const name = searchParams.get('name') || '________________________________________';
   const dni = searchParams.get('dni') || '____________________';
   const title = searchParams.get('title') || '________________________________________';
+  const code = searchParams.get('code') || 'MV-PENDIENTE';
 
   useEffect(() => {
     // Retardo pequeño para asegurar la renderización
@@ -35,7 +36,8 @@ function PrintFormContent() {
           </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: '8.5pt', color: '#555555' }}>
-          Documento de Cesión y Consentimiento
+          <div>Documento de Cesión y Consentimiento</div>
+          <strong style={{ fontSize: '10pt', color: '#000000', fontFamily: 'monospace' }}>{code}</strong>
         </div>
       </div>
 
@@ -48,8 +50,9 @@ function PrintFormContent() {
         <p style={{ textIndent: '2rem', textAlign: 'justify', margin: '0 0 0.5rem 0' }}>
           Por medio de la presente, yo <strong>{name}</strong>, con DNI N.º <strong>{dni}</strong>, en mi carácter de propietario, autor/a y/o de derecho habiente legítimo de los materiales históricos que aporto al archivo comunitario, declaro ceder y autorizar el uso del material detallado a continuación:
         </p>
-        <p style={{ paddingLeft: '2rem', margin: '0.5rem 0' }}>
-          <strong>Título/Identificación del Material:</strong> {title}
+        <p style={{ paddingLeft: '2rem', margin: '0.5rem 0', lineHeight: 1.5 }}>
+          <strong>Título/Identificación del Material:</strong> {title} <br />
+          <strong>Código de Catálogo (Signatura):</strong> <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{code}</span>
         </p>
       </div>
 

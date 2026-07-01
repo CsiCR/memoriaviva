@@ -28,6 +28,7 @@ export default async function AdminAportes({ searchParams }: PageProps) {
       authorization_level,
       editorial_status,
       created_at,
+      catalog_code,
       contributors!inner (
         full_name,
         dni

@@ -352,13 +352,9 @@ DNI/Representación:
   const validateStep1 = () => {
     if (formData.consent_source !== 'institutional_agreement') {
       return !!(formData.dni && formData.full_name && formData.relation_to_city && formData.neighborhood_or_institution);
-    } else {
-      if (!formData.institutional_agreement_id) return false;
-      if (formData.institutional_agreement_id === 'new') {
-        return !!(formData.new_agreement_name && formData.new_agreement_institution);
-      }
-      return true;
     }
+    // En caso 3 no se piden datos de personas en el Paso 1, la selección del convenio se hace en el paso 3.
+    return true; 
   };
 
   const validateStep2 = () => {
@@ -376,7 +372,7 @@ DNI/Representación:
     setErrorMsg(null);
     if (currentStep === 1) {
       if (!validateStep1()) {
-        setErrorMsg('Faltan completar campos obligatorios (*) en la identificación del aportante o convenio.');
+        setErrorMsg('Faltan completar campos obligatorios (*) en la identificación del aportante.');
         return;
       }
       setCurrentStep(2);
@@ -417,10 +413,24 @@ DNI/Representación:
       return;
     }
 
-    if (formData.consent_source === 'institutional_agreement' && formData.institutional_agreement_id === 'new' && !newAgreementFile) {
-      setErrorMsg('Debes subir el PDF firmado del convenio institucional.');
-      setLoading(false);
-      return;
+    if (formData.consent_source === 'institutional_agreement') {
+      if (!formData.institutional_agreement_id) {
+        setErrorMsg('Debes vincular o registrar un convenio colectivo de respaldo.');
+        setLoading(false);
+        return;
+      }
+      if (formData.institutional_agreement_id === 'new') {
+        if (!formData.new_agreement_name || !formData.new_agreement_institution) {
+          setErrorMsg('Faltan completar los datos del nuevo convenio (Nombre e Institución).');
+          setLoading(false);
+          return;
+        }
+        if (!newAgreementFile) {
+          setErrorMsg('Debes subir el PDF firmado del nuevo convenio institucional.');
+          setLoading(false);
+          return;
+        }
+      }
     }
 
     try {
@@ -525,7 +535,7 @@ DNI/Representación:
               <User size={20} style={{ color: 'var(--primary-blue)' }} /> Paso 1: Identificación de Ingesta y Caso Legal
             </h2>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-              💡 Nota: Todos los campos marcados con asterisco (<strong>*</strong>) son requeridos para pasar al siguiente paso.
+              💡 Nota: Selecciona el origen del material. Los aportes colectivos de instituciones no requieren filiaciones personales en este paso.
             </div>
 
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
@@ -550,7 +560,7 @@ DNI/Representación:
             </div>
 
             {/* CASO 1 Y 2: DATOS DEL APORTANTE (VECINO) */}
-            {formData.consent_source !== 'institutional_agreement' && (
+            {formData.consent_source !== 'institutional_agreement' ? (
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
                 <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem', color: '#0f172a', fontWeight: 600 }}>Filiación del Aportante</h3>
                 
@@ -674,99 +684,13 @@ DNI/Representación:
                   </label>
                 </div>
               </div>
-            )}
-
-            {/* CASO 3: CONVENIO INSTITUCIONAL */}
-            {formData.consent_source === 'institutional_agreement' && (
-              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <h3 style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 600, margin: 0 }}>Vincular o Generar Convenio Colectivo</h3>
-                
-                <div className="grid grid-2">
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label form-label-required">Convenio Colectivo / Institucional*</label>
-                    <select
-                      name="institutional_agreement_id"
-                      required
-                      className="form-select"
-                      value={formData.institutional_agreement_id}
-                      onChange={(e) => {
-                        handleInputChange(e);
-                        setErrorMsg(null);
-                      }}
-                      disabled={loading}
-                      style={{ height: '40px' }}
-                    >
-                      <option value="">-- Seleccione un convenio --</option>
-                      {agreements.map((a) => (
-                        <option key={a.id} value={a.id}>{a.name} ({a.institution})</option>
-                      ))}
-                      <option value="new">+ Registrar un nuevo convenio de respaldo...</option>
-                    </select>
-                  </div>
+            ) : (
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', paddingBottom: '1rem' }}>
+                <div style={{ padding: '1rem 1.25rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                  <strong>Aporte Colectivo Institucional Seleccionado</strong>
+                  <br />
+                  Los datos del convenio colectivo y los términos específicos de cesión se configurarán e imprimirán de forma centralizada en el <strong>Paso 3</strong>, una vez completados los detalles y calculada la signatura del material. Haz clic en Siguiente para continuar.
                 </div>
-
-                {/* Sub-panel para Registrar un Nuevo Convenio */}
-                {formData.institutional_agreement_id === 'new' && (
-                  <div style={{ padding: '1.5rem', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary-blue)' }}>Registrar Nuevo Convenio Institucional</h4>
-                    
-                    <div className="grid grid-2">
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label form-label-required">Nombre del Convenio*</label>
-                        <input
-                          type="text"
-                          name="new_agreement_name"
-                          required
-                          className="form-input"
-                          placeholder="Ej. Convenio Marco Biblioteca Municipal - Res 123/26"
-                          value={formData.new_agreement_name}
-                          onChange={handleInputChange}
-                          disabled={loading}
-                        />
-                      </div>
-
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label form-label-required">Institución Firmante*</label>
-                        <input
-                          type="text"
-                          name="new_agreement_institution"
-                          required
-                          className="form-input"
-                          placeholder="Ej. Biblioteca Municipal"
-                          value={formData.new_agreement_institution}
-                          onChange={handleInputChange}
-                          disabled={loading}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Convenio sugerido pre-cargado y editable */}
-                    {formData.new_agreement_name && formData.new_agreement_institution && (
-                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                        <label className="form-label" style={{ fontWeight: 600 }}>📝 Borrador del Convenio Sugerido (Editable con la Institución):</label>
-                        <textarea
-                          value={agreementText}
-                          onChange={(e) => setAgreementText(e.target.value)}
-                          className="form-textarea"
-                          style={{ minHeight: '260px', fontFamily: 'monospace', fontSize: '0.8rem', lineHeight: 1.4, backgroundColor: '#ffffff' }}
-                          disabled={loading}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => printAgreementTemplate(agreementText)}
-                          className="btn btn-outline"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '36px', marginTop: '0.75rem' }}
-                          disabled={loading}
-                        >
-                          <Printer size={15} /> Imprimir Convenio para Firmar
-                        </button>
-                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', marginBottom: 0 }}>
-                          💡 Ajusta las cláusulas con el representante institucional, imprímelo para firmar, y súbelo firmado en el <strong>Paso 3</strong>.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -1013,7 +937,7 @@ DNI/Representación:
               <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> Paso 3: Condiciones Legales y Respaldos Firmados
             </h2>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-              💡 Nota: Completa los parámetros de cesión y sube el respaldo correspondiente para finalizar la carga.
+              💡 Nota: Completa los parámetros de cesión y vincula el soporte legal firmado correspondiente.
             </div>
 
             {/* Impresión de Planilla A4 (Solo Caso 2) */}
@@ -1037,12 +961,106 @@ DNI/Representación:
               </div>
             )}
 
+            {/* Selección y Registro del Convenio (Caso 3) (Movido a Paso 3 para contar con la signatura resuelta) */}
+            {formData.consent_source === 'institutional_agreement' && (
+              <div style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <h3 style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileText size={18} style={{ color: 'var(--primary-blue)' }} /> Vincular o Generar Convenio Colectivo
+                </h3>
+                
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label form-label-required">Convenio Colectivo / Institucional*</label>
+                  <select
+                    name="institutional_agreement_id"
+                    ref={step3FirstInputRef}
+                    required
+                    className="form-select"
+                    value={formData.institutional_agreement_id}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      setErrorMsg(null);
+                    }}
+                    disabled={loading}
+                    style={{ height: '40px' }}
+                  >
+                    <option value="">-- Seleccione un convenio --</option>
+                    {agreements.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name} ({a.institution})</option>
+                    ))}
+                    <option value="new">+ Registrar un nuevo convenio de respaldo...</option>
+                  </select>
+                </div>
+
+                {/* Sub-panel para Registrar un Nuevo Convenio */}
+                {formData.institutional_agreement_id === 'new' && (
+                  <div style={{ padding: '1.25rem', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary-blue)' }}>Registrar Nuevo Convenio Institucional</h4>
+                    
+                    <div className="grid grid-2">
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label form-label-required">Nombre del Convenio*</label>
+                        <input
+                          type="text"
+                          name="new_agreement_name"
+                          required
+                          className="form-input"
+                          placeholder="Ej. Convenio Marco Biblioteca Municipal - Res 123/26"
+                          value={formData.new_agreement_name}
+                          onChange={handleInputChange}
+                          disabled={loading}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label form-label-required">Institución Firmante*</label>
+                        <input
+                          type="text"
+                          name="new_agreement_institution"
+                          required
+                          className="form-input"
+                          placeholder="Ej. Biblioteca Municipal"
+                          value={formData.new_agreement_institution}
+                          onChange={handleInputChange}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Convenio sugerido pre-cargado y editable */}
+                    {formData.new_agreement_name && formData.new_agreement_institution && (
+                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                        <label className="form-label" style={{ fontWeight: 600 }}>📝 Borrador del Convenio Sugerido (Editable con la Institución):</label>
+                        <textarea
+                          value={agreementText}
+                          onChange={(e) => setAgreementText(e.target.value)}
+                          className="form-textarea"
+                          style={{ minHeight: '220px', fontFamily: 'monospace', fontSize: '0.8rem', lineHeight: 1.4, backgroundColor: '#f8fafc' }}
+                          disabled={loading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => printAgreementTemplate(agreementText)}
+                          className="btn btn-outline"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '36px', marginTop: '0.75rem' }}
+                          disabled={loading}
+                        >
+                          <Printer size={15} /> Imprimir Convenio para Firmar
+                        </button>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', marginBottom: 0 }}>
+                          💡 Genera el contrato formal con la signatura sugerida <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong> pre-rellenada.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-2" style={{ marginBottom: '1.5rem' }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label form-label-required">Nivel de autorización acordado*</label>
                 <select
                   name="authorization_level"
-                  ref={step3FirstInputRef}
                   required
                   className="form-select"
                   value={formData.authorization_level}
@@ -1176,7 +1194,7 @@ DNI/Representación:
 
                   <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.75rem 1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Shield size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
-                    <span>Sube el PDF firmado del convenio generado en el Paso 1 (con signatura sugerida <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong>).</span>
+                    <span>Sube el PDF firmado del convenio generado (con signatura sugerida <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong>).</span>
                   </div>
                 </div>
               )}

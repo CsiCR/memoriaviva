@@ -160,6 +160,16 @@ DNI/Representación:
     }
   }, [formData.new_agreement_name, formData.new_agreement_institution]);
 
+  // Auto-llenar la institución en Paso 3 a partir de los datos ingresados en Paso 1
+  useEffect(() => {
+    if (formData.consent_source === 'institutional_agreement' && formData.full_name) {
+      setFormData(prev => ({
+        ...prev,
+        new_agreement_institution: prev.full_name
+      }));
+    }
+  }, [formData.full_name, formData.consent_source]);
+
   // Efecto para enfocar el primer elemento del paso actual
   useEffect(() => {
     if (currentStep === 1) {
@@ -353,8 +363,8 @@ DNI/Representación:
     if (formData.consent_source !== 'institutional_agreement') {
       return !!(formData.dni && formData.full_name && formData.relation_to_city && formData.neighborhood_or_institution);
     }
-    // En caso 3 no se piden datos de personas en el Paso 1, la selección del convenio se hace en el paso 3.
-    return true; 
+    // En caso 3, requerimos el nombre de la institución como identificador de aportante
+    return !!(formData.full_name); 
   };
 
   const validateStep2 = () => {
@@ -680,11 +690,62 @@ DNI/Representación:
                 </div>
               </div>
             ) : (
-              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', paddingBottom: '1rem' }}>
-                <div style={{ padding: '1rem 1.25rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                  <strong>Aporte Colectivo Institucional Seleccionado</strong>
-                  <br />
-                  Los datos del convenio colectivo y los términos específicos de cesión se configurarán e imprimirán de forma centralizada en el <strong>Paso 3</strong>, una vez completados los detalles y calculada la signatura del material. Haz clic en Siguiente para continuar.
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem', color: '#0f172a', fontWeight: 600 }}>Datos de la Institución Colaboradora</h3>
+                
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label form-label-required">Nombre de la Institución / Entidad Aportante*</label>
+                  <input
+                    type="text"
+                    name="full_name"
+                    required
+                    className="form-input"
+                    placeholder="Ej. Biblioteca Municipal Pico Truncado"
+                    value={formData.full_name}
+                    onChange={handleInputChange}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="grid grid-2" style={{ marginBottom: '1.25rem' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label">Teléfono de Contacto</label>
+                    <input
+                      type="text"
+                      name="phone"
+                      className="form-input"
+                      placeholder="Ej. 2974123456"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label">Correo Electrónico de Contacto</label>
+                    <input
+                      type="email"
+                      name="email"
+                      className="form-input"
+                      placeholder="Ej. contacto@biblioteca.gob.ar"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Observaciones o Notas de Coordinación (Opcional)</label>
+                  <textarea
+                    name="comments"
+                    className="form-textarea"
+                    placeholder="Ej. Convenio gestionado con la directora Ana Gómez. Pendiente de ratificación de firmas por mesa de entrada..."
+                    value={formData.comments}
+                    onChange={handleInputChange}
+                    disabled={loading}
+                    style={{ minHeight: '80px' }}
+                  />
                 </div>
               </div>
             )}

@@ -403,8 +403,14 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                   <strong>{contribution.contributors.full_name}</strong>
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>DNI (Documento)</span>
-                  <strong>{contribution.contributors.dni || '—'}</strong>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>
+                    {contribution.contributors.dni === 'Convenio' ? 'Tipo de Respaldo' : 'DNI (Documento)'}
+                  </span>
+                  {contribution.contributors.dni === 'Convenio' ? (
+                    <strong style={{ color: 'var(--primary-blue)', fontWeight: 600 }}>📄 Convenio Institucional</strong>
+                  ) : (
+                    <strong>{contribution.contributors.dni || '—'}</strong>
+                  )}
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Teléfono / WhatsApp</span>

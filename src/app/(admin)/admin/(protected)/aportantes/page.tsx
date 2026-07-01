@@ -168,7 +168,7 @@ export default async function AdminAportantes({ searchParams }: PageProps) {
                       <td data-label="Aportante" style={{ padding: '1rem 0.5rem', verticalAlign: 'top' }}>
                         <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.95rem' }}>{c.full_name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--primary-blue)', fontWeight: 600 }}>
-                          DNI: {c.dni || '—'}
+                          {c.dni === 'Convenio' ? '📄 Convenio Institucional' : `DNI: ${c.dni || '—'}`}
                         </div>
                         {namesToDisplay.length > 0 && (
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem', fontStyle: 'italic' }}>

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     // Si es Caso 3 (Convenio Institucional), usamos los datos de la institución como aportante
     if (consentSource === 'institutional_agreement') {
-      const institutionName = formData.get('related_institution') as string || 'Institución Colaboradora';
+      const institutionName = formData.get('full_name') as string || formData.get('related_institution') as string || 'Institución Colaboradora';
       dni = 'Convenio';
       fullName = institutionName;
       relationToCity = 'Representante de institución local';

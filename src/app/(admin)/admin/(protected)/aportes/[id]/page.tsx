@@ -361,7 +361,13 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                     {/* Contenido del evento */}
                     <div style={{ flexGrow: 1 }}>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        <strong>{new Date(log.created_at).toLocaleString('es-AR')}</strong> — por {log.profiles?.full_name || (log.action === 'INSERT' ? 'Vecino Aportante (Carga Web)' : 'Sistema / Desconocido')}
+                        <strong>{new Date(log.created_at).toLocaleString('es-AR')}</strong> — por {
+                          log.profiles?.full_name || (
+                            log.action === 'INSERT'
+                              ? ((contribution.consent_source === 'web_form' || !contribution.consent_source) ? 'Vecino Aportante (Carga Web)' : 'Gestor del Archivo (Carga Local)')
+                              : 'Sistema / Proceso Automático'
+                          )
+                        }
                       </div>
                       <div style={{ fontSize: '0.85rem', marginTop: '0.25rem', color: '#0f172a', lineHeight: '1.4' }}>
                         {renderAuditLogDescription(log)}

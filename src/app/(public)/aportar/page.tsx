@@ -197,6 +197,13 @@ export default function Aportar() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Si no está en el paso final, no procesar el submit real, sino avanzar de paso
+    if (currentStep < 3) {
+      handleNextStep();
+      return;
+    }
+
     setErrorMsg(null);
     setLoading(true);
     setUploadProgress('Validando y preparando el envío...');

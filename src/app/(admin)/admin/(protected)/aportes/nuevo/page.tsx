@@ -275,7 +275,7 @@ DNI/Representación:
     printWindow.document.write(`
       <html>
         <head>
-          <title>Convenio de Cesión - Memoria Viva</title>
+          <title>${suggestedCatalogCode || 'MV-PENDIENTE'} - Convenio de Cesión - Memoria Viva Pico Truncado</title>
           <style>
             body {
               font-family: 'Courier New', Courier, monospace;
@@ -400,6 +400,13 @@ DNI/Representación:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Si no está en el paso final, no procesar el submit real, sino avanzar de paso
+    if (currentStep < 3) {
+      handleNextStep();
+      return;
+    }
+
     setErrorMsg(null);
     setLoading(true);
     setUploadProgress('Guardando todo en el sistema...');

@@ -162,24 +162,28 @@ export default async function AdminAportes({ searchParams }: PageProps) {
           <div className="responsive-table-container">
             <table className="responsive-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Título</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Tipo</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Aportante</th>
-                  <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>Nivel Autoriz.</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Fecha de Carga</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Estado Editorial</th>
-                  <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contributions.map((contribution: any) => {
-                  const statusBadgeClass = `badge badge-${contribution.editorial_status.toLowerCase().replace(/á/g, 'a').replace(/ó/g, 'o').replace(/ /g, '-')}`;
-                  
-                  return (
-                    <tr key={contribution.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
-                      <td data-label="Título" style={{ padding: '1rem 0.5rem', fontWeight: 600, color: '#0f172a' }}>{contribution.title}</td>
-                      <td data-label="Tipo" style={{ padding: '1rem 0.5rem', color: 'var(--text-secondary)' }}>{contribution.contribution_type}</td>
+                  <tr style={{ borderBottom: '2px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Signatura</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Título</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Tipo</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Aportante</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>Nivel Autoriz.</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Fecha de Carga</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Estado Editorial</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contributions.map((contribution: any) => {
+                    const statusBadgeClass = `badge badge-${contribution.editorial_status.toLowerCase().replace(/á/g, 'a').replace(/ó/g, 'o').replace(/ /g, '-')}`;
+                    
+                    return (
+                      <tr key={contribution.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                        <td data-label="Signatura" style={{ padding: '1rem 0.5rem', fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
+                          {contribution.catalog_code || 'MV-PENDIENTE'}
+                        </td>
+                        <td data-label="Título" style={{ padding: '1rem 0.5rem', fontWeight: 600, color: '#0f172a' }}>{contribution.title}</td>
+                        <td data-label="Tipo" style={{ padding: '1rem 0.5rem', color: 'var(--text-secondary)' }}>{contribution.contribution_type}</td>
                       <td data-label="Aportante" style={{ padding: '1rem 0.5rem', color: 'var(--text-secondary)' }}>
                         {contribution.contributors?.full_name || 'Desconocido'}
                       </td>

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Upload, X, Shield, FileText, User, Printer, ArrowLeft, AlertCircle, Check } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'wav', 'm4a', 'mp4', 'mov'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -12,12 +13,16 @@ export default function AdminAportesNuevo() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const consentInputRef = useRef<HTMLInputElement>(null);
+  const newAgreementFileRef = useRef<HTMLInputElement>(null);
 
   // Estados del Formulario
   const [formData, setFormData] = useState({
     // Consentimiento Administrativo
     consent_source: 'signed_paper', // signed_paper | institutional_agreement | web_form
     consent_reference: '',
+    institutional_agreement_id: '', // UUID or 'new'
+    new_agreement_name: '',
+    new_agreement_institution: '',
 
     // Aportante
     dni: '',
@@ -48,11 +53,35 @@ export default function AdminAportesNuevo() {
 
   const [files, setFiles] = useState<File[]>([]);
   const [consentFile, setConsentFile] = useState<File | null>(null);
+  const [newAgreementFile, setNewAgreementFile] = useState<File | null>(null);
+  const [agreements, setAgreements] = useState<any[]>([]);
+
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [consentError, setConsentError] = useState<string | null>(null);
+  const [newAgreementFileError, setNewAgreementFileError] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
+
+  // Cargar convenios al montar el componente
+  useEffect(() => {
+    const fetchAgreements = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('institutional_agreements')
+          .select('id, name, institution')
+          .order('name');
+        
+        if (!error && data) {
+          setAgreements(data);
+        }
+      } catch (err) {
+        console.error('Error al cargar convenios:', err);
+      }
+    };
+    fetchAgreements();
+  }, []);
 
   // Handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -109,6 +138,26 @@ export default function AdminAportesNuevo() {
     setConsentFile(file);
   };
 
+  const handleNewAgreementFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+
+    if (extension !== 'pdf') {
+      setNewAgreementFileError('El archivo del convenio institucional debe ser obligatoriamente un PDF.');
+      setNewAgreementFile(null);
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setNewAgreementFileError('El archivo supera los 50 MB.');
+      setNewAgreementFile(null);
+      return;
+    }
+
+    setNewAgreementFileError(null);
+    setNewAgreementFile(file);
+  };
+
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -116,6 +165,11 @@ export default function AdminAportesNuevo() {
   const removeConsentFile = () => {
     setConsentFile(null);
     if (consentInputRef.current) consentInputRef.current.value = '';
+  };
+
+  const removeNewAgreementFile = () => {
+    setNewAgreementFile(null);
+    if (newAgreementFileRef.current) newAgreementFileRef.current.value = '';
   };
 
   const printConsentForm = () => {
@@ -133,10 +187,33 @@ export default function AdminAportesNuevo() {
     setLoading(true);
     setUploadProgress('Validando datos...');
 
+    // 1. Validaciones de archivos de aporte
     if (formData.contribution_type !== 'Testimonio escrito' && files.length === 0) {
       setErrorMsg('Debes adjuntar al menos un archivo para este tipo de aporte.');
       setLoading(false);
       return;
+    }
+
+    // 2. Validaciones de consentimiento legal
+    if (formData.consent_source === 'signed_paper') {
+      if (!consentFile) {
+        setErrorMsg('Caso 2: Debes subir la foto o PDF de la planilla de consentimiento firmada por el vecino.');
+        setLoading(false);
+        return;
+      }
+    } else if (formData.consent_source === 'institutional_agreement') {
+      if (!formData.institutional_agreement_id) {
+        setErrorMsg('Caso 3: Debes seleccionar un convenio institucional existente o elegir registrar uno nuevo.');
+        setLoading(false);
+        return;
+      }
+      if (formData.institutional_agreement_id === 'new') {
+        if (!formData.new_agreement_name || !formData.new_agreement_institution || !newAgreementFile) {
+          setErrorMsg('Caso 3 (Nuevo): Debes completar el nombre, institución y subir el PDF del nuevo convenio.');
+          setLoading(false);
+          return;
+        }
+      }
     }
 
     try {
@@ -152,9 +229,14 @@ export default function AdminAportesNuevo() {
         submissionData.append('files', file);
       });
 
-      // Adjuntar archivo de consentimiento si existe
-      if (consentFile) {
+      // Adjuntar archivo de consentimiento (Caso 2)
+      if (formData.consent_source === 'signed_paper' && consentFile) {
         submissionData.append('consent_file', consentFile);
+      }
+
+      // Adjuntar archivo de convenio nuevo (Caso 3 - Nuevo)
+      if (formData.consent_source === 'institutional_agreement' && formData.institutional_agreement_id === 'new' && newAgreementFile) {
+        submissionData.append('new_agreement_file', newAgreementFile);
       }
 
       setUploadProgress('Subiendo archivos y registrando en la base de datos...');
@@ -560,8 +642,6 @@ export default function AdminAportesNuevo() {
               name="historical_context"
               className="form-textarea"
               placeholder="Escribe aquí el relato, historia o anécdota asociada a este recuerdo."
-              value={formData.historical_context}
-              onChange={handleInputChange}
               disabled={loading}
             />
           </div>
@@ -573,14 +653,15 @@ export default function AdminAportesNuevo() {
             <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> 3. Consentimiento Legal y Respaldos
           </h2>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', backgroundColor: 'var(--primary-blue-light)', padding: '1rem 1.5rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid var(--primary-blue-light)' }}>
-            <div style={{ flexGrow: 1 }}>
-              <strong style={{ color: 'var(--text-primary)', display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Planilla de Consentimiento Pre-rellenada</strong>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                Genera el documento A4 oficial con el nombre y DNI del aportante listo para imprimir y firmar.
-              </span>
-            </div>
-            {formData.consent_source === 'signed_paper' && (
+          {/* Pre-rellenado A4 (Solo Caso 2) */}
+          {formData.consent_source === 'signed_paper' && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', backgroundColor: 'var(--primary-blue-light)', padding: '1rem 1.5rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid var(--primary-blue-light)' }}>
+              <div style={{ flexGrow: 1 }}>
+                <strong style={{ color: 'var(--text-primary)', display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Planilla de Consentimiento Pre-rellenada</strong>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  Genera el documento A4 oficial con el nombre y DNI del aportante listo para imprimir y firmar.
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={printConsentForm}
@@ -590,10 +671,10 @@ export default function AdminAportesNuevo() {
               >
                 <Printer size={16} /> Imprimir Planilla A4
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="grid grid-2">
+          <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
             <div className="form-group">
               <label className="form-label form-label-required">Nivel de autorización de uso</label>
               <select
@@ -629,27 +710,17 @@ export default function AdminAportesNuevo() {
             </div>
           </div>
 
-          <div className="grid grid-2">
-            <div className="form-group">
-              <label className="form-label">Código de Referencia / Expediente Físico</label>
-              <input
-                type="text"
-                name="consent_reference"
-                className="form-input"
-                placeholder={formData.consent_source === 'institutional_agreement' ? 'Ej. Convenio Biblioteca-2026' : 'Ej. Folio 45-B'}
-                value={formData.consent_reference}
-                onChange={handleInputChange}
-                disabled={loading}
-              />
-            </div>
+          {/* CASO 2: FIRMA EN PAPEL */}
+          {formData.consent_source === 'signed_paper' && (
+            <div className="grid grid-2" style={{ gap: '1.5rem', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem', height: 'fit-content' }}>
+                <Shield size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
+                <span>El <strong>Código de Referencia</strong> se asignará automáticamente coincidiendo con la Signatura de Catálogo (ej. MV-FOT-2026-0001).</span>
+              </div>
 
-            {/* Subir archivo de respaldo legal (Casos 2 y 3) */}
-            {formData.consent_source !== 'web_form' && (
-              <div className="form-group">
+              <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label form-label-required" style={{ fontWeight: 600 }}>
-                  {formData.consent_source === 'signed_paper' 
-                    ? 'Subir Foto/PDF de Planilla Firmada' 
-                    : 'Subir PDF del Convenio de Respaldo'}
+                  Subir Foto/PDF de Planilla Firmada
                 </label>
                 {!consentFile ? (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -687,8 +758,125 @@ export default function AdminAportesNuevo() {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* CASO 3: CONVENIO INSTITUCIONAL */}
+          {formData.consent_source === 'institutional_agreement' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="grid grid-2">
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label form-label-required">Convenio Colectivo / Institucional</label>
+                  <select
+                    name="institutional_agreement_id"
+                    required
+                    className="form-select"
+                    value={formData.institutional_agreement_id}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData(prev => ({ ...prev, institutional_agreement_id: val }));
+                      
+                      // Auto-rellenar nombre de institución si es convenio existente
+                      if (val && val !== 'new') {
+                        const selected = agreements.find(a => a.id === val);
+                        if (selected) {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            neighborhood_or_institution: selected.institution,
+                            related_institution: selected.institution 
+                          }));
+                        }
+                      }
+                    }}
+                    disabled={loading}
+                    style={{ height: '40px' }}
+                  >
+                    <option value="">-- Seleccione un convenio --</option>
+                    {agreements.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name} ({a.institution})</option>
+                    ))}
+                    <option value="new">+ Registrar un nuevo convenio de respaldo...</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Registro de Convenio Nuevo */}
+              {formData.institutional_agreement_id === 'new' && (
+                <div style={{ padding: '1.5rem', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary-blue)' }}>Registrar Nuevo Convenio Institucional</h4>
+                  
+                  <div className="grid grid-2">
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label form-label-required">Nombre del Convenio</label>
+                      <input
+                        type="text"
+                        name="new_agreement_name"
+                        required
+                        className="form-input"
+                        placeholder="Ej. Convenio Marco Biblioteca Municipal - Res 123/26"
+                        value={formData.new_agreement_name}
+                        onChange={handleInputChange}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label form-label-required">Institución Firmante</label>
+                      <input
+                        type="text"
+                        name="new_agreement_institution"
+                        required
+                        className="form-input"
+                        placeholder="Ej. Biblioteca Municipal"
+                        value={formData.new_agreement_institution}
+                        onChange={handleInputChange}
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label form-label-required" style={{ fontWeight: 600 }}>Subir Documento PDF de Convenio</label>
+                    {!newAgreementFile ? (
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <input
+                          type="file"
+                          ref={newAgreementFileRef}
+                          onChange={handleNewAgreementFileChange}
+                          accept="application/pdf"
+                          style={{ display: 'none' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => newAgreementFileRef.current?.click()}
+                          className="btn btn-outline"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '40px', justifyContent: 'center' }}
+                          disabled={loading}
+                        >
+                          <Upload size={16} /> Seleccionar PDF de Convenio
+                        </button>
+                        {newAgreementFileError && <div style={{ color: 'var(--danger-color)', fontSize: '0.8rem', marginTop: '0.25rem' }}>{newAgreementFileError}</div>}
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '0.5rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.85rem', height: '40px' }}>
+                        <span style={{ fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>
+                          📄 {newAgreementFile.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={removeNewAgreementFile}
+                          style={{ background: 'none', border: 'none', color: 'var(--neutral-grey)', cursor: 'pointer' }}
+                          disabled={loading}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* BOTONES DE ENVÍO */}

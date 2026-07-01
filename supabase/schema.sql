@@ -22,6 +22,15 @@ CREATE TABLE IF NOT EXISTS public.contributors (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 2.5 Tabla de Convenios Institucionales
+CREATE TABLE IF NOT EXISTS public.institutional_agreements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  institution TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- 3. Tabla de Aportes
 CREATE TABLE IF NOT EXISTS public.contributions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -43,6 +52,8 @@ CREATE TABLE IF NOT EXISTS public.contributions (
     'Aprobado para e-book', 'Restringido', 'Rechazado', 'Archivado'
   )),
   internal_notes TEXT,
+  institutional_agreement_id UUID REFERENCES public.institutional_agreements(id) ON DELETE SET NULL,
+  catalog_code TEXT UNIQUE,
   consent_source TEXT NOT NULL DEFAULT 'web_form' CHECK (consent_source IN ('web_form', 'signed_paper', 'institutional_agreement')),
   consent_reference TEXT,
   consent_file_path TEXT,
@@ -97,6 +108,7 @@ ALTER TABLE public.contributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contribution_files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.consent_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.institutional_agreements ENABLE ROW LEVEL SECURITY;
 
 -- Función de ayuda para validación de roles de usuario (SECURITY DEFINER para bypassear RLS en consultas internas)
 CREATE OR REPLACE FUNCTION public.has_role(user_id UUID, allowed_roles TEXT[])
@@ -177,6 +189,15 @@ CREATE POLICY "Permitir lectura de consentimiento al equipo"
 CREATE POLICY "Permitir control total de consentimiento al administrador"
   ON public.consent_records FOR ALL TO authenticated
   USING (public.has_role(auth.uid(), ARRAY['admin']));
+
+-- Políticas para Institutional Agreements
+CREATE POLICY "Permitir lectura de convenios al equipo"
+  ON public.institutional_agreements FOR SELECT TO authenticated
+  USING (public.has_role(auth.uid(), ARRAY['admin', 'editor', 'validator', 'interviewer']));
+
+CREATE POLICY "Permitir inserción de convenios al equipo"
+  ON public.institutional_agreements FOR INSERT TO authenticated
+  WITH CHECK (public.has_role(auth.uid(), ARRAY['admin', 'editor', 'validator', 'interviewer']));
 
 -- Políticas para Audit Logs
 CREATE POLICY "Permitir lectura de auditoría a administradores y editores"
@@ -273,6 +294,49 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE TRIGGER update_contributions_updated_at
   BEFORE UPDATE ON public.contributions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Trigger: Generar código de catálogo automático (ej: MV-FOT-2026-0001)
+CREATE OR REPLACE FUNCTION public.generate_catalog_code()
+RETURNS TRIGGER AS $$
+DECLARE
+  type_code TEXT;
+  year_val TEXT;
+  seq_num INT;
+BEGIN
+  -- 1. Obtener la abreviatura del tipo
+  type_code := CASE NEW.contribution_type
+    WHEN 'Testimonio escrito' THEN 'TXT'
+    WHEN 'Fotografía' THEN 'FOT'
+    WHEN 'Documento' THEN 'DOC'
+    WHEN 'Audio' THEN 'AUD'
+    WHEN 'Video' THEN 'VID'
+    ELSE 'GEN'
+  END;
+
+  -- 2. Obtener el año de creación
+  year_val := to_char(NOW(), 'YYYY');
+
+  -- 3. Obtener el número correlativo para este tipo y año
+  SELECT COALESCE(COUNT(*), 0) + 1 INTO seq_num
+  FROM public.contributions
+  WHERE contribution_type = NEW.contribution_type
+    AND to_char(created_at, 'YYYY') = year_val;
+
+  -- 4. Formatear y asignar el código de catálogo (ej: MV-FOT-2026-0001)
+  NEW.catalog_code := 'MV-' || type_code || '-' || year_val || '-' || lpad(seq_num::text, 4, '0');
+
+  -- 5. Para el Caso 2 (signed_paper), el código de referencia física por defecto es el mismo código de catálogo
+  IF NEW.consent_source = 'signed_paper' AND (NEW.consent_reference IS NULL OR NEW.consent_reference = '') THEN
+    NEW.consent_reference := NEW.catalog_code;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER contributions_catalog_code_trigger
+  BEFORE INSERT ON public.contributions
+  FOR EACH ROW EXECUTE FUNCTION public.generate_catalog_code();
 
 -- 7. Inicialización de Storage (bucket privado 'historical-uploads')
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

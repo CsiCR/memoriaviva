@@ -199,6 +199,10 @@ export default async function AdminContributionDetail({ params, searchParams }: 
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
               <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Código de Catálogo (Signatura)</span>
+                <strong style={{ fontSize: '1rem', color: 'var(--primary-blue)' }}>{contribution.catalog_code || 'MV-GEN-PENDIENTE'}</strong>
+              </div>
+              <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Tipo de Aporte</span>
                 <strong style={{ fontSize: '0.95rem' }}>{contribution.contribution_type}</strong>
               </div>

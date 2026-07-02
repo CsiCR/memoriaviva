@@ -78,6 +78,43 @@ export default function AdminAportesNuevo() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
+  
+  // Estado para advertir si el código de formulario de papel está duplicado (ej. por fotocopia)
+  const [duplicateRefWarning, setDuplicateRefWarning] = useState<string | null>(null);
+
+  // Efecto con Debounce para verificar códigos de formulario duplicados
+  useEffect(() => {
+    if (!formData.consent_reference || formData.consent_reference.trim() === '') {
+      setDuplicateRefWarning(null);
+      return;
+    }
+
+    const checkDuplicateReference = async () => {
+      try {
+        const supabase = createClient();
+        const { count, error } = await supabase
+          .from('contributions')
+          .select('*', { count: 'exact', head: true })
+          .eq('consent_reference', formData.consent_reference.trim());
+
+        if (!error && count && count > 0) {
+          setDuplicateRefWarning(
+            `⚠️ Este código de formulario ya está registrado en ${count} aporte${count > 1 ? 's' : ''}. Si fotocopiaste la planilla, ten en cuenta que se compartirá el identificador físico.`
+          );
+        } else {
+          setDuplicateRefWarning(null);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      checkDuplicateReference();
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [formData.consent_reference]);
 
   // Cargar convenios al montar
   useEffect(() => {
@@ -1209,8 +1246,13 @@ DNI/Representación:
                       value={formData.consent_reference}
                       onChange={handleInputChange}
                       disabled={loading}
-                      style={{ height: '40px' }}
+                      style={{ height: '40px', borderColor: duplicateRefWarning ? '#b45309' : 'var(--border-color)' }}
                     />
+                    {duplicateRefWarning && (
+                      <div style={{ color: '#b45309', fontSize: '0.75rem', marginTop: '0.35rem', backgroundColor: '#fffbeb', border: '1px solid #fef3c7', padding: '0.4rem 0.6rem', borderRadius: '4px', lineHeight: 1.3 }}>
+                        {duplicateRefWarning}
+                      </div>
+                    )}
                     <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
                       💡 Si utilizaste una planilla impresa con QR, ingresa el código aquí. Si la dejas en blanco, se usará la signatura sugerida <strong>{suggestedCatalogCode}</strong>.
                     </span>

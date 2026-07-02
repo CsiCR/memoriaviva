@@ -13,12 +13,17 @@ function PrintFormContent() {
   const code = searchParams.get('code') || 'MV-PENDIENTE';
 
   useEffect(() => {
-    document.title = `${code} - Planilla de Consentimiento - Memoria Viva Pico Truncado`;
-    // Retardo pequeño para asegurar la renderización
-    const timer = setTimeout(() => {
-      window.print();
-    }, 500);
-    return () => clearTimeout(timer);
+    document.title = isBlank
+      ? 'Planilla de Entrevista en Blanco - Memoria Viva Pico Truncado'
+      : `${code} - Planilla de Consentimiento - Memoria Viva Pico Truncado`;
+    
+    // Solo disparar impresión automática si es un documento cargado específico
+    if (!isBlank) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
   }, [code, isBlank]);
 
   const [quantity, setQuantity] = React.useState(1);

@@ -196,36 +196,30 @@ function PrintFormContent() {
               Planilla de Registro de Entrevistas y Cesión de Derechos
             </h2>
 
-            {/* Sección 1: Datos del Aportante */}
+            {/* Párrafo legal introductorio (Idéntico al de aportes específicos) */}
             <div style={{ marginBottom: '0.6rem' }}>
-              <h3 style={{ fontSize: '9pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.15rem', marginBottom: '0.35rem', color: '#0f172a' }}>
-                1. Datos del Aportante / Filiación
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem 1rem' }}>
-                <div>Nombre Completo: <span style={{ color: '#555' }}>____________________________________</span></div>
-                <div>DNI: <span style={{ color: '#555' }}>________________________</span></div>
-                <div>Teléfono / WhatsApp: <span style={{ color: '#555' }}>__________________________</span></div>
-                <div>E-mail: <span style={{ color: '#555' }}>________________________</span></div>
-                <div>Barrio / Institución: <span style={{ color: '#555' }}>__________________________</span></div>
-                <div>Relación local: <span style={{ fontSize: '8.5pt' }}>[ ] Vecino &nbsp; [ ] Antiguo Poblador &nbsp; [ ] Descendiente &nbsp; [ ] Otro</span></div>
-              </div>
+              <p style={{ textIndent: '2rem', textAlign: 'justify', margin: '0 0 0.4rem 0', fontSize: '9pt' }}>
+                Por medio de la presente, yo <strong>________________________________________</strong>, con DNI N.º <strong>____________________</strong>, en mi carácter de propietario, autor/a y/o de derecho habiente legítimo de los materiales históricos que aporto al archivo comunitario, declaro ceder y autorizar el uso del material detallado a continuación:
+              </p>
+              <p style={{ paddingLeft: '2rem', margin: '0.4rem 0', lineHeight: 1.4, fontSize: '9pt' }}>
+                <strong>Título/Identificación del Material:</strong> ______________________________________________________ <br />
+                <strong>Código de Referencia / Catálogo:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{p.code}</span>
+              </p>
             </div>
 
-            {/* Sección 2: Detalle del Material Aportado */}
-            <div style={{ marginBottom: '0.6rem' }}>
-              <h3 style={{ fontSize: '9pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.15rem', marginBottom: '0.35rem', color: '#0f172a' }}>
-                2. Detalle del Material Histórico
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <div>Título / Identificación del Material: <span style={{ color: '#555' }}>______________________________________________________</span></div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
-                  <div>Tipo: <span style={{ fontSize: '8.5pt' }}>[ ] Foto &nbsp; [ ] Documento &nbsp; [ ] Audio &nbsp; [ ] Video &nbsp; [ ] Testimonio Escrito</span></div>
-                  <div>Fecha/Década aprox.: <span style={{ color: '#555' }}>________________________</span></div>
-                </div>
-                <div>Lugar / Relación geográfica: <span style={{ color: '#555' }}>___________________________________________________________</span></div>
-                <div>Personas retratadas / Detalles: <span style={{ color: '#555' }}>__________________________________________________________</span></div>
-                <div>Relato o contexto histórico breve: <span style={{ color: '#555' }}>____________________________________________________________</span></div>
-                <div style={{ height: '14px', borderBottom: '1px dashed #cccccc' }}></div>
+            {/* Ficha Técnica de Campo (Para uso interno) */}
+            <div style={{ marginBottom: '0.6rem', padding: '0.5rem 0.75rem', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+              <strong style={{ fontSize: '8.5pt', color: '#334155', display: 'block', marginBottom: '0.35rem', borderBottom: '1px dashed #cbd5e1', paddingBottom: '0.15rem' }}>
+                📋 Ficha Técnica (Para uso interno del Archivo - No forma parte de la declaración legal)
+              </strong>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem 1rem', fontSize: '8pt' }}>
+                <div>Teléfono/WhatsApp: ____________________</div>
+                <div>Email: ____________________</div>
+                <div>Barrio/Relación local: ____________________</div>
+                <div>Tipo Material: [ ]Foto [ ]Doc [ ]Aud [ ]Vid [ ]Txt</div>
+                <div>Fecha/Década aprox: __________________</div>
+                <div>Lugar/Geografía: ____________________</div>
+                <div style={{ gridColumn: 'span 2' }}>Personas retratadas/Detalles: ____________________________________________________________________</div>
               </div>
             </div>
 

@@ -229,57 +229,66 @@ function PrintFormContent() {
               </div>
             </div>
 
-            {/* Sección 3: Niveles de Autorización */}
+            {/* Sección 3: Declaraciones del Aportante */}
             <div style={{ marginBottom: '0.6rem' }}>
               <h3 style={{ fontSize: '9pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.15rem', marginBottom: '0.35rem', color: '#0f172a' }}>
-                3. Declaración y Nivel de Autorización (Marque con una X la opción elegida)
+                3. Declaraciones del Aportante (Obligatorio)
               </h3>
-              <p style={{ fontSize: '8pt', margin: '0 0 0.35rem 0', textAlign: 'justify' }}>
-                Declaro bajo juramento ser el legítimo propietario o poseedor de la autorización correspondiente de los materiales cedidos, eximiendo al proyecto de todo reclamo de terceros, y autorizo su uso bajo la siguiente categoría:
-              </p>
+              <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', margin: 0, fontSize: '8pt', textAlign: 'justify' }}>
+                <li>Declaro bajo juramento ser el legítimo propietario o poseer la autorización correspondiente del titular de los derechos de autor para realizar este aporte.</li>
+                <li>Acepto que el material sea digitalizado, catalogado y archivado por el equipo editorial del proyecto.</li>
+                <li>Libero de toda responsabilidad al proyecto Memoria Viva Pico Truncado ante reclamos de terceros sobre la titularidad del material aportado.</li>
+              </ul>
+            </div>
+ 
+            {/* Sección 4: Niveles de Autorización */}
+            <div style={{ marginBottom: '0.6rem' }}>
+              <h3 style={{ fontSize: '9pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.15rem', marginBottom: '0.35rem', color: '#0f172a' }}>
+                4. Nivel de Autorización Seleccionado (Marque con una X la opción elegida)
+              </h3>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <tbody>
                   <tr style={{ border: '1px solid #000000' }}>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', textAlign: 'center', width: '8%', fontWeight: 'bold' }}>[ &nbsp; ]</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', width: '20%', fontWeight: 'bold', fontSize: '8.5pt' }}>Nivel A (Público)</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', fontSize: '8pt' }}>
-                      Publicación del material en internet (web, redes sociales, catálogos digitales) y medios impresos para divulgación cultural.
+                      Autorizo la publicación del material en internet (web, redes sociales, catálogos digitales) y medios impresos para su divulgación cultural y comunitaria.
                     </td>
                   </tr>
                   <tr style={{ border: '1px solid #000000' }}>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', textAlign: 'center', fontWeight: 'bold' }}>[ &nbsp; ]</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', fontWeight: 'bold', fontSize: '8.5pt' }}>Nivel B (Educativo)</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', fontSize: '8pt' }}>
-                      Uso exclusivo para fines pedagógicos, educativos, escolares, académicos o de investigación sin fines de lucro.
+                      Autorizo el uso del material exclusivamente para fines pedagogicos, educativos, escolares, académicos o de investigación sin fines de lucro.
                     </td>
                   </tr>
                   <tr style={{ border: '1px solid #000000' }}>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', textAlign: 'center', fontWeight: 'bold' }}>[ &nbsp; ]</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', fontWeight: 'bold', fontSize: '8.5pt' }}>Nivel C (Interno)</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', fontSize: '8pt' }}>
-                      Consulta únicamente física o privada dentro del archivo histórico, sin autorización para publicarse en redes ni páginas web.
+                      El material solo podrá ser consultado físicamente o de manera privada dentro del archivo histórico, sin autorización para publicarse en redes ni páginas web.
                     </td>
                   </tr>
                   <tr style={{ border: '1px solid #000000' }}>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', textAlign: 'center', fontWeight: 'bold' }}>[ &nbsp; ]</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', fontWeight: 'bold', fontSize: '8.5pt' }}>Nivel D (Restringido)</td>
                     <td style={{ border: '1px solid #000000', padding: '0.25rem', fontSize: '8pt' }}>
-                      Solo con fines de preservación digital a largo plazo. No se autoriza su consulta pública ni educativa hasta nuevo aviso.
+                      Material bajo embargo. Solo se conserva con fines de preservación digital. No se autoriza su consulta pública ni educativa hasta nuevo aviso.
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-
-            {/* Sección 4: Preferencia de Créditos */}
+ 
+            {/* Sección 5: Preferencia de Créditos */}
             <div style={{ marginBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '9pt', fontWeight: 'bold', borderBottom: '1px solid #cccccc', paddingBottom: '0.15rem', marginBottom: '0.35rem', color: '#0f172a' }}>
-                4. Preferencia de Créditos (Marque con una X la opción elegida)
+                5. Preferencia de Créditos al Publicar (Marque con una X la opción elegida)
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.3rem 1rem', paddingLeft: '0.5rem' }}>
-                <div style={{ fontSize: '8.5pt' }}>[ &nbsp; ] <strong>Nombre Completo</strong> <span style={{ fontSize: '7.5pt', color: '#555555' }}>(Aporte de [Nombre])</span></div>
-                <div style={{ fontSize: '8.5pt' }}>[ &nbsp; ] <strong>Iniciales</strong> <span style={{ fontSize: '7.5pt', color: '#555555' }}>(Aporte de [Iniciales])</span></div>
-                <div style={{ fontSize: '8.5pt' }}>[ &nbsp; ] <strong>Familia Aportante</strong> <span style={{ fontSize: '7.5pt', color: '#555555' }}>(Donación Familia [Barrio/Inst])</span></div>
+                <div style={{ fontSize: '8.5pt' }}>[ &nbsp; ] <strong>Nombre Completo</strong> <span style={{ fontSize: '7.5pt', color: '#555555' }}>(Ej. <i>"Aporte de Juan Pérez"</i>)</span></div>
+                <div style={{ fontSize: '8.5pt' }}>[ &nbsp; ] <strong>Iniciales</strong> <span style={{ fontSize: '7.5pt', color: '#555555' }}>(Ej. <i>"Aporte de J. P."</i>)</span></div>
+                <div style={{ fontSize: '8.5pt' }}>[ &nbsp; ] <strong>Familia Aportante</strong> <span style={{ fontSize: '7.5pt', color: '#555555' }}>(Ej. <i>"Donación Familia Pérez"</i>)</span></div>
                 <div style={{ fontSize: '8.5pt' }}>[ &nbsp; ] <strong>Anónimo</strong> <span style={{ fontSize: '7.5pt', color: '#555555' }}>(El material se muestra sin mencionar su nombre)</span></div>
               </div>
             </div>

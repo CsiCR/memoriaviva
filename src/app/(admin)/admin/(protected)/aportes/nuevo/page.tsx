@@ -1197,9 +1197,23 @@ DNI/Representación:
                     )}
                   </div>
 
-                  <div style={{ fontSize: '0.82rem', color: '#64748b', padding: '0.75rem 1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Shield size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
-                    <span>El <strong>Código de Referencia</strong> se asignará automáticamente como <strong style={{ fontFamily: 'monospace' }}>{suggestedCatalogCode}</strong> al guardar.</span>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      Código de Referencia / Formulario Físico (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      name="consent_reference"
+                      className="form-input"
+                      placeholder="Ej. MV-FORM-00045"
+                      value={formData.consent_reference}
+                      onChange={handleInputChange}
+                      disabled={loading}
+                      style={{ height: '40px' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
+                      💡 Si utilizaste una planilla impresa con QR, ingresa el código aquí. Si la dejas en blanco, se usará la signatura sugerida <strong>{suggestedCatalogCode}</strong>.
+                    </span>
                   </div>
                 </div>
               )}

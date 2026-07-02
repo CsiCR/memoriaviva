@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
-import { FileText, Search, Filter, RefreshCw, Plus } from 'lucide-react';
+import { FileText, Search, Filter, RefreshCw, Plus, Printer } from 'lucide-react';
 
 export const revalidate = 0; // Evitar caché
 
@@ -84,9 +84,20 @@ export default async function AdminAportes({ searchParams }: PageProps) {
             Revisa, edita los estados editoriales y audita los materiales históricos enviados por la comunidad.
           </p>
         </div>
-        <Link href="/admin/aportes/nuevo" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '40px', padding: '0 1.25rem' }}>
-          <Plus size={18} /> Cargar Aporte Administrativo
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <a
+            href="/admin/print?blank=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '40px', padding: '0 1.25rem', textDecoration: 'none' }}
+          >
+            <Printer size={18} /> Planilla de Entrevista
+          </a>
+          <Link href="/admin/aportes/nuevo" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '40px', padding: '0 1.25rem' }}>
+            <Plus size={18} /> Cargar Aporte Administrativo
+          </Link>
+        </div>
       </div>
 
       {/* Contenedor de Filtros */}

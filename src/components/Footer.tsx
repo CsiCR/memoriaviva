@@ -27,6 +27,9 @@ export default function Footer() {
               <Link href="/aportar" style={{ color: '#a0aec0' }}>Aportar una Memoria</Link>
             </li>
             <li>
+              <Link href="/quiero-formar-parte" style={{ color: '#a0aec0' }}>Quiero formar parte</Link>
+            </li>
+            <li>
               <Link href="/privacidad" style={{ color: '#a0aec0' }}>Política de Privacidad</Link>
             </li>
           </ul>

@@ -16,6 +16,7 @@ export default function Header() {
     { href: '/', label: 'Inicio' },
     { href: '/proyecto', label: 'El Proyecto' },
     { href: '/aportar', label: 'Aportar una Memoria' },
+    { href: '/quiero-formar-parte', label: 'Quiero formar parte' },
     { href: '/privacidad', label: 'Privacidad' },
   ];
 

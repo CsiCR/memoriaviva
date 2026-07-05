@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
     // 4. Obtener archivos
     const files = formData.getAll('files') as File[];
     
-    // Si no es un testimonio escrito, requiere archivos
-    if (contributionType !== 'Testimonio escrito' && (!files || files.length === 0 || (files.length === 1 && files[0].size === 0))) {
+    // Si no es un testimonio escrito o registro de solo texto, requiere archivos
+    if (contributionType !== 'Testimonio escrito' && contributionType !== 'Solo texto' && (!files || files.length === 0 || (files.length === 1 && files[0].size === 0))) {
       return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo.' }, { status: 400 });
     }
 

@@ -112,7 +112,7 @@ export default function QuieroFormarParte() {
         : 'Lugar de nacimiento: No especificado';
       
       submissionData.append('title', birthPlaceLabel);
-      submissionData.append('contribution_type', 'Solo texto');
+      submissionData.append('contribution_type', 'Testimonio escrito');
       submissionData.append('description', 'nuevo registro de aportante');
       
       if (formData.birth_date) {

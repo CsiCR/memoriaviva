@@ -147,6 +147,23 @@ export default async function AdminProtectedLayout({
                 <Users size={18} /> Aportantes
               </Link>
             </li>
+            {profile.role === 'admin' && (
+              <li>
+                <Link href="/admin/opciones" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  color: '#cbd5e1',
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+                className="admin-sidebar-link">
+                  <BookOpen size={18} /> Configurar Combos
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
 

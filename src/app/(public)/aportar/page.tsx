@@ -56,6 +56,35 @@ export default function Aportar() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
 
+  // Opciones dinámicas desde la base de datos
+  const [dbOptions, setDbOptions] = useState<Record<string, { value: string; label: string }[]>>({
+    contribution_type: [],
+    relation_to_city: [],
+    authorization_level: [],
+    credit_preference: []
+  });
+
+  // Cargar opciones desde la base de datos al montar
+  useEffect(() => {
+    const loadDbOptions = async () => {
+      try {
+        const res = await fetch('/api/select-options');
+        if (res.ok) {
+          const data = await res.json();
+          setDbOptions({
+            contribution_type: data.contribution_type || [],
+            relation_to_city: data.relation_to_city || [],
+            authorization_level: data.authorization_level || [],
+            credit_preference: data.credit_preference || []
+          });
+        }
+      } catch (err) {
+        console.error('Error al cargar opciones dinámicas:', err);
+      }
+    };
+    loadDbOptions();
+  }, []);
+
   // Estado para controlar si hay datos previos guardados
   const [hasCachedContributor, setHasCachedContributor] = useState(false);
 
@@ -426,11 +455,9 @@ export default function Aportar() {
                   style={{ height: '40px' }}
                 >
                   <option value="">Seleccione una opción...</option>
-                  <option value="Vecino actual">Vecino actual</option>
-                  <option value="Vecino anterior (emigrado)">Vecino anterior (emigrado)</option>
-                  <option value="Familiar de pioneros">Familiar de pioneros</option>
-                  <option value="Representante de institución local">Representante de institución local</option>
-                  <option value="Otro">Otro</option>
+                  {dbOptions.relation_to_city.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -518,11 +545,9 @@ export default function Aportar() {
                   style={{ height: '40px' }}
                 >
                   <option value="">Seleccione una opción...</option>
-                  <option value="Testimonio escrito">Testimonio escrito (Solo texto)</option>
-                  <option value="Fotografía">Fotografía</option>
-                  <option value="Documento">Documento (Cartas, boletines, planos, etc.)</option>
-                  <option value="Audio">Audio (Relatos grabados, entrevistas antiguas)</option>
-                  <option value="Video">Video (Grabaciones familiares, institucionales)</option>
+                  {dbOptions.contribution_type.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -768,10 +793,9 @@ export default function Aportar() {
                   style={{ height: '40px' }}
                 >
                   <option value="">Seleccione un nivel...</option>
-                  <option value="A">Nivel A — Uso público completo (Libro, Web, Muestras, Redes, Educación)</option>
-                  <option value="B">Nivel B — Uso editorial y educativo (Libro y escuelas, sin redes sociales)</option>
-                  <option value="C">Nivel C — Archivo histórico interno (Solo conservación, sin publicación)</option>
-                  <option value="D">Nivel D — Material restringido (Acceso limitado únicamente al comité)</option>
+                  {dbOptions.authorization_level.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -787,10 +811,9 @@ export default function Aportar() {
                   style={{ height: '40px' }}
                 >
                   <option value="">Seleccione una preferencia...</option>
-                  <option value="Nombre completo">Nombre completo (Ej. Aporte de Juan Carlos Pérez)</option>
-                  <option value="Iniciales">Iniciales (Ej. J.C.P.)</option>
-                  <option value="Familia aportante">Familia aportante (Ej. Aporte de la Familia Pérez)</option>
-                  <option value="Anónimo">Anónimo (Sin mención pública, solo registro interno)</option>
+                  {dbOptions.credit_preference.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
             </div>

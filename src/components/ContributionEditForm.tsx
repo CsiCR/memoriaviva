@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { updateContributionStatus } from '@/app/actions/contributions';
 import { Save, CheckCircle, AlertCircle, Upload, Shield } from 'lucide-react';
 
@@ -29,6 +29,30 @@ export default function ContributionEditForm({
   const [level, setLevel] = useState(initialLevel);
   const [credits, setCredits] = useState(initialCredits);
   const [consentFile, setConsentFile] = useState<File | null>(null);
+
+  // Opciones dinámicas de base de datos
+  const [dbOptions, setDbOptions] = useState<Record<string, { value: string; label: string }[]>>({
+    authorization_level: [],
+    credit_preference: []
+  });
+
+  useEffect(() => {
+    const loadDbOptions = async () => {
+      try {
+        const res = await fetch('/api/select-options');
+        if (res.ok) {
+          const data = await res.json();
+          setDbOptions({
+            authorization_level: data.authorization_level || [],
+            credit_preference: data.credit_preference || []
+          });
+        }
+      } catch (err) {
+        console.error('Error loading options in ContributionEditForm:', err);
+      }
+    };
+    loadDbOptions();
+  }, []);
 
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -117,10 +141,10 @@ export default function ContributionEditForm({
             disabled={saving}
             style={{ height: '40px' }}
           >
-            <option value="A">Nivel A: Público (Web y Catálogos)</option>
-            <option value="B">Nivel B: Educativo y Académico</option>
-            <option value="C">Nivel C: Interno (Solo consulta en Archivo)</option>
-            <option value="D">Nivel D: Restringido (Solo preservación)</option>
+            <option value="">Seleccione un nivel...</option>
+            {dbOptions.authorization_level.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -135,10 +159,10 @@ export default function ContributionEditForm({
             disabled={saving}
             style={{ height: '40px' }}
           >
-            <option value="Nombre completo">Nombre completo (Aporte de [Nombre])</option>
-            <option value="Iniciales">Iniciales (Aporte de [Iniciales])</option>
-            <option value="Familia aportante">Familia aportante (Donación Familia [Barrio/Inst])</option>
-            <option value="Anónimo">Anónimo</option>
+            <option value="">Seleccione una preferencia...</option>
+            {dbOptions.credit_preference.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
 

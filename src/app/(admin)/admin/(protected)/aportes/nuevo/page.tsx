@@ -78,6 +78,35 @@ export default function AdminAportesNuevo() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
+
+  // Opciones dinámicas de la base de datos
+  const [dbOptions, setDbOptions] = useState<Record<string, { value: string; label: string; code?: string }[]>>({
+    contribution_type: [],
+    relation_to_city: [],
+    authorization_level: [],
+    credit_preference: []
+  });
+
+  // Cargar opciones dinámicas al montar
+  useEffect(() => {
+    const loadDbOptions = async () => {
+      try {
+        const res = await fetch('/api/select-options');
+        if (res.ok) {
+          const data = await res.json();
+          setDbOptions({
+            contribution_type: data.contribution_type || [],
+            relation_to_city: data.relation_to_city || [],
+            authorization_level: data.authorization_level || [],
+            credit_preference: data.credit_preference || []
+          });
+        }
+      } catch (err) {
+        console.error('Error al cargar opciones dinámicas:', err);
+      }
+    };
+    loadDbOptions();
+  }, []);
   
   // Estado para advertir si el código de formulario de papel está duplicado (ej. por fotocopia)
   const [duplicateRefWarning, setDuplicateRefWarning] = useState<string | null>(null);
@@ -154,14 +183,8 @@ export default function AdminAportesNuevo() {
           .gte('created_at', `${yearVal}-01-01T00:00:00Z`)
           .lte('created_at', `${yearVal}-12-31T23:59:59Z`);
 
-        const typeCodeMap: Record<string, string> = {
-          'Testimonio escrito': 'TXT',
-          'Fotografía': 'FOT',
-          'Documento': 'DOC',
-          'Audio': 'AUD',
-          'Video': 'VID'
-        };
-        const typeCode = typeCodeMap[formData.contribution_type] || 'GEN';
+        const selectedTypeOpt = dbOptions.contribution_type.find(o => o.value === formData.contribution_type);
+        const typeCode = selectedTypeOpt?.code || 'GEN';
         const nextNum = (count || 0) + 1;
         const code = `MV-${typeCode}-${yearVal}-${String(nextNum).padStart(4, '0')}`;
         setSuggestedCatalogCode(code);
@@ -676,11 +699,10 @@ DNI/Representación:
                       disabled={loading}
                       style={{ height: '40px' }}
                     >
-                      <option value="Vecino actual">Vecino actual (Nacido o residente)</option>
-                      <option value="Antiguo poblador">Antiguo poblador (Vivió anteriormente)</option>
-                      <option value="Descendiente">Descendiente directo (Hijo/a, familiar)</option>
-                      <option value="Historiador o Investigador">Historiador / Investigador</option>
-                      <option value="Institución local">Institución local</option>
+                      <option value="">Seleccione una opción...</option>
+                      {dbOptions.relation_to_city.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -832,11 +854,9 @@ DNI/Representación:
                   style={{ height: '40px' }}
                 >
                   <option value="">-- Seleccione un tipo --</option>
-                  <option value="Fotografía">Fotografía histórica (FOT)</option>
-                  <option value="Documento">Documento / Diario / Folleto (DOC)</option>
-                  <option value="Testimonio escrito">Testimonio escrito (Relato manuscrito o digital) (TXT)</option>
-                  <option value="Audio">Audio / Grabación oral (AUD)</option>
-                  <option value="Video">Video / Filmación histórica (VID)</option>
+                  {dbOptions.contribution_type.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -1161,10 +1181,10 @@ DNI/Representación:
                   disabled={loading}
                   style={{ height: '40px' }}
                 >
-                  <option value="A">Nivel A: Público (Web y Catálogos)</option>
-                  <option value="B">Nivel B: Educativo y Académico</option>
-                  <option value="C">Nivel C: Interno (Solo consulta en Archivo)</option>
-                  <option value="D">Nivel D: Restringido (Solo preservación)</option>
+                  <option value="">Seleccione un nivel...</option>
+                  {dbOptions.authorization_level.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -1179,10 +1199,10 @@ DNI/Representación:
                   disabled={loading}
                   style={{ height: '40px' }}
                 >
-                  <option value="Nombre completo">Nombre completo (Aporte de [Nombre])</option>
-                  <option value="Iniciales">Iniciales (Aporte de [Iniciales])</option>
-                  <option value="Familia aportante">Familia aportante (Donación Familia [Barrio/Inst])</option>
-                  <option value="Anónimo">Anónimo</option>
+                  <option value="">Seleccione una preferencia...</option>
+                  {dbOptions.credit_preference.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
             </div>

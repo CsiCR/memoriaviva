@@ -31,6 +31,24 @@ export default function QuieroFormarParte() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Opciones de relación con la ciudad dinámicas desde la base de datos
+  const [relationOptions, setRelationOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    const loadRelations = async () => {
+      try {
+        const res = await fetch('/api/select-options?category=relation_to_city');
+        if (res.ok) {
+          const data = await res.json();
+          setRelationOptions(data);
+        }
+      } catch (err) {
+        console.error('Error al cargar relaciones:', err);
+      }
+    };
+    loadRelations();
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
@@ -314,11 +332,9 @@ export default function QuieroFormarParte() {
               style={{ height: '42px', borderColor: formErrors.relation_to_city ? 'var(--danger-color)' : 'var(--border-color)' }}
             >
               <option value="">Selecciona una opción...</option>
-              <option value="Antiguo Poblador">Antiguo Poblador (Más de 30 años en la ciudad)</option>
-              <option value="Vecino Residente">Vecino Residente (Nacido o criado aquí)</option>
-              <option value="Descendiente">Descendiente de familia pionera</option>
-              <option value="Institución o Comercio">Represento a una institución o comercio histórico</option>
-              <option value="Otro">Otro vínculo con la localidad</option>
+              {relationOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
             </select>
             {formErrors.relation_to_city && <span style={{ color: 'var(--danger-color)', fontSize: '0.78rem', marginTop: '0.25rem', display: 'block' }}>{formErrors.relation_to_city}</span>}
           </div>

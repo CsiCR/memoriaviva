@@ -174,7 +174,7 @@ export default function QuieroFormarParte() {
       sessionStorage.setItem('last_contributor', JSON.stringify(contributorInfo));
 
       // Redireccionar al agradecimiento público
-      router.push('/gracias');
+      router.push('/gracias?source=quiero-formar-parte');
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Error de conexión con el servidor. Inténtalo nuevamente.');

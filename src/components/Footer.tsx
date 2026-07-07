@@ -38,16 +38,13 @@ export default function Footer() {
         <div className="footer-section">
           <h4>Contacto Institucional</h4>
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#a0aec0' }}>
-            <strong>Email:</strong> contacto@memoriavivapicotruncado.org
+            <strong>Email:</strong> Memoriavivapicotruncado@gmail.com
           </p>
           <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#a0aec0' }}>
             <strong>Lugar:</strong> Unión Vecinal Barrio YPF
           </p>
           <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9rem', color: '#a0aec0' }}>
             Pico Truncado, Santa Cruz, Argentina
-          </p>
-          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#a0aec0' }}>
-            <strong>WhatsApp del equipo:</strong> +54 297 123-4567
           </p>
         </div>
       </div>

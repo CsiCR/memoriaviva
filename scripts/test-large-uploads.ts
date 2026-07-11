@@ -269,6 +269,123 @@ async function main() {
     console.log('  -> [ÉXITO] RLS bloqueó la subida directa con excepción:', err.message);
   }
 
+  // PRUEBA 7: Validaciones de approximate_decade y Normalización en RPC
+  console.log('\nPrueba 7: Verificando normalización de approximate_decade y restricciones en la RPC...');
+
+  // Caso A: approximate_decade = '' -> debe guardar NULL
+  console.log('  -> Caso A: approximate_decade = \'\'...');
+  const resA = await adminSupabase.rpc('create_contribution_with_files', {
+    p_contributor: { dni: '70000001', full_name: 'Test Década A', phone: '297444444', email: 'test@decade.org', relation_to_city: 'Vecino actual', neighborhood_or_institution: 'Centro' },
+    p_contribution: { title: 'Aporte A', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '' },
+    p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
+    p_files: [],
+    p_user_id: null
+  });
+  if (resA.error) {
+    console.error('     [FALLO] Error en Caso A:', resA.error.message);
+    process.exit(1);
+  }
+  const { data: contribA } = await adminSupabase.from('contributions').select('approximate_decade').eq('id', resA.data.contribution_id).single();
+  console.log(`     Valor guardado: ${contribA?.approximate_decade === null ? 'NULL (Correcto)' : contribA?.approximate_decade}`);
+  if (contribA?.approximate_decade !== null) {
+    console.error('     [FALLO] No guardó NULL.');
+    process.exit(1);
+  }
+
+  // Caso B: approximate_decade = '   ' -> debe guardar NULL
+  console.log('  -> Caso B: approximate_decade = \'   \'...');
+  const resB = await adminSupabase.rpc('create_contribution_with_files', {
+    p_contributor: { dni: '70000002', full_name: 'Test Década B', phone: '297444444', email: 'test@decade.org', relation_to_city: 'Vecino actual', neighborhood_or_institution: 'Centro' },
+    p_contribution: { title: 'Aporte B', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '   ' },
+    p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
+    p_files: [],
+    p_user_id: null
+  });
+  if (resB.error) {
+    console.error('     [FALLO] Error en Caso B:', resB.error.message);
+    process.exit(1);
+  }
+  const { data: contribB } = await adminSupabase.from('contributions').select('approximate_decade').eq('id', resB.data.contribution_id).single();
+  console.log(`     Valor guardado: ${contribB?.approximate_decade === null ? 'NULL (Correcto)' : contribB?.approximate_decade}`);
+  if (contribB?.approximate_decade !== null) {
+    console.error('     [FALLO] No guardó NULL.');
+    process.exit(1);
+  }
+
+  // Caso C: approximate_decade = null -> debe guardar NULL
+  console.log('  -> Caso C: approximate_decade = null...');
+  const resC = await adminSupabase.rpc('create_contribution_with_files', {
+    p_contributor: { dni: '70000003', full_name: 'Test Década C', phone: '297444444', email: 'test@decade.org', relation_to_city: 'Vecino actual', neighborhood_or_institution: 'Centro' },
+    p_contribution: { title: 'Aporte C', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: null },
+    p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
+    p_files: [],
+    p_user_id: null
+  });
+  if (resC.error) {
+    console.error('     [FALLO] Error en Caso C:', resC.error.message);
+    process.exit(1);
+  }
+  const { data: contribC } = await adminSupabase.from('contributions').select('approximate_decade').eq('id', resC.data.contribution_id).single();
+  console.log(`     Valor guardado: ${contribC?.approximate_decade === null ? 'NULL (Correcto)' : contribC?.approximate_decade}`);
+  if (contribC?.approximate_decade !== null) {
+    console.error('     [FALLO] No guardó NULL.');
+    process.exit(1);
+  }
+
+  // Caso D: approximate_decade = '1960s' -> debe guardar '1960s'
+  console.log('  -> Caso D: approximate_decade = \'1960s\'...');
+  const resD = await adminSupabase.rpc('create_contribution_with_files', {
+    p_contributor: { dni: '70000004', full_name: 'Test Década D', phone: '297444444', email: 'test@decade.org', relation_to_city: 'Vecino actual', neighborhood_or_institution: 'Centro' },
+    p_contribution: { title: 'Aporte D', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '1960s' },
+    p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
+    p_files: [],
+    p_user_id: null
+  });
+  if (resD.error) {
+    console.error('     [FALLO] Error en Caso D:', resD.error.message);
+    process.exit(1);
+  }
+  const { data: contribD } = await adminSupabase.from('contributions').select('approximate_decade').eq('id', resD.data.contribution_id).single();
+  console.log(`     Valor guardado: '${contribD?.approximate_decade}' (Esperado: '1960s')`);
+  if (contribD?.approximate_decade !== '1960s') {
+    console.error('     [FALLO] No guardó \'1960s\'.');
+    process.exit(1);
+  }
+
+  // Caso E: approximate_decade = '1965' -> debe fallar por CHECK
+  console.log('  -> Caso E: approximate_decade = \'1965\' (Debe fallar)...');
+  const resE = await adminSupabase.rpc('create_contribution_with_files', {
+    p_contributor: { dni: '70000005', full_name: 'Test Década E', phone: '297444444', email: 'test@decade.org', relation_to_city: 'Vecino actual', neighborhood_or_institution: 'Centro' },
+    p_contribution: { title: 'Aporte E', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '1965' },
+    p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
+    p_files: [],
+    p_user_id: null
+  });
+  if (resE.error && resE.error.message.includes('contributions_approximate_decade_check')) {
+    console.log('     [ÉXITO] Falló correctamente por restricción CHECK:', resE.error.message);
+  } else {
+    console.error('     [FALLO] El caso E no falló o arrojó otro error:', resE.error?.message || 'Ninguno');
+    process.exit(1);
+  }
+
+  // Caso F: creación de aporte con audio y sin década -> debe completarse correctamente
+  console.log('  -> Caso F: aporte tipo Audio sin década...');
+  const resF = await adminSupabase.rpc('create_contribution_with_files', {
+    p_contributor: { dni: '70000006', full_name: 'Test Aporte Audio', phone: '297444444', email: 'test@decade.org', relation_to_city: 'Vecino pionero', neighborhood_or_institution: 'Centro' },
+    p_contribution: { title: 'Aporte Audio Test', contribution_type: 'Audio', description: 'Test de audio sin década', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '' },
+    p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
+    p_files: [],
+    p_user_id: null
+  });
+  if (resF.error) {
+    console.error('     [FALLO] Error en Caso F:', resF.error.message);
+    process.exit(1);
+  }
+  console.log('     [ÉXITO] Aporte de audio sin década guardado correctamente.');
+
+  // Limpiar registros de prueba generados
+  await adminSupabase.from('contributors').delete().in('dni', ['70000001', '70000002', '70000003', '70000004', '70000006']);
+
   console.log('\n=== TODAS LAS PRUEBAS DE VINCULACIÓN PASARON CON ÉXITO ===');
 }
 

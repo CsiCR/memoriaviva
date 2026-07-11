@@ -106,11 +106,11 @@ BEGIN
   ) VALUES (
     p_contributor->>'dni',
     p_contributor->>'full_name',
-    p_contributor->>'phone',
-    p_contributor->>'email',
+    NULLIF(BTRIM(p_contributor->>'phone'), ''),
+    NULLIF(BTRIM(p_contributor->>'email'), ''),
     p_contributor->>'relation_to_city',
-    p_contributor->>'neighborhood_or_institution',
-    p_contributor->>'comments',
+    NULLIF(BTRIM(p_contributor->>'neighborhood_or_institution'), ''),
+    NULLIF(BTRIM(p_contributor->>'comments'), ''),
     COALESCE((p_contributor->>'allow_contact')::BOOLEAN, FALSE)
   ) RETURNING id INTO v_contributor_id;
 
@@ -127,17 +127,17 @@ BEGIN
     p_contribution->>'title',
     p_contribution->>'contribution_type',
     p_contribution->>'description',
-    CASE WHEN p_contribution->>'exact_date' IS NOT NULL AND p_contribution->>'exact_date' != '' THEN (p_contribution->>'exact_date')::DATE ELSE NULL END,
-    p_contribution->>'approximate_decade',
+    CASE WHEN p_contribution->>'exact_date' IS NOT NULL AND BTRIM(p_contribution->>'exact_date') != '' THEN (p_contribution->>'exact_date')::DATE ELSE NULL END,
+    NULLIF(BTRIM(p_contribution->>'approximate_decade'), ''),
     p_contribution->>'related_place',
-    p_contribution->>'mentioned_people',
-    p_contribution->>'related_institution',
-    p_contribution->>'historical_context',
+    NULLIF(BTRIM(p_contribution->>'mentioned_people'), ''),
+    NULLIF(BTRIM(p_contribution->>'related_institution'), ''),
+    NULLIF(BTRIM(p_contribution->>'historical_context'), ''),
     p_contribution->>'authorization_level',
     p_contribution->>'credit_preference',
     v_upload_source,
-    p_contribution->>'consent_reference',
-    p_contribution->>'consent_file_path',
+    NULLIF(BTRIM(p_contribution->>'consent_reference'), ''),
+    NULLIF(BTRIM(p_contribution->>'consent_file_path'), ''),
     COALESCE((p_contribution->>'consent_verified')::BOOLEAN, FALSE),
     'Recibido'
   ) RETURNING id INTO v_contribution_id;

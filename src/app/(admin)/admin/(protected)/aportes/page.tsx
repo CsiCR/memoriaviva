@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { FileText, Search, Filter, RefreshCw, Plus, Printer } from 'lucide-react';
+import { formatDateToAR } from '@/utils/date';
 
 export const revalidate = 0; // Evitar caché
 
@@ -213,7 +214,7 @@ export default async function AdminAportes({ searchParams }: PageProps) {
                         </span>
                       </td>
                       <td data-label="Fecha de Carga" style={{ padding: '1rem 0.5rem', color: 'var(--text-secondary)' }}>
-                        {new Date(contribution.created_at).toLocaleDateString('es-AR')}
+                        {formatDateToAR(contribution.created_at)}
                       </td>
                       <td data-label="Estado Editorial" style={{ padding: '1rem 0.5rem' }}>
                         <span className={statusBadgeClass || 'badge badge-default'}>

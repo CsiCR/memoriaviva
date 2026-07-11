@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { FileText, Users, Clock, Database, ChevronRight, File } from 'lucide-react';
+import { formatDateToAR } from '@/utils/date';
 
 export const revalidate = 0; // Evitar cache para que muestre datos actuales
 
@@ -59,7 +60,7 @@ export default async function AdminDashboard() {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem', color: '#0f172a' }}>Dashboard</h1>
+        <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem', color: '#0f172a' }}>Inicio</h1>
         <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
           Resumen actual de la recolección comunitaria de material histórico.
         </p>
@@ -181,7 +182,7 @@ export default async function AdminDashboard() {
                         {contribution.contributors?.full_name || 'Desconocido'}
                       </td>
                       <td data-label="Fecha de Carga" style={{ padding: '1rem 0.5rem', color: 'var(--text-secondary)' }}>
-                        {new Date(contribution.created_at).toLocaleDateString('es-AR')}
+                        {formatDateToAR(contribution.created_at)}
                       </td>
                       <td data-label="Estado" style={{ padding: '1rem 0.5rem' }}>
                         <span className={statusBadgeClass || 'badge badge-default'}>

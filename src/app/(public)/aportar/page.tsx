@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, X, Shield, FileText, User, HelpCircle, AlertCircle, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Upload, X, Shield, FileText, User, HelpCircle, AlertCircle, Check, ChevronRight, ChevronLeft, Play, Pause, RotateCcw } from 'lucide-react';
+import { uploadFileToStorage } from '@/utils/supabase/upload';
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'wav', 'm4a', 'mp4', 'mov'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -18,6 +19,18 @@ export default function Aportar() {
 
   // Control de Pasos
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Estados de Carga de Archivos
+  const [uploadStates, setUploadStates] = useState<{
+    fileName: string;
+    progress: number;
+    status: 'pending' | 'uploading' | 'uploaded' | 'failed' | 'paused';
+    control?: any;
+    uploadUuid?: string;
+    fileUuid?: string;
+    storagePath?: string;
+    error?: string;
+  }[]>([]);
 
   // Estados del Formulario
   const [formData, setFormData] = useState({
@@ -245,44 +258,159 @@ export default function Aportar() {
     }
 
     try {
-      const submissionData = new FormData();
+      const activeStates = [...uploadStates];
       
-      // Adjuntar datos
-      Object.entries(formData).forEach(([key, value]) => {
-        submissionData.append(key, String(value));
-      });
+      // Inicializar estados de subida si está vacío o difiere de los archivos actuales
+      if (activeStates.length !== files.length) {
+        const initialStates = files.map((file) => ({
+          fileName: file.name,
+          progress: 0,
+          status: 'pending' as const
+        }));
+        setUploadStates(initialStates);
+        activeStates.splice(0, activeStates.length, ...initialStates);
+      }
 
-      // Adjuntar archivos
-      files.forEach((file) => {
-        submissionData.append('files', file);
-      });
+      // 1. Subir archivos a Storage
+      const filesMetadata = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const state = activeStates[i];
 
-      setUploadProgress('Subiendo archivos y registrando aporte en Supabase...');
+        // Si ya se subió con éxito, conservamos su metadata y lo saltamos
+        if (state && state.status === 'uploaded' && state.uploadUuid) {
+          filesMetadata.push({ upload_uuid: state.uploadUuid });
+          continue;
+        }
+
+        setUploadProgress(`Subiendo archivo ${i + 1} de ${files.length}: ${file.name}...`);
+
+        // Promesa para manejar la carga con callbacks
+        const uploadResult = await new Promise<{ uploadUuid: string; storagePath: string }>((resolve, reject) => {
+          uploadFileToStorage(file, {
+            fileRole: 'original',
+            onProgress: (progress) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                next[i] = { ...next[i], progress };
+                return next;
+              });
+            },
+            onStateChange: (statusState) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                next[i] = { ...next[i], status: statusState };
+                return next;
+              });
+            },
+            onSuccess: (res) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                next[i] = {
+                  ...next[i],
+                  status: 'uploaded',
+                  uploadUuid: res.uploadUuid,
+                  fileUuid: res.fileUuid,
+                  storagePath: res.storagePath
+                };
+                return next;
+              });
+              resolve({ uploadUuid: res.uploadUuid, storagePath: res.storagePath });
+            },
+            onError: (err) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                next[i] = { ...next[i], status: 'failed', error: err };
+                return next;
+              });
+              reject(new Error(err));
+            }
+          }).then((ctrl) => {
+            setUploadStates((prev) => {
+              const next = [...prev];
+              next[i] = { ...next[i], control: ctrl };
+              return next;
+            });
+          }).catch((err) => {
+            reject(err);
+          });
+        });
+
+        filesMetadata.push({ upload_uuid: uploadResult.uploadUuid });
+      }
+
+      // 2. Registrar el Aporte final con metadatos JSON
+      setUploadProgress('Guardando registro del aporte en el sistema...');
+
+      const payload = {
+        contributor: {
+          dni: formData.dni,
+          full_name: formData.full_name,
+          phone: formData.phone,
+          email: formData.email,
+          relation_to_city: formData.relation_to_city,
+          neighborhood_or_institution: formData.neighborhood_or_institution,
+          comments: formData.comments,
+          allow_contact: formData.allow_contact
+        },
+        contribution: {
+          title: formData.title,
+          contribution_type: formData.contribution_type,
+          description: formData.description,
+          exact_date: formData.exact_date,
+          approximate_decade: formData.approximate_decade,
+          related_place: formData.related_place,
+          mentioned_people: formData.mentioned_people,
+          related_institution: formData.related_institution,
+          historical_context: formData.historical_context,
+          authorization_level: formData.authorization_level,
+          credit_preference: formData.credit_preference
+        },
+        consent: {
+          owns_or_has_permission: formData.owns_or_has_permission,
+          accepts_cataloging: formData.accepts_cataloging,
+          consent_text_version: 'Versión inicial 1.0 - MVP - Junio 2026'
+        },
+        files: filesMetadata
+      };
 
       const response = await fetch('/api/contribute', {
         method: 'POST',
-        body: submissionData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
-      const result = await response.json();
+      let errorMessage = 'Ocurrió un error al guardar el aporte.';
+      const contentType = response.headers.get('content-type') || '';
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Ocurrió un error al procesar el aporte.');
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Guardar datos del aportante en sessionStorage
+        const contributorInfo = {
+          dni: formData.dni,
+          full_name: formData.full_name,
+          phone: formData.phone,
+          email: formData.email,
+          relation_to_city: formData.relation_to_city,
+          neighborhood_or_institution: formData.neighborhood_or_institution,
+          allow_contact: formData.allow_contact,
+        };
+        sessionStorage.setItem('last_contributor', JSON.stringify(contributorInfo));
+
+        router.push('/gracias');
+      } else {
+        if (contentType.includes('application/json')) {
+          const result = await response.json();
+          errorMessage = result.error || errorMessage;
+        } else {
+          const textError = await response.text();
+          errorMessage = textError || `Error del servidor (código ${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
-      // Guardar datos del aportante en sessionStorage
-      const contributorInfo = {
-        dni: formData.dni,
-        full_name: formData.full_name,
-        phone: formData.phone,
-        email: formData.email,
-        relation_to_city: formData.relation_to_city,
-        neighborhood_or_institution: formData.neighborhood_or_institution,
-        allow_contact: formData.allow_contact,
-      };
-      sessionStorage.setItem('last_contributor', JSON.stringify(contributorInfo));
-
-      router.push('/gracias');
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Error de conexión con el servidor. Inténtalo nuevamente.');
@@ -853,6 +981,112 @@ export default function Aportar() {
                 </span>
               </label>
             </div>
+
+            {/* Visualizador de Carga de Archivos (Paso 3) */}
+            {uploadStates.length > 0 && (
+              <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.75rem' }}>
+                  Progreso de Carga de Archivos:
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {uploadStates.map((state, idx) => {
+                    const isTus = files[idx]?.size > 6 * 1024 * 1024;
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: '#f8fafc',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                            📄 {state.fileName}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 500, color: state.status === 'uploaded' ? 'var(--success-color)' : state.status === 'failed' ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
+                            {state.status === 'pending' && 'Pendiente'}
+                            {state.status === 'uploading' && `Cargando... ${state.progress}%`}
+                            {state.status === 'paused' && `Pausado... ${state.progress}%`}
+                            {state.status === 'uploaded' && 'Completado ✓'}
+                            {state.status === 'failed' && 'Error ✗'}
+                          </span>
+                        </div>
+
+                        {/* Barra de progreso */}
+                        <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div 
+                            style={{ 
+                              width: `${state.progress}%`, 
+                              height: '100%', 
+                              backgroundColor: state.status === 'uploaded' ? 'var(--success-color)' : state.status === 'failed' ? 'var(--danger-color)' : 'var(--primary-blue)', 
+                              transition: 'width 0.3s ease' 
+                            }}
+                          ></div>
+                        </div>
+
+                        {/* Botones de control para TUS / Errores */}
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          {isTus && state.status === 'uploading' && (
+                            <button
+                              type="button"
+                              onClick={() => state.control?.pause()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#ffffff', cursor: 'pointer' }}
+                            >
+                              <Pause size={12} /> Pausar
+                            </button>
+                          )}
+                          {isTus && state.status === 'paused' && (
+                            <button
+                              type="button"
+                              onClick={() => state.control?.resume()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#ffffff', cursor: 'pointer' }}
+                            >
+                              <Play size={12} /> Reanudar
+                            </button>
+                          )}
+                          {(state.status === 'uploading' || state.status === 'paused') && (
+                            <button
+                              type="button"
+                              onClick={() => state.control?.cancel()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#fef2f2', color: 'var(--danger-color)', cursor: 'pointer' }}
+                            >
+                              <X size={12} /> Cancelar
+                            </button>
+                          )}
+                          {state.status === 'failed' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--danger-color)', wordBreak: 'break-all' }}>
+                                {state.error || 'Error de red.'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUploadStates((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = { ...next[idx], status: 'pending', progress: 0, error: undefined };
+                                    return next;
+                                  });
+                                  const mockEvent = { preventDefault: () => {} } as any;
+                                  handleSubmit(mockEvent);
+                                }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#ffffff', cursor: 'pointer' }}
+                              >
+                                <RotateCcw size={12} /> Reintentar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

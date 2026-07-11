@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getBuenosAiresYear } from '@/utils/date';
 
 export default function Footer() {
   return (
@@ -51,7 +52,7 @@ export default function Footer() {
 
       <div className="container">
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} Proyecto Memoria Viva Pico Truncado. Todos los derechos reservados.</p>
+          <p>&copy; {getBuenosAiresYear()} Proyecto Memoria Viva Pico Truncado. Todos los derechos reservados.</p>
           <p style={{ fontSize: '0.75rem', marginTop: '0.5rem', color: '#718096' }}>
             Preservando la historia de nuestras familias, instituciones y vecinos.
           </p>

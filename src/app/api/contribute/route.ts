@@ -1,212 +1,135 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
-
-// Extensiones y MIME types permitidos
-const ALLOWED_EXTENSIONS = [
-  'jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'wav', 'm4a', 'mp4', 'mov'
-];
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 Megabytes
+import { getCategoryFromMimeOrExtension } from '@/utils/uploadConfig';
+import { validateStorageFileMagicBytes } from '@/utils/magicBytes';
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
+    const body = await req.json();
+    const { contributor, contribution, consent, files } = body;
 
-    // 1. Obtener y validar datos del Aportante
-    const dni = formData.get('dni') as string;
-    const fullName = formData.get('full_name') as string;
-    const phone = formData.get('phone') as string;
-    const email = formData.get('email') as string;
-    const relationToCity = formData.get('relation_to_city') as string;
-    const neighborhoodOrInstitution = formData.get('neighborhood_or_institution') as string;
-    const comments = formData.get('comments') as string || '';
-    const allowContact = formData.get('allow_contact') === 'true';
+    // 1. Validaciones de Datos Básicos
+    if (!contributor || !contribution || !consent) {
+      return NextResponse.json({ error: 'Faltan secciones obligatorias en la solicitud.' }, { status: 400 });
+    }
 
-    if (!dni || !fullName || !phone || !email || !relationToCity || !neighborhoodOrInstitution) {
+    const { dni, full_name, phone, email, relation_to_city, neighborhood_or_institution } = contributor;
+    if (!dni || !full_name || !phone || !email || !relation_to_city || !neighborhood_or_institution) {
       return NextResponse.json({ error: 'Faltan datos obligatorios del aportante.' }, { status: 400 });
     }
 
-    // 2. Obtener y validar datos del Aporte
-    const title = formData.get('title') as string;
-    const contributionType = formData.get('contribution_type') as string;
-    const description = formData.get('description') as string;
-    const exactDateStr = formData.get('exact_date') as string;
-    const approximateDecade = formData.get('approximate_decade') as string;
-    const relatedPlace = formData.get('related_place') as string;
-    const mentionedPeople = formData.get('mentioned_people') as string || '';
-    const relatedInstitution = formData.get('related_institution') as string || '';
-    const historicalContext = formData.get('historical_context') as string || '';
-
-    if (!title || !contributionType || !description || !relatedPlace) {
+    const { title, contribution_type, description, related_place, authorization_level, credit_preference } = contribution;
+    if (!title || !contribution_type || !description || !related_place || !authorization_level || !credit_preference) {
       return NextResponse.json({ error: 'Faltan datos obligatorios del aporte.' }, { status: 400 });
     }
 
-    // 3. Obtener y validar datos de Consentimiento
-    const authorizationLevel = formData.get('authorization_level') as string;
-    const creditPreference = formData.get('credit_preference') as string;
-    const ownsOrHasPermission = formData.get('owns_or_has_permission') === 'true';
-    const acceptsCataloging = formData.get('accepts_cataloging') === 'true';
-
-    if (!authorizationLevel || !creditPreference || !ownsOrHasPermission || !acceptsCataloging) {
+    const { owns_or_has_permission, accepts_cataloging } = consent;
+    if (!owns_or_has_permission || !accepts_cataloging) {
       return NextResponse.json({ error: 'Debes aceptar las declaraciones de consentimiento obligatorias.' }, { status: 400 });
     }
 
-    // 4. Obtener archivos
-    const files = formData.getAll('files') as File[];
-    
-    // Si no es un testimonio escrito o registro de solo texto, requiere archivos
-    if (contributionType !== 'Testimonio escrito' && contributionType !== 'Solo texto' && (!files || files.length === 0 || (files.length === 1 && files[0].size === 0))) {
-      return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo.' }, { status: 400 });
+    // Si no es un testimonio escrito, requiere archivos vinculados
+    const isTextOnly = contribution_type === 'Testimonio escrito' || contribution_type === 'Solo texto';
+    if (!isTextOnly && (!files || files.length === 0)) {
+      return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo histórico.' }, { status: 400 });
     }
 
-    // Validar archivos antes de hacer inserts
-    for (const file of files) {
-      if (file.size === 0) continue; // Archivo vacío
-      
-      // Validar tamaño
-      if (file.size > MAX_FILE_SIZE) {
-        return NextResponse.json({ error: `El archivo ${file.name} supera el límite de 50 MB.` }, { status: 400 });
-      }
+    const adminSupabase = createAdminClient();
+    const filesMetadataToLink = [];
 
-      // Validar extensión
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
-        return NextResponse.json({ error: `El formato del archivo ${file.name} no está permitido. Permitidos: jpg, jpeg, png, webp, pdf, doc, docx, mp3, wav, m4a, mp4, mov.` }, { status: 400 });
-      }
-    }
+    // 2. Validar cada sesión de carga y magic bytes
+    if (files && files.length > 0) {
+      for (const fileItem of files) {
+        const { upload_uuid } = fileItem;
 
-    // 5. Iniciar inserción en Base de Datos usando Cliente Admin (Service Role)
-    const supabase = createAdminClient();
+        if (!upload_uuid) {
+          return NextResponse.json({ error: 'Falta el identificador de sesión de carga en uno de los archivos.' }, { status: 400 });
+        }
 
-    // A. Insertar Aportante (Contributor)
-    const { data: contributorData, error: contributorError } = await supabase
-      .from('contributors')
-      .insert({
-        dni,
-        full_name: fullName,
-        phone,
-        email,
-        relation_to_city: relationToCity,
-        neighborhood_or_institution: neighborhoodOrInstitution,
-        comments,
-        allow_contact: allowContact
-      })
-      .select()
-      .single();
+        // Obtener detalles de la sesión desde la base de datos
+        const { data: session, error: sessionError } = await adminSupabase
+          .from('upload_sessions')
+          .select('*')
+          .eq('upload_uuid', upload_uuid)
+          .single();
 
-    if (contributorError) {
-      console.error('Error al insertar aportante:', contributorError);
-      return NextResponse.json({ error: 'Error al registrar tus datos. Por favor intenta de nuevo.' }, { status: 500 });
-    }
+        if (sessionError || !session) {
+          return NextResponse.json({ error: 'No se encontró la sesión de carga para uno de los archivos.' }, { status: 400 });
+        }
 
-    const contributorId = contributorData.id;
+        // Validaciones de seguridad en el backend (Requisito 10)
+        if (session.status !== 'uploaded') {
+          return NextResponse.json({ error: 'Uno de los archivos no ha finalizado su carga correctamente.' }, { status: 400 });
+        }
 
-    // B. Insertar Aporte (Contribution)
-    const exactDate = exactDateStr ? exactDateStr : null;
+        if (new Date(session.expires_at) < new Date()) {
+          return NextResponse.json({ error: 'La sesión de carga del archivo ha expirado. Por favor, intente subirlo nuevamente.' }, { status: 400 });
+        }
 
-    const { data: contributionData, error: contributionError } = await supabase
-      .from('contributions')
-      .insert({
-        contributor_id: contributorId,
-        title,
-        contribution_type: contributionType,
-        description,
-        exact_date: exactDate,
-        approximate_decade: approximateDecade || null,
-        related_place: relatedPlace,
-        mentioned_people: mentionedPeople,
-        related_institution: relatedInstitution,
-        historical_context: historicalContext,
-        authorization_level: authorizationLevel,
-        credit_preference: creditPreference,
-        editorial_status: 'Recibido'
-      })
-      .select()
-      .single();
+        if (session.linked_contribution_id) {
+          return NextResponse.json({ error: 'Uno de los archivos ya está vinculado a otra contribución.' }, { status: 400 });
+        }
 
-    if (contributionError) {
-      console.error('Error al insertar aporte:', contributionError);
-      return NextResponse.json({ error: 'Error al registrar el aporte. Por favor intenta de nuevo.' }, { status: 500 });
-    }
+        const expectedCategory = getCategoryFromMimeOrExtension(session.mime_type, session.storage_path);
+        if (!expectedCategory) {
+          return NextResponse.json({ error: 'Categoría de archivo no admitida para vinculación.' }, { status: 400 });
+        }
 
-    const contributionId = contributionData.id;
+        // Validar magic bytes (sin descargar el archivo completo)
+        const magicCheck = await validateStorageFileMagicBytes(adminSupabase, session.storage_path, expectedCategory);
+        if (!magicCheck.isValid) {
+          console.warn(`Archivo ${session.storage_path} falló validación de magic bytes: ${magicCheck.error}`);
+          
+          // Marcar la sesión de carga como quarantined en la base de datos
+          await adminSupabase
+            .from('upload_sessions')
+            .update({ status: 'quarantined', updated_at: new Date().toISOString() })
+            .eq('upload_uuid', upload_uuid);
 
-    // C. Insertar Registro de Consentimiento (Consent Record)
-    const consentTextVersion = "Versión inicial 1.0 - MVP - Junio 2026";
-    const { error: consentError } = await supabase
-      .from('consent_records')
-      .insert({
-        contributor_id: contributorId,
-        contribution_id: contributionId,
-        authorization_level: authorizationLevel,
-        credit_preference: creditPreference,
-        owns_or_has_permission: ownsOrHasPermission,
-        accepts_cataloging: acceptsCataloging,
-        consent_text_version: consentTextVersion
-      });
+          return NextResponse.json({ 
+            error: `El archivo ${session.storage_path.split('/').pop()} no pasó el control de integridad de formato: ${magicCheck.error}` 
+          }, { status: 400 });
+        }
 
-    if (consentError) {
-      console.error('Error al insertar consentimiento:', consentError);
-      // Continuamos pero logueamos el fallo, el aporte y aportante ya están creados
-    }
-
-    // D. Subir archivos a Storage y registrar en la tabla
-    const uploadedFilesSummary = [];
-    for (const file of files) {
-      if (file.size === 0) continue;
-
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${extension}`;
-      // Ruta: contributions/[contribution_id]/[file_name]
-      const filePath = `contributions/${contributionId}/${uniqueFileName}`;
-
-      const buffer = Buffer.from(await file.arrayBuffer());
-
-      // Subir archivo a bucket privado 'historical-uploads'
-      const { error: uploadError } = await supabase.storage
-        .from('historical-uploads')
-        .upload(filePath, buffer, {
-          contentType: file.type,
-          duplex: 'half'
+        // Armar el metadato del archivo para enviarlo a la transacción RPC
+        filesMetadataToLink.push({
+          upload_uuid,
+          storage_path: session.storage_path,
+          mime_type: session.mime_type,
+          size_bytes: session.size_bytes,
+          file_role: 'original', // Forzado a original por defecto en flujo público (Requisito 2)
+          original_filename: session.storage_path.split('/').pop() || 'archivo'
         });
-
-      if (uploadError) {
-        console.error(`Error al subir archivo ${file.name} a storage:`, uploadError);
-        return NextResponse.json({ error: `Error al subir el archivo ${file.name}.` }, { status: 500 });
       }
-
-      // Registrar archivo en base de datos
-      const { error: dbFileError } = await supabase
-        .from('contribution_files')
-        .insert({
-          contribution_id: contributionId,
-          file_name: file.name,
-          file_path: filePath,
-          file_type: file.type,
-          file_size: file.size,
-          storage_bucket: 'historical-uploads',
-          is_original: true
-        });
-
-      if (dbFileError) {
-        console.error(`Error al registrar archivo ${file.name} en base de datos:`, dbFileError);
-        // Continuamos, el archivo físico ya está en storage
-      }
-
-      uploadedFilesSummary.push({ name: file.name, path: filePath });
     }
 
+    // 3. Ejecutar transacción atómica en PostgreSQL mediante la función RPC
+    const { data: rpcResult, error: rpcError } = await adminSupabase.rpc(
+      'create_contribution_with_files',
+      {
+        p_contributor: contributor,
+        p_contribution: contribution,
+        p_consent: consent,
+        p_files: filesMetadataToLink,
+        p_user_id: null // Flujo público
+      }
+    );
 
+    if (rpcError || !rpcResult?.success) {
+      console.error('Error al ejecutar RPC create_contribution_with_files:', rpcError);
+      return NextResponse.json({ 
+        error: 'Ocurrió un error al guardar el aporte en el sistema. Se revirtieron todos los cambios.' 
+      }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
-      contributionId,
-      contributorId,
-      files: uploadedFilesSummary
+      contributionId: rpcResult.contribution_id,
+      contributorId: rpcResult.contributor_id
     });
 
-  } catch (error) {
-    console.error('Error interno del servidor en endpoint contribute:', error);
-    return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error interno del servidor en api/contribute:', error);
+    return NextResponse.json({ error: 'Error interno del servidor al procesar el aporte.' }, { status: 500 });
   }
 }

@@ -112,53 +112,62 @@ export default function QuieroFormarParte() {
     setLoading(true);
 
     try {
-      const submissionData = new FormData();
-
-      // Mapear los datos de registro de aportante según la especificación del sistema
-      submissionData.append('dni', formData.dni.trim());
-      submissionData.append('full_name', formData.full_name.trim());
-      submissionData.append('phone', formData.phone.trim());
-      submissionData.append('email', formData.email.trim());
-      submissionData.append('relation_to_city', formData.relation_to_city);
-      submissionData.append('neighborhood_or_institution', 'Plataforma Memoria Viva Pico Truncado');
-      submissionData.append('comments', 'nuevo registro de aportante');
-      submissionData.append('allow_contact', formData.allow_contact ? 'true' : 'false');
-
-      // Campos de la contribución asociada
-      const birthPlaceLabel = formData.birth_place.trim() 
-        ? `Lugar de nacimiento: ${formData.birth_place.trim()}`
-        : 'Lugar de nacimiento: No especificado';
-      
-      submissionData.append('title', birthPlaceLabel);
-      submissionData.append('contribution_type', 'Testimonio escrito');
-      submissionData.append('description', 'nuevo registro de aportante');
-      
-      if (formData.birth_date) {
-        submissionData.append('exact_date', formData.birth_date);
-      }
-      
-      submissionData.append('related_place', 'Plataforma Memoria Viva Pico Truncado');
-      
-      const userNarrative = formData.narrative.trim()
-        ? formData.narrative.trim()
-        : 'Sin relato inicial (Pendiente de contacto)';
-      submissionData.append('historical_context', userNarrative);
-
-      // Cesión y consentimiento digital implícito
-      submissionData.append('authorization_level', 'C'); // Interno / Preventivo
-      submissionData.append('credit_preference', 'Anónimo');
-      submissionData.append('owns_or_has_permission', 'true');
-      submissionData.append('accepts_cataloging', 'true');
+      const payload = {
+        contributor: {
+          dni: formData.dni.trim(),
+          full_name: formData.full_name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          relation_to_city: formData.relation_to_city,
+          neighborhood_or_institution: 'Plataforma Memoria Viva Pico Truncado',
+          comments: 'nuevo registro de aportante',
+          allow_contact: formData.allow_contact
+        },
+        contribution: {
+          title: formData.birth_place.trim() 
+            ? `Lugar de nacimiento: ${formData.birth_place.trim()}`
+            : 'Lugar de nacimiento: No especificado',
+          contribution_type: 'Testimonio escrito',
+          description: 'nuevo registro de aportante',
+          exact_date: formData.birth_date || '',
+          approximate_decade: '',
+          related_place: 'Plataforma Memoria Viva Pico Truncado',
+          mentioned_people: '',
+          related_institution: '',
+          historical_context: formData.narrative.trim()
+            ? formData.narrative.trim()
+            : 'Sin relato inicial (Pendiente de contacto)',
+          authorization_level: 'C', // Interno / Preventivo
+          credit_preference: 'Anónimo'
+        },
+        consent: {
+          owns_or_has_permission: true,
+          accepts_cataloging: true,
+          consent_text_version: 'Versión inicial 1.0 - MVP - Junio 2026'
+        },
+        files: []
+      };
 
       const response = await fetch('/api/contribute', {
         method: 'POST',
-        body: submissionData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
-      const result = await response.json();
+      let errorMessage = 'Ocurrió un error al enviar el registro.';
+      const contentType = response.headers.get('content-type') || '';
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Ocurrió un error al enviar el registro.');
+      if (response.ok) {
+        const result = await response.json();
+      } else {
+        if (contentType.includes('application/json')) {
+          const result = await response.json();
+          errorMessage = result.error || errorMessage;
+        } else {
+          const textError = await response.text();
+          errorMessage = textError || `Error del servidor (código ${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
       // Guardar datos del aportante en sessionStorage para recordar su sesión

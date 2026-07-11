@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, User, FileText, Shield, File, Download, ExternalLink, Calendar, MapPin, Landmark, Heart, History } from 'lucide-react';
 import ContributionEditForm from '@/components/ContributionEditForm';
+import { formatDateToAR, formatDateTimeToAR, formatDateTimeForAudit } from '@/utils/date';
 
 export const revalidate = 0; // Evitar caché
 
@@ -212,7 +213,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 <strong style={{ fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <Calendar size={14} />
                   {contribution.exact_date 
-                    ? new Date(contribution.exact_date).toLocaleDateString('es-AR')
+                    ? formatDateToAR(contribution.exact_date)
                     : contribution.approximate_decade 
                       ? `Aprox. década de ${contribution.approximate_decade.replace('s', '')}` 
                       : 'Desconocido'
@@ -362,7 +363,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                     {/* Contenido del evento */}
                     <div style={{ flexGrow: 1 }}>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        <strong>{new Date(log.created_at).toLocaleString('es-AR')}</strong> — por {
+                        <strong>{formatDateTimeForAudit(log.created_at)}</strong> — por {
                           log.profiles?.full_name || (
                             log.action === 'INSERT'
                               ? ((contribution.consent_source === 'web_form' || !contribution.consent_source) ? 'Vecino Aportante (Carga Web)' : 'Gestor del Archivo (Carga Local)')
@@ -475,7 +476,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Firmado el:</span>
-                  <span>{new Date(contribution.consent_records[0].accepted_at).toLocaleString('es-AR')}</span>
+                  <span>{formatDateTimeToAR(contribution.consent_records[0].accepted_at)}</span>
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   Doc. de Consentimiento: {contribution.consent_records[0].consent_text_version}
@@ -656,9 +657,9 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                           <span style={{ fontWeight: 'bold', color: idx === 0 ? '#15803d' : 'var(--text-primary)' }}>
                             Nivel {record.authorization_level} {idx === 0 && ' (Activo)'}
                           </span>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                            {new Date(record.accepted_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
-                          </span>
+                           <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                            {formatDateTimeToAR(record.accepted_at)}
+                           </span>
                         </div>
                         <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                           Créditos: {record.credit_preference}

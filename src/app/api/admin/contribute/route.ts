@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
-
-const ALLOWED_EXTENSIONS = [
-  'jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'wav', 'm4a', 'mp4', 'mov'
-];
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+import { getBuenosAiresYear, createBuenosAiresDate } from '@/utils/date';
+import { getCategoryFromMimeOrExtension } from '@/utils/uploadConfig';
+import { validateStorageFileMagicBytes } from '@/utils/magicBytes';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,183 +25,155 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado para realizar esta acción.' }, { status: 403 });
     }
 
-    // 2. Parsear FormData
-    const formData = await req.formData();
+    // 2. Parsear JSON del cuerpo
+    const body = await req.json();
+    const { 
+      contributor, 
+      contribution, 
+      consent, 
+      files, 
+      consent_upload_uuid, 
+      agreement_upload_uuid,
+      institutional_agreement_id,
+      new_agreement_name,
+      new_agreement_institution
+    } = body;
 
-    const consentSource = formData.get('consent_source') as string || 'signed_paper';
-    const consentReference = formData.get('consent_reference') as string || '';
-
-    // Datos del Aportante
-    let dni = formData.get('dni') as string;
-    let fullName = formData.get('full_name') as string;
-    let phone = formData.get('phone') as string || '—';
-    let email = formData.get('email') as string || '—';
-    let relationToCity = formData.get('relation_to_city') as string;
-    let neighborhoodOrInstitution = formData.get('neighborhood_or_institution') as string;
-    const comments = formData.get('comments') as string || '';
-    const allowContact = formData.get('allow_contact') === 'true';
-
-    // Si es Caso 3 (Convenio Institucional), usamos los datos de la institución como aportante
-    if (consentSource === 'institutional_agreement') {
-      const institutionName = formData.get('full_name') as string || formData.get('related_institution') as string || 'Institución Colaboradora';
-      dni = 'Convenio';
-      fullName = institutionName;
-      relationToCity = 'Representante de institución local';
-      neighborhoodOrInstitution = institutionName;
+    if (!contributor || !contribution || !consent) {
+      return NextResponse.json({ error: 'Faltan secciones obligatorias en la solicitud.' }, { status: 400 });
     }
 
-    if (!dni || !fullName || !relationToCity || !neighborhoodOrInstitution) {
-      return NextResponse.json({ error: 'Faltan datos obligatorios del aportante o de la institución.' }, { status: 400 });
+    let { dni, full_name, phone = '—', email = '—', relation_to_city, neighborhood_or_institution } = contributor;
+    const { title, contribution_type, description, related_place, authorization_level, credit_preference, consent_source, consent_reference, approximate_decade, mentioned_people, related_institution, historical_context } = contribution;
+
+    if (!dni || !full_name || !relation_to_city || !neighborhood_or_institution) {
+      return NextResponse.json({ error: 'Faltan datos obligatorios del aportante.' }, { status: 400 });
     }
 
-    // Datos del Aporte
-    const title = formData.get('title') as string;
-    const contributionType = formData.get('contribution_type') as string;
-    const description = formData.get('description') as string;
-    const exactDateStr = formData.get('exact_date') as string;
-    const approximateDecade = formData.get('approximate_decade') as string;
-    const relatedPlace = formData.get('related_place') as string;
-    const mentionedPeople = formData.get('mentioned_people') as string || '';
-    const relatedInstitution = formData.get('related_institution') as string || '';
-    const historicalContext = formData.get('historical_context') as string || '';
-
-    if (!title || !contributionType || !description || !relatedPlace) {
+    if (!title || !contribution_type || !description || !related_place) {
       return NextResponse.json({ error: 'Faltan datos obligatorios del aporte.' }, { status: 400 });
     }
 
-    // Consentimiento
-    const authorizationLevel = formData.get('authorization_level') as string || 'A';
-    const creditPreference = formData.get('credit_preference') as string || 'Nombre completo';
-
-    // Obtener archivo de firma de consentimiento (Caso 2)
-    const consentFile = formData.get('consent_file') as File | null;
-
-    // Obtener archivos históricos
-    const files = formData.getAll('files') as File[];
-    
-    if (contributionType !== 'Testimonio escrito' && (!files || files.length === 0 || (files.length === 1 && files[0].size === 0))) {
+    const isTextOnly = contribution_type === 'Testimonio escrito' || contribution_type === 'Solo texto';
+    if (!isTextOnly && (!files || files.length === 0)) {
       return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo histórico.' }, { status: 400 });
     }
 
-    // Validar archivos históricos
-    for (const file of files) {
-      if (file.size === 0) continue;
-      if (file.size > MAX_FILE_SIZE) {
-        return NextResponse.json({ error: `El archivo ${file.name} supera el límite de 50 MB.` }, { status: 400 });
-      }
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
-        return NextResponse.json({ error: `El formato del archivo ${file.name} no está permitido.` }, { status: 400 });
-      }
-    }
-
     const adminSupabase = createAdminClient();
-
-    // Variables legales
-    let finalAgreementId = null;
+    const filesToLink = [];
     let finalConsentFilePath = null;
-    let finalConsentReference = consentReference;
+    let finalAgreementId = null;
+    let refValue = consent_reference;
 
-    // 3. Procesar Respaldos según Caso Legal
-    if (consentSource === 'signed_paper') {
+    // 3. Procesar Respaldo Legal según el caso
+    if (consent_source === 'signed_paper') {
       // Caso 2: Planilla Firmada es OBLIGATORIA
-      if (!consentFile || consentFile.size === 0) {
+      if (!consent_upload_uuid) {
         return NextResponse.json({ error: 'Debes subir la foto o PDF de la planilla de consentimiento firmada por el aportante.' }, { status: 400 });
       }
 
-      // Validar tipo de archivo
-      const extension = consentFile.name.split('.').pop()?.toLowerCase();
-      if (!extension || !['jpg', 'jpeg', 'png', 'webp', 'pdf'].includes(extension)) {
-        return NextResponse.json({ error: 'Formato de planilla no permitido (solo imágenes o PDF).' }, { status: 400 });
+      // Validar sesión de planilla firmada
+      const { data: session, error: sessionErr } = await adminSupabase
+        .from('upload_sessions')
+        .select('*')
+        .eq('upload_uuid', consent_upload_uuid)
+        .single();
+
+      if (sessionErr || !session || session.status !== 'uploaded') {
+        return NextResponse.json({ error: 'No se encontró la carga de la planilla firmada o no se completó.' }, { status: 400 });
       }
 
-      // Subir archivo
-      const uniqueFileName = `${Date.now()}_consent_${Math.random().toString(36).substring(2, 9)}.${extension}`;
-      const filePath = `consents/temp_${uniqueFileName}`; // Se moverá o asignará
-      const buffer = Buffer.from(await consentFile.arrayBuffer());
-
-      const { error: uploadError } = await adminSupabase.storage
-        .from('historical-uploads')
-        .upload(filePath, buffer, {
-          contentType: consentFile.type,
-          duplex: 'half'
-        });
-
-      if (uploadError) {
-        console.error('Error al subir planilla firmada:', uploadError);
-        return NextResponse.json({ error: 'Error al subir el archivo de autorización.' }, { status: 500 });
+      const expectedCategory = getCategoryFromMimeOrExtension(session.mime_type, session.storage_path);
+      if (expectedCategory !== 'image' && expectedCategory !== 'document') {
+        return NextResponse.json({ error: 'El archivo de la planilla firmada debe ser una imagen o PDF.' }, { status: 400 });
       }
 
-      finalConsentFilePath = filePath;
+      // Validar magic bytes de la planilla
+      const magicCheck = await validateStorageFileMagicBytes(adminSupabase, session.storage_path, expectedCategory);
+      if (!magicCheck.isValid) {
+        return NextResponse.json({ error: `La planilla firmada no pasó el control de formato: ${magicCheck.error}` }, { status: 400 });
+      }
+
+      finalConsentFilePath = session.storage_path;
+
+      // Agregar a la lista de archivos a vincular como soporte legal
+      filesToLink.push({
+        upload_uuid: consent_upload_uuid,
+        storage_path: session.storage_path,
+        mime_type: session.mime_type,
+        size_bytes: session.size_bytes,
+        file_role: 'legal_support',
+        original_filename: session.storage_path.split('/').pop() || 'planilla_consentimiento'
+      });
     } 
-    else if (consentSource === 'institutional_agreement') {
+    else if (consent_source === 'institutional_agreement') {
       // Caso 3: Convenio Institucional
-      const institutionalAgreementId = formData.get('institutional_agreement_id') as string;
-
-      if (!institutionalAgreementId) {
+      if (!institutional_agreement_id) {
         return NextResponse.json({ error: 'Debes seleccionar un convenio institucional o registrar uno nuevo.' }, { status: 400 });
       }
 
-      if (institutionalAgreementId === 'new') {
+      if (institutional_agreement_id === 'new') {
         // Registrar un NUEVO convenio
-        const newAgreementName = formData.get('new_agreement_name') as string;
-        const newAgreementInstitution = formData.get('new_agreement_institution') as string;
-        const newAgreementFile = formData.get('new_agreement_file') as File | null;
-
-        if (!newAgreementName || !newAgreementInstitution) {
-          return NextResponse.json({ error: 'Faltan datos obligatorios para registrar el nuevo convenio.' }, { status: 400 });
+        if (!new_agreement_name || !new_agreement_institution || !agreement_upload_uuid) {
+          return NextResponse.json({ error: 'Faltan datos obligatorios para registrar el nuevo convenio institucional.' }, { status: 400 });
         }
 
-        let filePath = null;
-        if (newAgreementFile && newAgreementFile.size > 0) {
-          const extension = newAgreementFile.name.split('.').pop()?.toLowerCase();
-          if (!extension || extension !== 'pdf') {
-            return NextResponse.json({ error: 'El archivo del convenio institucional debe ser un documento PDF.' }, { status: 400 });
-          }
+        const { data: session, error: sessionErr } = await adminSupabase
+          .from('upload_sessions')
+          .select('*')
+          .eq('upload_uuid', agreement_upload_uuid)
+          .single();
 
-          // Subir convenio
-          const uniqueFileName = `${Date.now()}_agreement_${Math.random().toString(36).substring(2, 9)}.pdf`;
-          filePath = `agreements/${uniqueFileName}`;
-          const buffer = Buffer.from(await newAgreementFile.arrayBuffer());
-
-          const { error: uploadError } = await adminSupabase.storage
-            .from('historical-uploads')
-            .upload(filePath, buffer, {
-              contentType: 'application/pdf',
-              duplex: 'half'
-            });
-
-          if (uploadError) {
-            console.error('Error al subir PDF de convenio:', uploadError);
-            return NextResponse.json({ error: 'Error al subir el PDF del convenio.' }, { status: 500 });
-          }
+        if (sessionErr || !session || session.status !== 'uploaded') {
+          return NextResponse.json({ error: 'No se encontró la carga del PDF de convenio institucional.' }, { status: 400 });
         }
 
-        // Insertar convenio en BD
+        const expectedCategory = getCategoryFromMimeOrExtension(session.mime_type, session.storage_path);
+        if (expectedCategory !== 'document') {
+          return NextResponse.json({ error: 'El archivo del convenio institucional debe ser un documento PDF.' }, { status: 400 });
+        }
+
+        // Validar magic bytes del PDF de convenio
+        const magicCheck = await validateStorageFileMagicBytes(adminSupabase, session.storage_path, 'document');
+        if (!magicCheck.isValid) {
+          return NextResponse.json({ error: `El documento de convenio no pasó el control de formato: ${magicCheck.error}` }, { status: 400 });
+        }
+
+        // Crear registro en la tabla de convenios
         const { data: agreementData, error: agreementError } = await adminSupabase
           .from('institutional_agreements')
           .insert({
-            name: newAgreementName,
-            institution: newAgreementInstitution,
-            file_path: filePath
+            name: new_agreement_name,
+            institution: new_agreement_institution,
+            file_path: session.storage_path
           })
           .select()
           .single();
 
         if (agreementError) {
-          console.error('Error al guardar convenio en BD:', agreementError);
-          return NextResponse.json({ error: `Error al registrar convenio: ${agreementError.message}` }, { status: 500 });
+          console.error('Error al registrar nuevo convenio:', agreementError);
+          return NextResponse.json({ error: 'Error al registrar el nuevo convenio institucional.' }, { status: 500 });
         }
 
         finalAgreementId = agreementData.id;
-        finalConsentFilePath = filePath;
-        finalConsentReference = newAgreementName;
+        finalConsentFilePath = session.storage_path;
+        refValue = new_agreement_name;
+
+        // Vincular archivo de convenio como soporte legal
+        filesToLink.push({
+          upload_uuid: agreement_upload_uuid,
+          storage_path: session.storage_path,
+          mime_type: session.mime_type,
+          size_bytes: session.size_bytes,
+          file_role: 'legal_support',
+          original_filename: session.storage_path.split('/').pop() || 'convenio_institucional'
+        });
       } else {
         // Utilizar convenio EXISTENTE
         const { data: agreementData, error: agreementError } = await adminSupabase
           .from('institutional_agreements')
           .select('name, file_path')
-          .eq('id', institutionalAgreementId)
+          .eq('id', institutional_agreement_id)
           .single();
 
         if (agreementError || !agreementData) {
@@ -212,44 +181,83 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'El convenio institucional seleccionado no es válido.' }, { status: 400 });
         }
 
-        finalAgreementId = institutionalAgreementId;
+        finalAgreementId = institutional_agreement_id;
         finalConsentFilePath = agreementData.file_path;
-        finalConsentReference = agreementData.name;
+        refValue = agreementData.name;
       }
     } else {
       // Caso 1: Web Form
-      finalConsentReference = 'Formulario Web';
+      refValue = 'Formulario Web';
       finalConsentFilePath = null;
       finalAgreementId = null;
     }
 
-    // 4. Inserción en Base de Datos
+    // 4. Procesar y Validar Archivos Históricos
+    if (files && files.length > 0) {
+      for (const fileItem of files) {
+        const { upload_uuid, file_role = 'original' } = fileItem;
 
-    // A. Insertar Aportante
-    const { data: contributorData, error: contributorError } = await adminSupabase
-      .from('contributors')
-      .insert({
-        dni,
-        full_name: fullName,
-        phone,
-        email,
-        relation_to_city: relationToCity,
-        neighborhood_or_institution: neighborhoodOrInstitution,
-        comments,
-        allow_contact: allowContact
-      })
-      .select()
-      .single();
+        if (!upload_uuid) {
+          return NextResponse.json({ error: 'Falta el identificador de sesión de carga en uno de los archivos.' }, { status: 400 });
+        }
 
-    if (contributorError) {
-      console.error('Error al insertar aportante (admin):', contributorError);
-      return NextResponse.json({ error: 'Error al registrar el aportante.' }, { status: 500 });
+        // Obtener detalles de la sesión desde la base de datos
+        const { data: session, error: sessionError } = await adminSupabase
+          .from('upload_sessions')
+          .select('*')
+          .eq('upload_uuid', upload_uuid)
+          .single();
+
+        if (sessionError || !session) {
+          return NextResponse.json({ error: 'No se encontró la sesión de carga para uno de los archivos.' }, { status: 400 });
+        }
+
+        if (session.status !== 'uploaded') {
+          return NextResponse.json({ error: 'Uno de los archivos no ha finalizado su carga correctamente.' }, { status: 400 });
+        }
+
+        if (new Date(session.expires_at) < new Date()) {
+          return NextResponse.json({ error: 'La sesión de carga de uno de los archivos ha expirado.' }, { status: 400 });
+        }
+
+        if (session.linked_contribution_id) {
+          return NextResponse.json({ error: 'Uno de los archivos ya está vinculado a otra contribución.' }, { status: 400 });
+        }
+
+        const expectedCategory = getCategoryFromMimeOrExtension(session.mime_type, session.storage_path);
+        if (!expectedCategory) {
+          return NextResponse.json({ error: 'Categoría de archivo no admitida para vinculación.' }, { status: 400 });
+        }
+
+        // Validar magic bytes (sin descargar el archivo completo)
+        const magicCheck = await validateStorageFileMagicBytes(adminSupabase, session.storage_path, expectedCategory);
+        if (!magicCheck.isValid) {
+          console.warn(`Archivo admin ${session.storage_path} falló validación magic bytes: ${magicCheck.error}`);
+          
+          await adminSupabase
+            .from('upload_sessions')
+            .update({ status: 'quarantined', updated_at: new Date().toISOString() })
+            .eq('upload_uuid', upload_uuid);
+
+          return NextResponse.json({ 
+            error: `El archivo ${session.storage_path.split('/').pop()} no pasó el control de integridad de formato: ${magicCheck.error}` 
+          }, { status: 400 });
+        }
+
+        // Armar metadatos para la transacción RPC
+        filesToLink.push({
+          upload_uuid,
+          storage_path: session.storage_path,
+          mime_type: session.mime_type,
+          size_bytes: session.size_bytes,
+          file_role, // Rol asignado por el administrador
+          original_filename: session.storage_path.split('/').pop() || 'archivo_historico'
+        });
+      }
     }
 
-    const contributorId = contributorData.id;
-
-    // B. Insertar Aporte (Calcular catalog_code en Next.js por seguridad como fallback)
-    const yearVal = new Date().getFullYear();
+    // 5. Calcular Catalog Code
+    const yearVal = getBuenosAiresYear();
     const typeCodeMap: Record<string, string> = {
       'Testimonio escrito': 'TXT',
       'Fotografía': 'FOT',
@@ -257,151 +265,92 @@ export async function POST(req: NextRequest) {
       'Audio': 'AUD',
       'Video': 'VID'
     };
-    const typeCode = typeCodeMap[contributionType] || 'GEN';
+    const typeCode = typeCodeMap[contribution_type] || 'GEN';
+    
+    const startOfYear = createBuenosAiresDate(yearVal, 0, 1, 0, 0, 0, 0);
+    const endOfYear = createBuenosAiresDate(yearVal + 1, 0, 1, 0, 0, 0, 0);
     
     const { count } = await adminSupabase
       .from('contributions')
       .select('*', { count: 'exact', head: true })
-      .eq('contribution_type', contributionType)
-      .gte('created_at', `${yearVal}-01-01T00:00:00Z`)
-      .lte('created_at', `${yearVal}-12-31T23:59:59Z`);
+      .eq('contribution_type', contribution_type)
+      .gte('created_at', startOfYear.toISOString())
+      .lt('created_at', endOfYear.toISOString());
 
     const nextNum = (count || 0) + 1;
     const finalCatalogCode = `MV-${typeCode}-${yearVal}-${String(nextNum).padStart(4, '0')}`;
 
-    // Si es Caso 2 (signed_paper) y la referencia está vacía, hacerla igual a la signatura
-    let refValue = finalConsentReference;
-    if (consentSource === 'signed_paper' && (!refValue || refValue.trim() === '')) {
+    // Si es planilla firmada y la referencia está vacía, hacerla igual a la signatura
+    if (consent_source === 'signed_paper' && (!refValue || refValue.trim() === '')) {
       refValue = finalCatalogCode;
     }
 
-    const exactDate = exactDateStr ? exactDateStr : null;
+    // 6. Preparar payloads para el RPC
+    const contributorPayload = {
+      dni,
+      full_name,
+      phone,
+      email,
+      relation_to_city,
+      neighborhood_or_institution,
+      comments: contributor.comments || '',
+      allow_contact: contributor.allow_contact
+    };
 
-    const { data: contributionData, error: contributionError } = await adminSupabase
-      .from('contributions')
-      .insert({
-        contributor_id: contributorId,
-        title,
-        contribution_type: contributionType,
-        description,
-        exact_date: exactDate,
-        approximate_decade: approximateDecade || null,
-        related_place: relatedPlace,
-        mentioned_people: mentionedPeople,
-        related_institution: relatedInstitution,
-        historical_context: historicalContext,
-        authorization_level: authorizationLevel,
-        credit_preference: creditPreference,
-        consent_source: consentSource,
-        consent_reference: refValue || null,
-        consent_file_path: finalConsentFilePath,
-        institutional_agreement_id: finalAgreementId,
-        catalog_code: finalCatalogCode,
-        consent_verified: false,
-        editorial_status: 'Recibido'
-      })
-      .select()
-      .single();
+    const contributionPayload = {
+      title,
+      contribution_type,
+      description,
+      exact_date: contribution.exact_date || '',
+      approximate_decade,
+      related_place,
+      mentioned_people,
+      related_institution,
+      historical_context,
+      authorization_level,
+      credit_preference,
+      consent_reference: refValue || null,
+      consent_file_path: finalConsentFilePath,
+      consent_verified: false,
+      catalog_code: finalCatalogCode,
+      consent_source,
+      institutional_agreement_id: finalAgreementId
+    };
 
-    if (contributionError) {
-      console.error('Error al insertar aporte (admin):', contributionError);
-      return NextResponse.json({ error: 'Error al registrar el aporte.' }, { status: 500 });
-    }
+    const consentPayload = {
+      owns_or_has_permission: consent.owns_or_has_permission,
+      accepts_cataloging: consent.accepts_cataloging,
+      consent_text_version: consent.consent_text_version || `Carga Administrativa - Caso: ${consent_source}`
+    };
 
-    const contributionId = contributionData.id;
-
-    // C. Si era Caso 2, mover/renombrar archivo en Storage a su ruta definitiva con contributionId
-    if (consentSource === 'signed_paper' && finalConsentFilePath) {
-      const extension = finalConsentFilePath.split('.').pop()?.toLowerCase();
-      const newFilePath = `consents/${contributionId}/${Date.now()}_consent.${extension}`;
-      
-      const { error: moveError } = await adminSupabase.storage
-        .from('historical-uploads')
-        .copy(finalConsentFilePath, newFilePath);
-
-      if (!moveError) {
-        // Eliminar el temporal
-        await adminSupabase.storage.from('historical-uploads').remove([finalConsentFilePath]);
-        finalConsentFilePath = newFilePath;
-        
-        // Actualizar el registro del aporte con la ruta definitiva
-        await adminSupabase
-          .from('contributions')
-          .update({ consent_file_path: newFilePath })
-          .eq('id', contributionId);
+    // 7. Ejecutar transacción atómica RPC en la base de datos
+    const { data: rpcResult, error: rpcError } = await adminSupabase.rpc(
+      'create_contribution_with_files',
+      {
+        p_contributor: contributorPayload,
+        p_contribution: contributionPayload,
+        p_consent: consentPayload,
+        p_files: filesToLink,
+        p_user_id: user.id // Flujo administrativo con ID del operador
       }
-    }
+    );
 
-    // D. Registrar Consentimiento (consent_records)
-    const consentTextVersion = `Carga Administrativa - Caso: ${consentSource} - Ref: ${finalConsentReference || '—'}`;
-    const { error: consentError } = await adminSupabase
-      .from('consent_records')
-      .insert({
-        contributor_id: contributorId,
-        contribution_id: contributionId,
-        authorization_level: authorizationLevel,
-        credit_preference: creditPreference,
-        owns_or_has_permission: true,
-        accepts_cataloging: true,
-        consent_text_version: consentTextVersion,
-        consent_file_path: finalConsentFilePath
-      });
-
-    if (consentError) {
-      console.error('Error al insertar registro consentimiento (admin):', consentError);
-    }
-
-    // E. Subir archivos históricos
-    const uploadedFilesSummary = [];
-    for (const file of files) {
-      if (file.size === 0) continue;
-
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${extension}`;
-      const filePath = `contributions/${contributionId}/${uniqueFileName}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
-
-      const { error: uploadError } = await adminSupabase.storage
-        .from('historical-uploads')
-        .upload(filePath, buffer, {
-          contentType: file.type,
-          duplex: 'half'
-        });
-
-      if (uploadError) {
-        console.error(`Error al subir archivo histórico ${file.name}:`, uploadError);
-        return NextResponse.json({ error: `Error al subir el archivo ${file.name}.` }, { status: 500 });
-      }
-
-      const { error: dbFileError } = await adminSupabase
-        .from('contribution_files')
-        .insert({
-          contribution_id: contributionId,
-          file_name: file.name,
-          file_path: filePath,
-          file_type: file.type,
-          file_size: file.size,
-          storage_bucket: 'historical-uploads',
-          is_original: true
-        });
-
-      if (dbFileError) {
-        console.error(`Error al registrar archivo histórico ${file.name} en BD:`, dbFileError);
-      }
-
-      uploadedFilesSummary.push({ name: file.name, path: filePath });
+    if (rpcError || !rpcResult?.success) {
+      console.error('Error al ejecutar RPC create_contribution_with_files (admin):', rpcError);
+      return NextResponse.json({ 
+        error: `Error al guardar el aporte en el sistema: ${rpcError?.message || 'Rollback de la transacción ejecutado.'}` 
+      }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
-      contributionId,
-      contributorId,
-      files: uploadedFilesSummary,
-      consentFilePath: finalConsentFilePath
+      contributionId: rpcResult.contribution_id,
+      contributorId: rpcResult.contributor_id,
+      catalogCode: finalCatalogCode
     });
 
-  } catch (error) {
-    console.error('Error interno del servidor en endpoint admin/contribute:', error);
-    return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error interno en api/admin/contribute:', error);
+    return NextResponse.json({ error: 'Error interno del servidor al procesar el aporte administrativo.' }, { status: 500 });
   }
 }

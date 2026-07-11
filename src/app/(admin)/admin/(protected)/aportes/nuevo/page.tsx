@@ -3,8 +3,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, X, Shield, FileText, User, Printer, ArrowLeft, AlertCircle, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Upload, X, Shield, FileText, User, Printer, ArrowLeft, AlertCircle, Check, ChevronRight, ChevronLeft, Play, Pause, RotateCcw } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { getBuenosAiresYear, createBuenosAiresDate } from '@/utils/date';
+import { uploadFileToStorage } from '@/utils/supabase/upload';
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'wav', 'm4a', 'mp4', 'mov'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -62,6 +64,19 @@ export default function AdminAportesNuevo() {
   });
 
   const [files, setFiles] = useState<File[]>([]);
+  const [fileRoles, setFileRoles] = useState<string[]>([]);
+  const [uploadStates, setUploadStates] = useState<{
+    id: string;
+    fileName: string;
+    progress: number;
+    status: 'pending' | 'uploading' | 'uploaded' | 'failed' | 'paused';
+    control?: any;
+    uploadUuid?: string;
+    fileUuid?: string;
+    storagePath?: string;
+    error?: string;
+    fileRole: 'original' | 'restored' | 'derivative' | 'legal_support';
+  }[]>([]);
   const [consentFile, setConsentFile] = useState<File | null>(null);
   const [newAgreementFile, setNewAgreementFile] = useState<File | null>(null);
   const [agreements, setAgreements] = useState<any[]>([]);
@@ -175,13 +190,15 @@ export default function AdminAportesNuevo() {
     const fetchNextCode = async () => {
       try {
         const supabase = createClient();
-        const yearVal = new Date().getFullYear();
+        const yearVal = getBuenosAiresYear();
+        const startOfYear = createBuenosAiresDate(yearVal, 0, 1, 0, 0, 0, 0);
+        const endOfYear = createBuenosAiresDate(yearVal + 1, 0, 1, 0, 0, 0, 0);
         const { count } = await supabase
           .from('contributions')
           .select('*', { count: 'exact', head: true })
           .eq('contribution_type', formData.contribution_type)
-          .gte('created_at', `${yearVal}-01-01T00:00:00Z`)
-          .lte('created_at', `${yearVal}-12-31T23:59:59Z`);
+          .gte('created_at', startOfYear.toISOString())
+          .lt('created_at', endOfYear.toISOString());
 
         const selectedTypeOpt = dbOptions.contribution_type.find(o => o.value === formData.contribution_type);
         const typeCode = selectedTypeOpt?.code || 'GEN';
@@ -274,6 +291,7 @@ DNI/Representación:
 
     setFileErrors(newErrors);
     setFiles((prev) => [...prev, ...validFiles]);
+    setFileRoles((prev) => [...prev, ...validFiles.map(() => 'original')]);
   };
 
   const handleConsentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,6 +336,7 @@ DNI/Representación:
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+    setFileRoles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeConsentFile = () => {
@@ -499,37 +518,201 @@ DNI/Representación:
     }
 
     try {
-      const submissionData = new FormData();
+      const activeStates: any[] = [];
+
+      // 1. Preparar lista de archivos a cargar
+      const filesToUpload: { id: string; file: File; fileRole: string }[] = [];
       
-      // Adjuntar campos básicos
-      Object.entries(formData).forEach(([key, value]) => {
-        submissionData.append(key, String(value));
+      files.forEach((file, i) => {
+        filesToUpload.push({
+          id: `historical_file_${i}`,
+          file,
+          fileRole: fileRoles[i] || 'original'
+        });
       });
 
-      // Adjuntar archivos de aporte
-      files.forEach((file) => {
-        submissionData.append('files', file);
-      });
-
-      // Adjuntar archivo de consentimiento (Caso 2)
       if (formData.consent_source === 'signed_paper' && consentFile) {
-        submissionData.append('consent_file', consentFile);
+        filesToUpload.push({
+          id: 'consent_file',
+          file: consentFile,
+          fileRole: 'legal_support'
+        });
       }
 
-      // Adjuntar archivo de convenio nuevo (Caso 3 - Nuevo)
       if (formData.consent_source === 'institutional_agreement' && formData.institutional_agreement_id === 'new' && newAgreementFile) {
-        submissionData.append('new_agreement_file', newAgreementFile);
+        filesToUpload.push({
+          id: 'agreement_file',
+          file: newAgreementFile,
+          fileRole: 'legal_support'
+        });
       }
+
+      // Inicializar estado de carga en el frontend
+      const initialStates = filesToUpload.map((item) => {
+        const existing = uploadStates.find((s) => s.id === item.id);
+        if (existing && existing.status === 'uploaded') {
+          return existing;
+        }
+        return {
+          id: item.id,
+          fileName: item.file.name,
+          progress: 0,
+          status: 'pending' as const,
+          fileRole: item.fileRole as any
+        };
+      });
+
+      setUploadStates(initialStates);
+
+      // 2. Realizar las subidas secuencialmente
+      const uploadedMetas: Record<string, { uploadUuid: string; storagePath: string }> = {};
+
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const item = filesToUpload[i];
+        const existingState = initialStates[i];
+
+        if (existingState && existingState.status === 'uploaded' && existingState.uploadUuid) {
+          uploadedMetas[item.id] = {
+            uploadUuid: existingState.uploadUuid,
+            storagePath: existingState.storagePath || ''
+          };
+          continue;
+        }
+
+        setUploadProgress(`Subiendo archivo ${i + 1} de ${filesToUpload.length}: ${item.file.name}...`);
+
+        const uploadResult = await new Promise<{ uploadUuid: string; storagePath: string }>((resolve, reject) => {
+          uploadFileToStorage(item.file, {
+            fileRole: item.fileRole as any,
+            onProgress: (progress) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                const idx = next.findIndex((s) => s.id === item.id);
+                if (idx !== -1) next[idx] = { ...next[idx], progress };
+                return next;
+              });
+            },
+            onStateChange: (statusState) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                const idx = next.findIndex((s) => s.id === item.id);
+                if (idx !== -1) next[idx] = { ...next[idx], status: statusState };
+                return next;
+              });
+            },
+            onSuccess: (res) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                const idx = next.findIndex((s) => s.id === item.id);
+                if (idx !== -1) {
+                  next[idx] = {
+                    ...next[idx],
+                    status: 'uploaded',
+                    uploadUuid: res.uploadUuid,
+                    fileUuid: res.fileUuid,
+                    storagePath: res.storagePath
+                  };
+                }
+                return next;
+              });
+              resolve({ uploadUuid: res.uploadUuid, storagePath: res.storagePath });
+            },
+            onError: (err) => {
+              setUploadStates((prev) => {
+                const next = [...prev];
+                const idx = next.findIndex((s) => s.id === item.id);
+                if (idx !== -1) next[idx] = { ...next[idx], status: 'failed', error: err };
+                return next;
+              });
+              reject(new Error(err));
+            }
+          }).then((ctrl) => {
+            setUploadStates((prev) => {
+              const next = [...prev];
+              const idx = next.findIndex((s) => s.id === item.id);
+              if (idx !== -1) next[idx] = { ...next[idx], control: ctrl };
+              return next;
+            });
+          }).catch((err) => {
+            reject(err);
+          });
+        });
+
+        uploadedMetas[item.id] = uploadResult;
+      }
+
+      // 3. Registrar el aporte final con metadatos JSON
+      setUploadProgress('Guardando registro del aporte administrativo...');
+
+      // Compilar lista de archivos históricos cargados
+      const historicalFilesPayload = files.map((_, i) => {
+        const meta = uploadedMetas[`historical_file_${i}`];
+        return {
+          upload_uuid: meta?.uploadUuid,
+          file_role: fileRoles[i] || 'original'
+        };
+      });
+
+      const payload = {
+        contributor: {
+          dni: formData.dni,
+          full_name: formData.full_name,
+          phone: formData.phone,
+          email: formData.email,
+          relation_to_city: formData.relation_to_city,
+          neighborhood_or_institution: formData.neighborhood_or_institution,
+          comments: formData.comments,
+          allow_contact: formData.allow_contact
+        },
+        contribution: {
+          title: formData.title,
+          contribution_type: formData.contribution_type,
+          description: formData.description,
+          exact_date: formData.exact_date,
+          approximate_decade: formData.approximate_decade,
+          related_place: formData.related_place,
+          mentioned_people: formData.mentioned_people,
+          related_institution: formData.related_institution,
+          historical_context: formData.historical_context,
+          authorization_level: formData.authorization_level,
+          credit_preference: formData.credit_preference,
+          consent_source: formData.consent_source,
+          consent_reference: formData.consent_reference
+        },
+        consent: {
+          owns_or_has_permission: true,
+          accepts_cataloging: true,
+          consent_text_version: `Carga Administrativa - Caso: ${formData.consent_source}`
+        },
+        files: historicalFilesPayload,
+        consent_upload_uuid: uploadedMetas['consent_file']?.uploadUuid || null,
+        agreement_upload_uuid: uploadedMetas['agreement_file']?.uploadUuid || null,
+        institutional_agreement_id: formData.institutional_agreement_id,
+        new_agreement_name: formData.new_agreement_name,
+        new_agreement_institution: formData.new_agreement_institution
+      };
 
       const response = await fetch('/api/admin/contribute', {
         method: 'POST',
-        body: submissionData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
-      const result = await response.json();
+      let errorMessage = 'Ocurrió un error al procesar la carga administrativa.';
+      const contentType = response.headers.get('content-type') || '';
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Ocurrió un error al procesar la carga.');
+      if (response.ok) {
+        router.push('/admin/aportes');
+        router.refresh();
+      } else {
+        if (contentType.includes('application/json')) {
+          const rJson = await response.json();
+          errorMessage = rJson.error || errorMessage;
+        } else {
+          const textError = await response.text();
+          errorMessage = textError || `Error del servidor (código ${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
       router.push('/admin/aportes');
@@ -1020,10 +1203,28 @@ DNI/Representación:
                 {files.length > 0 && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginTop: '1rem' }}>
                     {files.map((file, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '0.5rem 1rem', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.85rem' }}>
-                        <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                          📄 {file.name} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                        </span>
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '0.5rem 1rem', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.85rem', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                            📄 {file.name} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                          </span>
+                          <select
+                            value={fileRoles[idx] || 'original'}
+                            onChange={(e) => {
+                              const newRoles = [...fileRoles];
+                              newRoles[idx] = e.target.value;
+                              setFileRoles(newRoles);
+                            }}
+                            className="form-select"
+                            style={{ height: '30px', padding: '0 0.5rem', fontSize: '0.75rem', width: '160px', margin: 0 }}
+                            disabled={loading}
+                          >
+                            <option value="original">Original</option>
+                            <option value="restored">Versión restaurada</option>
+                            <option value="derivative">Derivado</option>
+                            <option value="legal_support">Respaldo legal</option>
+                          </select>
+                        </div>
                         <button
                           type="button"
                           onClick={() => removeFile(idx)}
@@ -1358,6 +1559,132 @@ DNI/Representación:
               )}
 
             </div>
+
+            {/* Visualizador de Carga de Archivos (Paso 3) */}
+            {uploadStates.length > 0 && (
+              <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.75rem' }}>
+                  Progreso de Carga de Archivos en Sistema:
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {uploadStates.map((state, idx) => {
+                    let fileObj: File | null = null;
+                    if (state.id.startsWith('historical_file_')) {
+                      const fileIdx = parseInt(state.id.replace('historical_file_', ''), 10);
+                      fileObj = files[fileIdx];
+                    } else if (state.id === 'consent_file') {
+                      fileObj = consentFile;
+                    } else if (state.id === 'agreement_file') {
+                      fileObj = newAgreementFile;
+                    }
+                    
+                    const isTus = fileObj && fileObj.size > 6 * 1024 * 1024;
+                    const roleLabels: Record<string, string> = {
+                      original: 'Original',
+                      restored: 'Versión restaurada',
+                      derivative: 'Derivado',
+                      legal_support: 'Respaldo legal'
+                    };
+
+                    return (
+                      <div 
+                        key={state.id} 
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: '#f8fafc',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                            📄 {state.fileName} <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.72rem' }}>({roleLabels[state.fileRole] || 'Original'})</span>
+                          </span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 500, color: state.status === 'uploaded' ? 'var(--success-color)' : state.status === 'failed' ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
+                            {state.status === 'pending' && 'Pendiente'}
+                            {state.status === 'uploading' && `Cargando... ${state.progress}%`}
+                            {state.status === 'paused' && `Pausado... ${state.progress}%`}
+                            {state.status === 'uploaded' && 'Completado ✓'}
+                            {state.status === 'failed' && 'Error ✗'}
+                          </span>
+                        </div>
+
+                        {/* Barra de progreso */}
+                        <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div 
+                            style={{ 
+                              width: `${state.progress}%`, 
+                              height: '100%', 
+                              backgroundColor: state.status === 'uploaded' ? 'var(--success-color)' : state.status === 'failed' ? 'var(--danger-color)' : 'var(--primary-blue)', 
+                              transition: 'width 0.3s ease' 
+                            }}
+                          ></div>
+                        </div>
+
+                        {/* Botones de control para TUS / Errores */}
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          {isTus && state.status === 'uploading' && (
+                            <button
+                              type="button"
+                              onClick={() => state.control?.pause()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#ffffff', cursor: 'pointer' }}
+                            >
+                              <Pause size={12} /> Pausar
+                            </button>
+                          )}
+                          {isTus && state.status === 'paused' && (
+                            <button
+                              type="button"
+                              onClick={() => state.control?.resume()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#ffffff', cursor: 'pointer' }}
+                            >
+                              <Play size={12} /> Reanudar
+                            </button>
+                          )}
+                          {(state.status === 'uploading' || state.status === 'paused') && (
+                            <button
+                              type="button"
+                              onClick={() => state.control?.cancel()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#fef2f2', color: 'var(--danger-color)', cursor: 'pointer' }}
+                            >
+                              <X size={12} /> Cancelar
+                            </button>
+                          )}
+                          {state.status === 'failed' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--danger-color)', wordBreak: 'break-all' }}>
+                                {state.error || 'Error de carga.'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUploadStates((prev) => {
+                                    const next = [...prev];
+                                    const idx = next.findIndex((s) => s.id === state.id);
+                                    if (idx !== -1) {
+                                      next[idx] = { ...next[idx], status: 'pending', progress: 0, error: undefined };
+                                    }
+                                    return next;
+                                  });
+                                  const mockEvent = { preventDefault: () => {} } as any;
+                                  handleSubmit(mockEvent);
+                                }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#ffffff', cursor: 'pointer' }}
+                              >
+                                <RotateCcw size={12} /> Reintentar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

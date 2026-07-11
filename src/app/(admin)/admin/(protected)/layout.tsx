@@ -94,7 +94,7 @@ export default async function AdminProtectedLayout({
               {profile.full_name}
             </div>
             <div style={{ fontSize: '0.7rem', color: '#38bdf8', textTransform: 'capitalize' }}>
-              {profile.role === 'validator' ? 'Validador Histórico' : profile.role === 'interviewer' ? 'Entrevistador' : profile.role}
+              {profile.role === 'admin' ? 'Administrador' : profile.role === 'editor' ? 'Editor' : profile.role === 'validator' ? 'Validador Histórico' : profile.role === 'interviewer' ? 'Entrevistador' : profile.role}
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default async function AdminProtectedLayout({
                 fontWeight: 500
               }}
               className="admin-sidebar-link">
-                <LayoutDashboard size={18} /> Dashboard
+                <LayoutDashboard size={18} /> Inicio
               </Link>
             </li>
             <li>

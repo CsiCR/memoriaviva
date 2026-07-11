@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { Users, Phone, Mail, Check, X, Search, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { formatDateToAR } from '@/utils/date';
 
 export const revalidate = 0; // Evitar caché
 
@@ -275,7 +276,7 @@ export default async function AdminAportantes({ searchParams }: PageProps) {
                                   
                                   {/* Fecha de Registro de este aporte */}
                                   <div style={{ fontSize: '0.675rem', color: 'var(--text-secondary)' }}>
-                                    Registrado: {new Date(contrib.submitted_at).toLocaleDateString('es-AR')}
+                                    Registrado: {formatDateToAR(contrib.submitted_at)}
                                   </div>
                                   
                                   {/* Comentario de este aporte */}

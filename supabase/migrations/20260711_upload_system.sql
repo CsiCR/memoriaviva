@@ -135,7 +135,7 @@ BEGIN
     NULLIF(BTRIM(p_contribution->>'historical_context'), ''),
     p_contribution->>'authorization_level',
     p_contribution->>'credit_preference',
-    v_upload_source,
+    COALESCE(NULLIF(BTRIM(p_contribution->>'consent_source'), ''), 'web_form'),
     NULLIF(BTRIM(p_contribution->>'consent_reference'), ''),
     NULLIF(BTRIM(p_contribution->>'consent_file_path'), ''),
     COALESCE((p_contribution->>'consent_verified')::BOOLEAN, FALSE),

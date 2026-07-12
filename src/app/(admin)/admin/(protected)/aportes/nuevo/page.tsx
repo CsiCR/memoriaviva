@@ -64,6 +64,7 @@ export default function AdminAportesNuevo() {
   });
 
   const [files, setFiles] = useState<File[]>([]);
+  const [oversizedFiles, setOversizedFiles] = useState<{ name: string; size: number; type: string }[]>([]);
   const [fileRoles, setFileRoles] = useState<string[]>([]);
   const [uploadStates, setUploadStates] = useState<{
     id: string;
@@ -274,6 +275,7 @@ DNI/Representación:
     const selectedFiles = Array.from(e.target.files);
     const newErrors: string[] = [];
     const validFiles: File[] = [];
+    const newOversized: { name: string; size: number; type: string }[] = [];
 
     selectedFiles.forEach((file) => {
       const extension = file.name.split('.').pop()?.toLowerCase() || '';
@@ -283,13 +285,20 @@ DNI/Representación:
         return;
       }
       if (file.size > MAX_FILE_SIZE) {
-        newErrors.push(`El archivo "${file.name}" supera el límite de 50 MB.`);
+        newOversized.push({
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream'
+        });
         return;
       }
       validFiles.push(file);
     });
 
     setFileErrors(newErrors);
+    if (newOversized.length > 0) {
+      setOversizedFiles((prev) => [...prev, ...newOversized]);
+    }
     setFiles((prev) => [...prev, ...validFiles]);
     setFileRoles((prev) => [...prev, ...validFiles.map(() => 'original')]);
   };
@@ -450,8 +459,10 @@ DNI/Representación:
     const basicValid = !!(formData.title && formData.contribution_type && formData.description && formData.related_place);
     if (!basicValid) return false;
 
-    // Si no es Testimonio escrito, requiere al menos un archivo histórico
-    if (formData.contribution_type !== 'Testimonio escrito' && files.length === 0) {
+    // Si no es Testimonio escrito, requiere al menos un archivo histórico o avisos de archivos grandes (Alcance Acotado)
+    const isTextOnly = formData.contribution_type === 'Testimonio escrito' || formData.contribution_type === 'Solo texto';
+    const totalFilesCount = files.length + oversizedFiles.length;
+    if (!isTextOnly && totalFilesCount === 0) {
       return false;
     }
     return true;
@@ -685,6 +696,11 @@ DNI/Representación:
           consent_text_version: `Carga Administrativa - Caso: ${formData.consent_source}`
         },
         files: historicalFilesPayload,
+        oversized_files: oversizedFiles.map((f) => ({
+          original_filename: f.name,
+          size_bytes: f.size,
+          mime_type: f.type
+        })),
         consent_upload_uuid: uploadedMetas['consent_file']?.uploadUuid || null,
         agreement_upload_uuid: uploadedMetas['agreement_file']?.uploadUuid || null,
         institutional_agreement_id: formData.institutional_agreement_id,
@@ -857,7 +873,7 @@ DNI/Representación:
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Correo Electrónico</label>
+                    <label className="form-label">Correo electrónico (opcional)</label>
                     <input
                       type="email"
                       name="email"
@@ -964,7 +980,7 @@ DNI/Representación:
                   </div>
 
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Correo Electrónico de Contacto</label>
+                    <label className="form-label">Correo electrónico (opcional)</label>
                     <input
                       type="email"
                       name="email"
@@ -1229,6 +1245,32 @@ DNI/Representación:
                           type="button"
                           onClick={() => removeFile(idx)}
                           style={{ background: 'none', border: 'none', color: 'var(--neutral-grey)', cursor: 'pointer' }}
+                          disabled={loading}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Listado de archivos pendientes por superar límite (Alcance Acotado) */}
+                {oversizedFiles.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginTop: '1rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#d97706', display: 'block' }}>
+                      Archivos grandes pendientes (superan 50 MB, no se subirán pero se registrarán como pendientes):
+                    </span>
+                    {oversizedFiles.map((file, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fffbeb', padding: '0.5rem 1rem', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.85rem' }}>
+                        <span style={{ fontWeight: 500, color: '#b45309' }}>
+                          ⚠️ {file.name} <span style={{ color: '#d97706', fontSize: '0.75rem' }}>({(file.size / 1024 / 1024).toFixed(2)} MB - Excede límite)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOversizedFiles((prev) => prev.filter((_, i) => i !== idx));
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#b45309', cursor: 'pointer' }}
                           disabled={loading}
                         >
                           <X size={16} />

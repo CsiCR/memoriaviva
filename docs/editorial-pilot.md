@@ -105,7 +105,22 @@ A continuación se detallan las fichas correspondientes a los primeros 3 aportes
 
 ---
 
-## 7. Comentarios del Equipo Editorial
+## 7. Mejoras de la Versión 1 (Piloto Editorial)
+
+A partir de las observaciones anteriores, se implementaron las siguientes mejoras operativas:
+
+### 1. Flexibilización del Correo Electrónico
+- **Contexto:** Se detectaron aportantes de avanzada edad que no disponen de dirección de correo electrónico.
+- **Cambio técnico:** La columna `contributors.email` se modificó a nullable. Las validaciones de frontend y APIs normalizan strings vacíos a `NULL` en PostgreSQL, evitando la inyección de valores genéricos o ficticios (ej: "—").
+
+### 2. Tratamiento de Archivos Excedidos (> 50 MB)
+- **Contexto:** La plataforma web restringe la subida directa a 50 MB por rendimiento de red.
+- **Cambio técnico:** Los archivos pesados se identifican en el navegador y se excluyen de la subida local. El aporte se guarda con éxito, registrando los nombres y tamaños de los archivos excedidos en la tabla `oversized_file_notices` en estado `pending`.
+- **Alertas y Carga Posterior:** Se diseñó una campanita interactiva con notificaciones internas en el panel administrativo. Los operadores resguardan externamente el material master, generan una copia comprimida <= 50 MB, y la vinculan al aporte existente resolviendo los avisos pendientes.
+
+---
+
+## 8. Comentarios del Equipo Editorial
 
 > "Es muy valioso contar con el registro de auditoría en la hora oficial de nuestro país (Buenos Aires). Al revisar la carga de testimonios que ocurren tarde en la noche, podemos asociarlos con precisión a las planillas físicas de entrevistas recolectadas ese mismo día."
 > — *Edith Gómez, Centro Chileno*

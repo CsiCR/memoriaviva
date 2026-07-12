@@ -399,6 +399,12 @@ p {
   color: var(--status-default-text);
 }
 
+.badge-pendiente-de-archivos {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
 /* Header & Footer */
 .site-header {
   background-color: var(--white);

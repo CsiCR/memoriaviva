@@ -33,6 +33,10 @@ export default async function AdminAportes({ searchParams }: PageProps) {
       contributors!inner (
         full_name,
         dni
+      ),
+      oversized_file_notices (
+        id,
+        status
       )
     `)
     .order('created_at', { ascending: false });
@@ -217,9 +221,19 @@ export default async function AdminAportes({ searchParams }: PageProps) {
                         {formatDateToAR(contribution.created_at)}
                       </td>
                       <td data-label="Estado Editorial" style={{ padding: '1rem 0.5rem' }}>
-                        <span className={statusBadgeClass || 'badge badge-default'}>
-                          {contribution.editorial_status}
-                        </span>
+                        {contribution.editorial_status === 'Recibido' && contribution.oversized_file_notices?.some((n: any) => n.status === 'pending') ? (
+                          <span 
+                            className="badge badge-pendiente-de-archivos" 
+                            title="Este aporte fue recibido, pero uno o más archivos superaron el límite de 50 MB y requieren coordinación con el aportante."
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
+                            ⚠️ Recibido · faltan archivos
+                          </span>
+                        ) : (
+                          <span className={statusBadgeClass || 'badge badge-default'}>
+                            {contribution.editorial_status}
+                          </span>
+                        )}
                       </td>
                       <td data-label="Acción" style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
                         <Link 

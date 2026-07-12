@@ -36,14 +36,21 @@ export async function POST(req: NextRequest) {
       agreement_upload_uuid,
       institutional_agreement_id,
       new_agreement_name,
-      new_agreement_institution
+      new_agreement_institution,
+      oversized_files
     } = body;
 
     if (!contributor || !contribution || !consent) {
       return NextResponse.json({ error: 'Faltan secciones obligatorias en la solicitud.' }, { status: 400 });
     }
 
-    let { dni, full_name, phone = '—', email = '—', relation_to_city, neighborhood_or_institution } = contributor;
+    let { dni, full_name, phone = '—', email, relation_to_city, neighborhood_or_institution } = contributor;
+    if (email !== undefined) {
+      email = email?.trim() || null;
+    } else {
+      email = null;
+    }
+
     const { title, contribution_type, description, related_place, authorization_level, credit_preference, consent_source, consent_reference, approximate_decade, mentioned_people, related_institution, historical_context } = contribution;
 
     if (!dni || !full_name || !relation_to_city || !neighborhood_or_institution) {
@@ -55,8 +62,9 @@ export async function POST(req: NextRequest) {
     }
 
     const isTextOnly = contribution_type === 'Testimonio escrito' || contribution_type === 'Solo texto';
-    if (!isTextOnly && (!files || files.length === 0)) {
-      return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo histórico.' }, { status: 400 });
+    const totalFilesCount = (files?.length || 0) + (oversized_files?.length || 0);
+    if (!isTextOnly && totalFilesCount === 0) {
+      return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo histórico o informes archivos grandes.' }, { status: 400 });
     }
 
     const adminSupabase = createAdminClient();
@@ -331,7 +339,8 @@ export async function POST(req: NextRequest) {
         p_contribution: contributionPayload,
         p_consent: consentPayload,
         p_files: filesToLink,
-        p_user_id: user.id // Flujo administrativo con ID del operador
+        p_user_id: user.id, // Flujo administrativo con ID del operador
+        p_oversized_files: oversized_files || []
       }
     );
 

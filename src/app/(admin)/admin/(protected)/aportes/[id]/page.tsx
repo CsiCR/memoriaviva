@@ -5,12 +5,12 @@ import { ArrowLeft, User, FileText, Shield, File, Download, ExternalLink, Calend
 import ContributionEditForm from '@/components/ContributionEditForm';
 import { formatDateToAR, formatDateTimeToAR, formatDateTimeForAudit } from '@/utils/date';
 
+import AdminAddFilesForm from '@/components/AdminAddFilesForm';
+
 export const revalidate = 0; // Evitar caché
 
 interface PageProps {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
   searchParams: Promise<{
     from?: string;
   }>;
@@ -21,7 +21,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   const { from } = await searchParams;
   const supabase = await createClient();
 
-  // 1. Obtener el aporte completo
+  // 1. Obtener el aporte completo (incluyendo avisos de archivos grandes)
   const { data: contribution, error } = await supabase
     .from('contributions')
     .select(`
@@ -29,7 +29,8 @@ export default async function AdminContributionDetail({ params, searchParams }: 
       contributors ( * ),
       contribution_files ( * ),
       consent_records ( * ),
-      institutional_agreements ( * )
+      institutional_agreements ( * ),
+      oversized_file_notices ( * )
     `)
     .eq('id', id)
     .single();
@@ -177,9 +178,19 @@ export default async function AdminContributionDetail({ params, searchParams }: 
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Estado actual:</span>
-          <span className={statusBadgeClass || 'badge badge-default'} style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>
-            {contribution.editorial_status}
-          </span>
+          {contribution.editorial_status === 'Recibido' && contribution.oversized_file_notices?.some((n: any) => n.status === 'pending') ? (
+            <span 
+              className="badge badge-pendiente-de-archivos" 
+              title="Este aporte fue recibido, pero uno o más archivos superaron el límite de 50 MB y requieren coordinación con el aportante."
+              style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+            >
+              ⚠️ Recibido · faltan archivos
+            </span>
+          ) : (
+            <span className={statusBadgeClass || 'badge badge-default'} style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>
+              {contribution.editorial_status}
+            </span>
+          )}
         </div>
       </div>
 
@@ -328,6 +339,53 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 No hay archivos adjuntos (aporte de testimonio escrito únicamente).
               </div>
             )}
+
+            {/* Listado de archivos grandes pendientes (Alcance Acotado) */}
+            {contribution.oversized_file_notices && contribution.oversized_file_notices.length > 0 && (
+              <div style={{
+                marginTop: '1.5rem',
+                border: '1px solid #fde68a',
+                backgroundColor: '#fffbeb',
+                borderRadius: '8px',
+                padding: '1.25rem'
+              }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#b45309', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ⚠️ Avisos de Archivos Grandes Pendientes ({contribution.oversized_file_notices.filter((n: any) => n.status === 'pending').length} activos)
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {contribution.oversized_file_notices.map((notice: any) => (
+                    <div key={notice.id} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '6px',
+                      fontSize: '0.8rem'
+                    }}>
+                      <span style={{ fontWeight: 550, color: notice.status === 'pending' ? '#b45309' : '#10b981' }}>
+                        {notice.status === 'pending' ? '⏳' : '✅'}{' '}
+                        {notice.original_filename}{' '}
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 'normal' }}>
+                          ({(notice.size_bytes / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </span>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        padding: '0.15rem 0.4rem',
+                        borderRadius: '4px',
+                        backgroundColor: notice.status === 'pending' ? '#fef3c7' : '#d1fae5',
+                        color: notice.status === 'pending' ? '#b45309' : '#065f46'
+                      }}>
+                        {notice.status === 'pending' ? 'Pendiente' : 'Resuelto'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Ficha Histórica: Bitácora de Cambios */}
@@ -386,6 +444,11 @@ export default async function AdminContributionDetail({ params, searchParams }: 
             )}
           </div>
 
+          {/* Carga Posterior de Archivos (Operadores Autorizados) */}
+          <AdminAddFilesForm
+            contributionId={contribution.id}
+            pendingNotices={contribution.oversized_file_notices?.filter((n: any) => n.status === 'pending') || []}
+          />
         </div>
 
         {/* Columna Derecha: Aportante, Consentimiento y Notas */}
@@ -421,9 +484,13 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Email</span>
-                  <a href={`mailto:${contribution.contributors.email}`} style={{ fontWeight: 500 }}>
-                    {contribution.contributors.email}
-                  </a>
+                  {contribution.contributors.email && contribution.contributors.email.trim() !== '' ? (
+                    <a href={`mailto:${contribution.contributors.email}`} style={{ fontWeight: 500 }}>
+                      {contribution.contributors.email}
+                    </a>
+                  ) : (
+                    <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No informado</span>
+                  )}
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Relación local</span>

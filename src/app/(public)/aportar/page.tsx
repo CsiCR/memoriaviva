@@ -64,6 +64,7 @@ export default function Aportar() {
   });
 
   const [files, setFiles] = useState<File[]>([]);
+  const [oversizedFiles, setOversizedFiles] = useState<{ name: string; size: number; type: string }[]>([]);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -159,6 +160,7 @@ export default function Aportar() {
     const selectedFiles = Array.from(e.target.files);
     const newErrors: string[] = [];
     const validFiles: File[] = [];
+    const newOversized: { name: string; size: number; type: string }[] = [];
 
     selectedFiles.forEach((file) => {
       const extension = file.name.split('.').pop()?.toLowerCase() || '';
@@ -169,7 +171,11 @@ export default function Aportar() {
       }
       
       if (file.size > MAX_FILE_SIZE) {
-        newErrors.push(`El archivo "${file.name}" supera el límite de 50 MB.`);
+        newOversized.push({
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream'
+        });
         return;
       }
 
@@ -177,6 +183,9 @@ export default function Aportar() {
     });
 
     setFileErrors(newErrors);
+    if (newOversized.length > 0) {
+      setOversizedFiles((prev) => [...prev, ...newOversized]);
+    }
     setFiles((prev) => [...prev, ...validFiles]);
   };
 
@@ -194,7 +203,6 @@ export default function Aportar() {
       formData.dni && 
       formData.full_name && 
       formData.phone && 
-      formData.email && 
       formData.relation_to_city && 
       formData.neighborhood_or_institution
     );
@@ -204,8 +212,10 @@ export default function Aportar() {
     const basicValid = !!(formData.title && formData.contribution_type && formData.description && formData.related_place);
     if (!basicValid) return false;
 
-    // Si no es testimonio escrito, obliga a subir archivos
-    if (formData.contribution_type !== 'Testimonio escrito' && files.length === 0) {
+    // Si no es testimonio escrito, obliga a subir archivos o tener archivos grandes pendientes (Alcance Acotado)
+    const isTextOnly = formData.contribution_type === 'Testimonio escrito' || formData.contribution_type === 'Solo texto';
+    const totalFilesCount = files.length + oversizedFiles.length;
+    if (!isTextOnly && totalFilesCount === 0) {
       return false;
     }
     return true;
@@ -372,7 +382,12 @@ export default function Aportar() {
           accepts_cataloging: formData.accepts_cataloging,
           consent_text_version: 'Versión inicial 1.0 - MVP - Junio 2026'
         },
-        files: filesMetadata
+        files: filesMetadata,
+        oversized_files: oversizedFiles.map((f) => ({
+          original_filename: f.name,
+          size_bytes: f.size,
+          mime_type: f.type
+        }))
       };
 
       const response = await fetch('/api/contribute', {
@@ -399,7 +414,15 @@ export default function Aportar() {
         };
         sessionStorage.setItem('last_contributor', JSON.stringify(contributorInfo));
 
-        router.push('/gracias');
+        if (oversizedFiles.length > 0) {
+          sessionStorage.setItem('last_oversized_files', JSON.stringify({
+            catalogCode: result.catalog_code || null,
+            files: oversizedFiles.map(f => ({ name: f.name, size: f.size }))
+          }));
+          router.push('/gracias?oversized=true');
+        } else {
+          router.push('/gracias');
+        }
       } else {
         if (contentType.includes('application/json')) {
           const result = await response.json();
@@ -556,11 +579,10 @@ export default function Aportar() {
               </div>
 
               <div className="form-group">
-                <label className="form-label form-label-required">Email*</label>
+                <label className="form-label">Correo electrónico (opcional)</label>
                 <input
                   type="email"
                   name="email"
-                  required
                   className="form-input"
                   placeholder="juan.perez@email.com"
                   value={formData.email}
@@ -761,6 +783,45 @@ export default function Aportar() {
                             type="button"
                             onClick={() => removeFile(index)}
                             style={{ background: 'none', border: 'none', color: 'var(--neutral-grey)', cursor: 'pointer' }}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Listado de archivos pendientes por superar límite (Alcance Acotado) */}
+                {oversizedFiles.length > 0 && (
+                  <div style={{ marginTop: '1.25rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#d97706', display: 'block', marginBottom: '0.5rem' }}>
+                      Archivos grandes pendientes (se coordinará su entrega offline):
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {oversizedFiles.map((file, index) => (
+                        <div 
+                          key={index} 
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#fffbeb',
+                            border: '1px solid #fde68a',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          <span style={{ fontWeight: 500, color: '#b45309' }}>
+                            ⚠️ {file.name} <span style={{ color: '#d97706', fontSize: '0.75rem' }}>({(file.size / (1024 * 1024)).toFixed(2)} MB - Excede 50 MB)</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOversizedFiles((prev) => prev.filter((_, i) => i !== index));
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#b45309', cursor: 'pointer' }}
                           >
                             <X size={16} />
                           </button>

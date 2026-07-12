@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { signOut } from '@/app/actions/auth';
 import { LayoutDashboard, FileText, Users, LogOut, BookOpen, User } from 'lucide-react';
+import AdminNotificationsBell from '@/components/AdminNotificationsBell';
 
 export default async function AdminProtectedLayout({
   children,
@@ -192,8 +193,25 @@ export default async function AdminProtectedLayout({
       </aside>
 
       {/* Contenido Principal */}
-      <main style={{ flexGrow: 1, padding: '2rem', overflowY: 'auto', maxHeight: '100vh' }}>
-        {children}
+      <main style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        {/* Barra de Cabecera con Campanita */}
+        <header style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          padding: '0 2rem',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+          height: '60px',
+          flexShrink: 0
+        }}>
+          <AdminNotificationsBell />
+        </header>
+
+        {/* Contenedor de contenido scrollable */}
+        <div style={{ flexGrow: 1, padding: '2rem', overflowY: 'auto' }}>
+          {children}
+        </div>
       </main>
     </div>
   );

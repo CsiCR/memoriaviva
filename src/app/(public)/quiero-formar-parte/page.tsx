@@ -86,9 +86,7 @@ export default function QuieroFormarParte() {
       errors.phone = 'Teléfono de contacto es requerido';
     }
 
-    if (!formData.email.trim()) {
-      errors.email = 'E-mail de contacto es requerido';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       errors.email = 'E-mail no tiene un formato válido';
     }
 
@@ -311,7 +309,7 @@ export default function QuieroFormarParte() {
           </div>
 
           <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label form-label-required" style={{ fontWeight: 550 }}>Email de Contacto*</label>
+            <label className="form-label" style={{ fontWeight: 550 }}>Correo electrónico (opcional)</label>
             <div style={{ position: 'relative' }}>
               <input
                 type="email"

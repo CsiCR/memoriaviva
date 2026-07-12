@@ -1,25 +1,46 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle, ArrowLeft, Plus, Heart } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { CheckCircle, ArrowLeft, Plus, Heart, AlertTriangle, FileWarning } from 'lucide-react';
 
-interface PageProps {
-  searchParams: Promise<{ source?: string }>;
-}
+export default function Gracias() {
+  const searchParams = useSearchParams();
+  const source = searchParams.get('source');
+  const hasOversized = searchParams.get('oversized') === 'true';
 
-export default async function Gracias({ searchParams }: PageProps) {
-  const resolvedParams = await searchParams;
-  const isRegistration = resolvedParams.source === 'quiero-formar-parte';
+  const isRegistration = source === 'quiero-formar-parte';
+  
+  const [oversizedInfo, setOversizedInfo] = useState<{
+    catalogCode: string | null;
+    files: { name: string; size: number }[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (hasOversized) {
+      try {
+        const stored = sessionStorage.getItem('last_oversized_files');
+        if (stored) {
+          setOversizedInfo(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.error('Error reading oversized files from session storage:', err);
+      }
+    }
+  }, [hasOversized]);
 
   return (
     <div className="container section" style={{ maxWidth: '600px', textAlign: 'center', marginTop: '2rem', paddingBottom: '4rem' }}>
       <div style={{ 
         display: 'inline-flex', 
-        backgroundColor: isRegistration ? '#f0f9ff' : 'var(--hope-green-light)', 
-        color: isRegistration ? '#0284c7' : 'var(--hope-green)', 
+        backgroundColor: isRegistration ? '#f0f9ff' : (hasOversized ? '#fffbeb' : 'var(--hope-green-light)'), 
+        color: isRegistration ? '#0284c7' : (hasOversized ? '#d97706' : 'var(--hope-green)'), 
         padding: '1.25rem', 
         borderRadius: '50%',
         marginBottom: '1.5rem'
       }}>
-        {isRegistration ? <Heart size={48} /> : <CheckCircle size={48} />}
+        {isRegistration ? <Heart size={48} /> : (hasOversized ? <FileWarning size={48} /> : <CheckCircle size={48} />)}
       </div>
       
       {isRegistration ? (
@@ -49,17 +70,74 @@ export default async function Gracias({ searchParams }: PageProps) {
         </>
       ) : (
         <>
-          <h1 style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>¡Muchas gracias por tu aporte!</h1>
+          <h1 style={{ fontSize: '2.25rem', marginBottom: '1rem', color: '#0f172a' }}>
+            {hasOversized ? 'El aporte fue guardado correctamente' : '¡Muchas gracias por tu aporte!'}
+          </h1>
           
-          <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2rem' }}>
-            Hemos recibido tu material e información de contacto de forma segura. El equipo editorial de <strong>Memoria Viva Pico Truncado</strong> revisará tu aporte respetando rigurosamente el nivel de consentimiento y la preferencia de créditos que seleccionaste.
-          </p>
+          {hasOversized ? (
+            <div className="card" style={{ 
+              padding: '1.5rem', 
+              marginBottom: '2rem', 
+              textAlign: 'left', 
+              backgroundColor: '#fffbeb', 
+              border: '1px solid #fde68a', 
+              borderRadius: '8px' 
+            }}>
+              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+                <AlertTriangle size={20} style={{ color: '#d97706', flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, color: '#b45309', fontSize: '0.95rem' }}>
+                  Aviso de Archivos Pendientes
+                </span>
+              </div>
+              <p style={{ fontSize: '0.9rem', color: '#78350f', lineHeight: 1.6, margin: '0 0 1rem 0' }}>
+                Uno o más archivos superaron el máximo actual de 50 MB y no pudieron cargarse por este medio. 
+                El equipo de <strong>Memoria Viva</strong> recibió un aviso y se comunicará con usted para coordinar la entrega o preparar una versión adecuada.
+              </p>
+              <p style={{ fontSize: '0.9rem', color: '#78350f', lineHeight: 1.6, margin: '0 0 1rem 0' }}>
+                También puede comunicarse de manera directa a: <a href="mailto:memoriavivapicotruncado@gmail.com" style={{ fontWeight: 600, color: '#b45309', textDecoration: 'underline' }}>memoriavivapicotruncado@gmail.com</a>
+              </p>
+
+              {oversizedInfo && (
+                <div style={{ 
+                  backgroundColor: '#ffffff', 
+                  border: '1px solid #f3f4f6', 
+                  padding: '1rem', 
+                  borderRadius: '6px',
+                  fontSize: '0.85rem'
+                }}>
+                  {oversizedInfo.catalogCode && (
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <strong style={{ color: '#374151' }}>Código de Catalogación:</strong>{' '}
+                      <code style={{ backgroundColor: '#f3f4f6', padding: '0.1rem 0.4rem', borderRadius: '4px', color: '#1f2937' }}>
+                        {oversizedInfo.catalogCode}
+                      </code>
+                    </div>
+                  )}
+                  <strong style={{ color: '#374151', display: 'block', marginBottom: '0.5rem' }}>Archivos pendientes ({oversizedInfo.files.length}):</strong>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    {oversizedInfo.files.map((file, idx) => (
+                      <li key={idx}>
+                        {file.name} <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>({(file.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2rem' }}>
+              Hemos recibido tu material e información de contacto de forma segura. El equipo editorial de <strong>Memoria Viva Pico Truncado</strong> revisará tu aporte respetando rigurosamente el nivel de consentimiento y la preferencia de créditos que seleccionaste.
+            </p>
+          )}
 
           <div className="card" style={{ padding: '1.5rem', marginBottom: '2.5rem', textAlign: 'left', backgroundColor: 'var(--white)', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>¿Qué sucede ahora?</h3>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#0f172a', fontWeight: 600 }}>¿Qué sucede ahora?</h3>
             <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               <li>El aporte ingresa al panel en estado <strong>Recibido</strong>.</li>
               <li>Un validador histórico del equipo revisará la descripción, fecha y personas mencionadas.</li>
+              {hasOversized ? (
+                <li style={{ color: '#b45309', fontWeight: 550 }}>Coordinaremos la recepción offline de los archivos que superan los 50 MB.</li>
+              ) : null}
               <li>Si autorizaste a ser contactado, es posible que te enviemos un mensaje de WhatsApp o correo electrónico para ampliar la historia o coordinar una entrevista grabada.</li>
               <li>El material será archivado digitalmente y quedará catalogado para su posible publicación en el libro u otros medios autorizados.</li>
             </ol>

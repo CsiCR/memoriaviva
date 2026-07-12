@@ -6,7 +6,7 @@ import { validateStorageFileMagicBytes } from '@/utils/magicBytes';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { contributor, contribution, consent, files } = body;
+    const { contributor, contribution, consent, files, oversized_files } = body;
 
     // 1. Validaciones de Datos Básicos
     if (!contributor || !contribution || !consent) {
@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { dni, full_name, phone, email, relation_to_city, neighborhood_or_institution } = contributor;
-    if (!dni || !full_name || !phone || !email || !relation_to_city || !neighborhood_or_institution) {
+    // email ya no es obligatorio en la validación (Alcance Acotado)
+    if (!dni || !full_name || !phone || !relation_to_city || !neighborhood_or_institution) {
       return NextResponse.json({ error: 'Faltan datos obligatorios del aportante.' }, { status: 400 });
     }
 
@@ -28,10 +29,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Debes aceptar las declaraciones de consentimiento obligatorias.' }, { status: 400 });
     }
 
-    // Si no es un testimonio escrito, requiere archivos vinculados
+    // Si no es un testimonio escrito, requiere archivos vinculados o al menos un aviso de archivo grande
     const isTextOnly = contribution_type === 'Testimonio escrito' || contribution_type === 'Solo texto';
-    if (!isTextOnly && (!files || files.length === 0)) {
-      return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo histórico.' }, { status: 400 });
+    const totalFilesCount = (files?.length || 0) + (oversized_files?.length || 0);
+    if (!isTextOnly && totalFilesCount === 0) {
+      return NextResponse.json({ error: 'Este tipo de aporte requiere que adjuntes al menos un archivo histórico o informes archivos grandes.' }, { status: 400 });
     }
 
     const adminSupabase = createAdminClient();
@@ -111,7 +113,8 @@ export async function POST(req: NextRequest) {
         p_contribution: contribution,
         p_consent: consent,
         p_files: filesMetadataToLink,
-        p_user_id: null // Flujo público
+        p_user_id: null, // Flujo público
+        p_oversized_files: oversized_files || []
       }
     );
 

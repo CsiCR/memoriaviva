@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, ArrowLeft, Plus, Heart, AlertTriangle, FileWarning } from 'lucide-react';
 
-export default function Gracias() {
+function GraciasContent() {
   const searchParams = useSearchParams();
   const source = searchParams.get('source');
   const hasOversized = searchParams.get('oversized') === 'true';
@@ -160,5 +160,17 @@ export default function Gracias() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Gracias() {
+  return (
+    <Suspense fallback={
+      <div className="container section" style={{ maxWidth: '600px', textAlign: 'center', marginTop: '4rem', paddingBottom: '4rem' }}>
+        <div style={{ color: 'var(--text-secondary)' }}>Cargando confirmación...</div>
+      </div>
+    }>
+      <GraciasContent />
+    </Suspense>
   );
 }

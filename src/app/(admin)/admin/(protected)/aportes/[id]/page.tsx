@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, User, FileText, Shield, File, Download, ExternalLink, Calendar, MapPin, Landmark, Heart, History } from 'lucide-react';
 import ContributionEditForm from '@/components/ContributionEditForm';
+import EditorialHelp from '@/components/EditorialHelp';
 import { formatDateToAR, formatDateTimeToAR, formatDateTimeForAudit } from '@/utils/date';
 
 import AdminAddFilesForm from '@/components/AdminAddFilesForm';
@@ -181,10 +182,10 @@ export default async function AdminContributionDetail({ params, searchParams }: 
           {contribution.editorial_status === 'Recibido' && contribution.oversized_file_notices?.some((n: any) => n.status === 'pending') ? (
             <span 
               className="badge badge-pendiente-de-archivos" 
-              title="Este aporte fue recibido, pero uno o más archivos superaron el límite de 50 MB y requieren coordinación con el aportante."
-              style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+              style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
             >
-              ⚠️ Recibido · faltan archivos
+              <span>⚠️ Recibido · faltan archivos</span>
+              <EditorialHelp helpKey="indicators.missing_files" />
             </span>
           ) : (
             <span className={statusBadgeClass || 'badge badge-default'} style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>
@@ -263,6 +264,15 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               </span>
               <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6', color: '#1a202c', whiteSpace: 'pre-wrap' }}>
                 {contribution.historical_context || 'No se aportó historia detallada por escrito.'}
+              </p>
+            </div>
+
+            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--neutral-grey)', display: 'block', marginBottom: '0.35rem' }}>
+                ¿Por qué existe este campo? · Validación histórica
+              </span>
+              <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                La memoria oral tiene un enorme valor patrimonial. La validación histórica no busca modificar el testimonio sino aportar contexto cuando sea posible para facilitar su comprensión por las generaciones futuras.
               </p>
             </div>
           </div>
@@ -565,6 +575,15 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 </div>
               </div>
             )}
+
+            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--neutral-grey)', display: 'block', marginBottom: '0.35rem' }}>
+                ¿Por qué existe este campo? · Consentimiento firmado
+              </span>
+              <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                La preservación y difusión de memorias exige el respeto absoluto a la voluntad y derechos del aportante. Este campo asegura la trazabilidad legal y el respaldo documental de cada testimonio custodiado.
+              </p>
+            </div>
           </div>
 
           {/* Ficha 5: Soporte Legal y Respaldos */}

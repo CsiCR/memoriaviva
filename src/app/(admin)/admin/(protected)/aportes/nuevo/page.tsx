@@ -7,6 +7,7 @@ import { Upload, X, Shield, FileText, User, Printer, ArrowLeft, AlertCircle, Che
 import { createClient } from '@/utils/supabase/client';
 import { getBuenosAiresYear, createBuenosAiresDate } from '@/utils/date';
 import { uploadFileToStorage } from '@/utils/supabase/upload';
+import EditorialHelp from '@/components/EditorialHelp';
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'wav', 'm4a', 'mp4', 'mov'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -1414,7 +1415,10 @@ DNI/Representación:
 
             <div className="grid grid-2" style={{ marginBottom: '1.5rem' }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label form-label-required">Nivel de autorización acordado*</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                  <label className="form-label form-label-required" style={{ margin: 0 }}>Nivel de autorización acordado*</label>
+                  <EditorialHelp helpKey="authorizationLevel" initialSelectedValue={formData.authorization_level} />
+                </div>
                 <select
                   name="authorization_level"
                   required
@@ -1432,7 +1436,10 @@ DNI/Representación:
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label form-label-required">Preferencia de créditos acordada*</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                  <label className="form-label form-label-required" style={{ margin: 0 }}>Preferencia de créditos acordada*</label>
+                  <EditorialHelp helpKey="creditPreference" initialSelectedValue={formData.credit_preference} />
+                </div>
                 <select
                   name="credit_preference"
                   required

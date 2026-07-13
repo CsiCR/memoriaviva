@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { updateContributionStatus } from '@/app/actions/contributions';
 import { Save, CheckCircle, AlertCircle, Upload, Shield } from 'lucide-react';
+import EditorialHelp from './EditorialHelp';
 
 interface ContributionEditFormProps {
   id: string;
@@ -118,7 +119,10 @@ export default function ContributionEditForm({
 
       <div className="grid grid-2" style={{ gap: '1rem' }}>
         <div className="form-group" style={{ margin: 0 }}>
-          <label className="form-label">Estado Editorial</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+            <label className="form-label" style={{ margin: 0 }}>Estado Editorial</label>
+            <EditorialHelp helpKey="editorialStatus" initialSelectedValue={status} />
+          </div>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -133,37 +137,49 @@ export default function ContributionEditForm({
         </div>
 
         <div className="form-group" style={{ margin: 0 }}>
-          <label className="form-label">Nivel de Autorización</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+            <label className="form-label" style={{ margin: 0 }}>Nivel de Autorización</label>
+            <EditorialHelp helpKey="authorizationLevel" initialSelectedValue={level} />
+          </div>
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
             className="form-select"
-            disabled={saving}
-            style={{ height: '40px' }}
+            disabled={true}
+            style={{ height: '40px', backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: 'var(--text-secondary)' }}
           >
             <option value="">Seleccione un nivel...</option>
             {dbOptions.authorization_level.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+            Solo lectura (rectificación requiere trámite formal)
+          </span>
         </div>
       </div>
 
       <div className="grid grid-2" style={{ gap: '1rem' }}>
         <div className="form-group" style={{ margin: 0 }}>
-          <label className="form-label">Preferencia de Créditos</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+            <label className="form-label" style={{ margin: 0 }}>Preferencia de Créditos</label>
+            <EditorialHelp helpKey="creditPreference" initialSelectedValue={credits} />
+          </div>
           <select
             value={credits}
             onChange={(e) => setCredits(e.target.value)}
             className="form-select"
-            disabled={saving}
-            style={{ height: '40px' }}
+            disabled={true}
+            style={{ height: '40px', backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: 'var(--text-secondary)' }}
           >
             <option value="">Seleccione una preferencia...</option>
             {dbOptions.credit_preference.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+            Solo lectura (rectificación requiere trámite formal)
+          </span>
         </div>
 
         <div className="form-group" style={{ margin: 0 }}>

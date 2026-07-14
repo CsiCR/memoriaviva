@@ -1,6 +1,39 @@
--- MIGRACIÓN DE CORRECCIÓN: VALIDACIÓN ESTRICTA DE FECHA PROGRAMADA EN LA RPC
+-- MIGRACIÓN DE CORRECCIÓN: VALIDACIÓN ESTRICTA DE FECHA PROGRAMADA Y SANEAMIENTO DE POLÍTICAS RLS EN SELECT_OPTIONS
 -- Archivo: supabase/migrations/202607142220_fix_scheduled_date_validation.sql
 
+-- 1. Saneamiento de RLS en select_options
+-- Borra dinámicamente cualquier política anterior (evitando ORs permisivos con políticas obsoletas) y recrea las tres autorizadas
+DO $$
+DECLARE
+    pol RECORD;
+BEGIN
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'select_options'
+    LOOP
+        EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(pol.policyname) || ' ON public.select_options;';
+    END LOOP;
+END $$;
+
+-- Forzar habilitación de RLS
+ALTER TABLE public.select_options ENABLE ROW LEVEL SECURITY;
+
+-- Recrear políticas limpias
+CREATE POLICY "Permitir lectura publica de categorias seleccionadas"
+  ON public.select_options FOR SELECT TO anon
+  USING (category IN ('relation_to_city', 'contribution_type', 'authorization_level', 'credit_preference'));
+
+CREATE POLICY "Permitir lectura completa a usuarios autenticados"
+  ON public.select_options FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "Permitir control de select_options solo a admins"
+  ON public.select_options FOR ALL TO authenticated
+  USING (public.has_role(auth.uid(), ARRAY['admin']));
+
+
+-- 2. Redefinir la RPC update_editorial_dimensions con validación estricta de fecha programada
 CREATE OR REPLACE FUNCTION public.update_editorial_dimensions(
   p_contribution_id UUID,
   p_editorial_status TEXT,

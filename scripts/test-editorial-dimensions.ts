@@ -126,6 +126,7 @@ async function main() {
     p_contribution_id: contribution.id,
     p_editorial_status: 'En revisión',
     p_publication_status_option_id: scheduledOpt.id,
+    p_publication_notes: 'Notas de pub',
     p_publication_scheduled_at: new Date(Date.now() + 86400000).toISOString(), // mañana
     p_internal_notes: 'Notas de prueba',
     p_active_indicator_option_ids: [missingFilesOpt.id, missingInfoOpt.id]
@@ -194,6 +195,7 @@ async function main() {
     p_contribution_id: contribution.id,
     p_editorial_status: 'En revisión',
     p_publication_status_option_id: scheduledOpt.id,
+    p_publication_notes: 'Notas de pub',
     p_publication_scheduled_at: new Date(Date.now() + 86400000).toISOString(),
     p_internal_notes: 'Notas de prueba',
     p_active_indicator_option_ids: [missingFilesOpt.id]
@@ -229,6 +231,7 @@ async function main() {
     p_contribution_id: contribution.id,
     p_editorial_status: 'En revisión',
     p_publication_status_option_id: scheduledOpt.id,
+    p_publication_notes: 'Notas de pub',
     p_publication_scheduled_at: new Date(Date.now() + 86400000).toISOString(),
     p_internal_notes: 'Notas de prueba',
     p_active_indicator_option_ids: [missingFilesOpt.id, missingInfoOpt.id]
@@ -270,6 +273,7 @@ async function main() {
     p_contribution_id: contribution.id,
     p_editorial_status: 'En revisión', // se mantiene
     p_publication_status_option_id: withdrawnOpt.id,
+    p_publication_notes: 'Notas de pub',
     p_publication_scheduled_at: null,
     p_internal_notes: 'Modificación de prueba',
     p_active_indicator_option_ids: [] // sin indicadores
@@ -307,6 +311,7 @@ async function main() {
     p_contribution_id: contribution.id,
     p_editorial_status: 'En revisión',
     p_publication_status_option_id: scheduledOpt.id,
+    p_publication_notes: 'Notas de pub',
     p_publication_scheduled_at: null, // error requerido!
     p_internal_notes: 'Fallo de prueba',
     p_active_indicator_option_ids: []

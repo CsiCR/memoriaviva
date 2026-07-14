@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('select_options')
       .select('*')
-      .order('sort_order', { ascending: true })
+      .order('display_order', { ascending: true })
       .order('created_at', { ascending: true });
 
     if (category !== 'all') {
@@ -78,22 +78,36 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { category, value, label, code, sort_order, is_active } = body;
+    const { category, value, name, code, display_order, is_active, metadata, is_default, is_system, description } = body;
 
-    if (!category || !value || !label) {
-      return NextResponse.json({ error: 'Faltan campos obligatorios (category, value, label).' }, { status: 400 });
+    if (!category || !value || !name) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios (category, value, name).' }, { status: 400 });
     }
 
     const adminClient = createAdminClient();
+    
+    // Si se establece como predeterminado, quitar predeterminado de los otros de la misma categoría primero
+    if (is_default === true) {
+      await adminClient
+        .from('select_options')
+        .update({ is_default: false })
+        .eq('category', category);
+    }
+
     const { data, error } = await adminClient
       .from('select_options')
       .insert({
         category,
         value: value.trim(),
-        label: label.trim(),
+        name: name.trim(),
         code: code ? code.trim().toUpperCase() : null,
-        sort_order: parseInt(sort_order, 10) || 0,
-        is_active: is_active !== false
+        display_order: parseInt(display_order, 10) || 0,
+        is_active: is_active !== false,
+        is_default: is_default === true,
+        is_system: is_system === true,
+        metadata: metadata || {},
+        description: description ? description.trim() : null,
+        created_by: authCheck.user?.id
       })
       .select()
       .single();
@@ -119,22 +133,58 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, value, label, code, sort_order, is_active } = body;
+    const { id, value, name, code, display_order, is_active, metadata, is_default, is_system, description } = body;
 
-    if (!id || !value || !label) {
-      return NextResponse.json({ error: 'Faltan campos obligatorios (id, value, label).' }, { status: 400 });
+    if (!id || !value || !name) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios (id, value, name).' }, { status: 400 });
     }
 
     const adminClient = createAdminClient();
+
+    // Obtener la categoría del registro actual
+    const { data: currentOpt } = await adminClient
+      .from('select_options')
+      .select('category, is_system, code')
+      .eq('id', id)
+      .single();
+
+    if (!currentOpt) {
+      return NextResponse.json({ error: 'Opción no encontrada.' }, { status: 404 });
+    }
+
+    // Protecciones: code inmutable si es del sistema
+    const updateData: Record<string, any> = {
+      name: name.trim(),
+      display_order: parseInt(display_order, 10) || 0,
+      is_active: is_active !== false,
+      metadata: metadata || {},
+      description: description ? description.trim() : null,
+      updated_by: authCheck.user?.id,
+      updated_at: new Date().toISOString()
+    };
+
+    // Si no es de sistema, permitir cambiar value y code
+    if (!currentOpt.is_system) {
+      updateData.value = value.trim();
+      updateData.code = code ? code.trim().toUpperCase() : null;
+      updateData.is_system = is_system === true;
+    }
+
+    // Manejar is_default
+    if (is_default === true) {
+      // Quitar predeterminado a todos los demás de la categoría
+      await adminClient
+        .from('select_options')
+        .update({ is_default: false })
+        .eq('category', currentOpt.category);
+      updateData.is_default = true;
+    } else {
+      updateData.is_default = false;
+    }
+
     const { data, error } = await adminClient
       .from('select_options')
-      .update({
-        value: value.trim(),
-        label: label.trim(),
-        code: code ? code.trim().toUpperCase() : null,
-        sort_order: parseInt(sort_order, 10) || 0,
-        is_active: is_active !== false
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -151,7 +201,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE: Eliminar una opción (Solo admin)
+// DELETE: Eliminar una opción (Solo admin, baja lógica si está en uso o de sistema)
 export async function DELETE(req: NextRequest) {
   try {
     const authCheck = await checkAdminAccess();
@@ -167,6 +217,75 @@ export async function DELETE(req: NextRequest) {
     }
 
     const adminClient = createAdminClient();
+
+    // Obtener información del registro
+    const { data: option } = await adminClient
+      .from('select_options')
+      .select('is_system, name, category')
+      .eq('id', id)
+      .single();
+
+    if (!option) {
+      return NextResponse.json({ error: 'Opción no encontrada.' }, { status: 404 });
+    }
+
+    // Protecciones: registros is_system no se eliminan físicamente
+    if (option.is_system) {
+      // Intentar desactivar en vez de borrar
+      const { error: deactivateError } = await adminClient
+        .from('select_options')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (deactivateError) {
+        console.error('Error al desactivar opción de sistema:', deactivateError);
+        return NextResponse.json({ error: 'No se pudo desactivar la opción del sistema.' }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, message: 'La opción de sistema fue desactivada (baja lógica).' });
+    }
+
+    // Verificar si está en uso en contributions
+    let inUse = false;
+    if (option.category === 'authorization_level') {
+      const { count } = await adminClient
+        .from('contributions')
+        .select('*', { count: 'exact', head: true })
+        .eq('authorization_level', option.name); // O valor
+      inUse = (count || 0) > 0;
+    } else if (option.category === 'credit_preference') {
+      const { count } = await adminClient
+        .from('contributions')
+        .select('*', { count: 'exact', head: true })
+        .eq('credit_preference', option.name);
+      inUse = (count || 0) > 0;
+    } else if (option.category === 'publication_status') {
+      const { count } = await adminClient
+        .from('contributions')
+        .select('*', { count: 'exact', head: true })
+        .eq('publication_status_option_id', id);
+      inUse = (count || 0) > 0;
+    } else if (option.category === 'editorial_indicator') {
+      const { count } = await adminClient
+        .from('contribution_editorial_indicators')
+        .select('*', { count: 'exact', head: true })
+        .eq('indicator_option_id', id);
+      inUse = (count || 0) > 0;
+    }
+
+    // Si está en uso, hacer baja lógica
+    if (inUse) {
+      const { error: deactivateError } = await adminClient
+        .from('select_options')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (deactivateError) {
+        return NextResponse.json({ error: 'No se pudo desactivar la opción en uso.' }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, message: 'La opción está en uso. Se realizó una baja lógica.' });
+    }
+
+    // Si no está en uso y no es del sistema, eliminar físicamente
     const { error } = await adminClient
       .from('select_options')
       .delete()

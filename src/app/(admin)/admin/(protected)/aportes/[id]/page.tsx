@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, User, FileText, Shield, File, Download, ExternalLink, Calendar, MapPin, Landmark, Heart, History } from 'lucide-react';
+import { ArrowLeft, User, FileText, Shield, File, Download, ExternalLink, Calendar, MapPin, Landmark, Heart, History, Globe } from 'lucide-react';
 import ContributionEditForm from '@/components/ContributionEditForm';
 import EditorialHelp from '@/components/EditorialHelp';
 import { formatDateToAR, formatDateTimeToAR, formatDateTimeForAudit } from '@/utils/date';
@@ -22,7 +22,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   const { from } = await searchParams;
   const supabase = await createClient();
 
-  // 1. Obtener el aporte completo (incluyendo avisos de archivos grandes)
+  // 1. Obtener el aporte completo (incluyendo avisos de archivos grandes e indicadores)
   const { data: contribution, error } = await supabase
     .from('contributions')
     .select(`
@@ -31,7 +31,8 @@ export default async function AdminContributionDetail({ params, searchParams }: 
       contribution_files ( * ),
       consent_records ( * ),
       institutional_agreements ( * ),
-      oversized_file_notices ( * )
+      oversized_file_notices ( * ),
+      contribution_editorial_indicators ( * )
     `)
     .eq('id', id)
     .single();
@@ -40,6 +41,36 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     console.error('Error al obtener detalle del aporte:', error);
     notFound();
   }
+
+  // Obtener la opción de estado de publicación actual si existe
+  let publicationStatusOpt = null;
+  if (contribution.publication_status_option_id) {
+    const { data: pubOpt } = await supabase
+      .from('select_options')
+      .select('*')
+      .eq('id', contribution.publication_status_option_id)
+      .single();
+    publicationStatusOpt = pubOpt;
+  }
+
+  // Obtener los nombres/detalles de los indicadores activos
+  let activeIndicatorsWithDetails: any[] = [];
+  const activeInds = (contribution.contribution_editorial_indicators || []).filter((ind: any) => ind.is_active);
+  if (activeInds.length > 0) {
+    const { data: indOpts } = await supabase
+      .from('select_options')
+      .select('*')
+      .in('id', activeInds.map((ind: any) => ind.indicator_option_id));
+    
+    activeIndicatorsWithDetails = activeInds.map((ind: any) => {
+      const opt = indOpts?.find((o: any) => o.id === ind.indicator_option_id);
+      return {
+        ...ind,
+        opt
+      };
+    });
+  }
+
 
   // 2. Generar Signed URLs para cada archivo cargado (expiran en 15 minutos)
   const filesWithSignedUrls = await Promise.all(
@@ -188,8 +219,9 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               <EditorialHelp helpKey="indicators.missing_files" />
             </span>
           ) : (
-            <span className={statusBadgeClass || 'badge badge-default'} style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>
-              {contribution.editorial_status}
+            <span className={statusBadgeClass || 'badge badge-default'} style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <span>{contribution.editorial_status}</span>
+              <EditorialHelp helpKey="editorialStatus" initialSelectedValue={contribution.editorial_status} />
             </span>
           )}
         </div>
@@ -787,6 +819,102 @@ export default async function AdminContributionDetail({ params, searchParams }: 
             </div>
           </div>
 
+          {/* Ficha 5b: Dimensiones de Publicación e Indicadores */}
+          <div className="card" style={{ padding: '2rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+              <Globe size={20} style={{ color: 'var(--primary-blue)' }} /> Estado de Publicación e Indicadores
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.9rem' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Estado de Publicación</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {publicationStatusOpt ? (
+                    <span className="badge" style={{
+                      backgroundColor: publicationStatusOpt.metadata?.color === 'red' ? '#fee2e2' : publicationStatusOpt.metadata?.color === 'blue' ? '#dbeafe' : publicationStatusOpt.metadata?.color === 'green' ? '#dcfce7' : publicationStatusOpt.metadata?.color === 'amber' ? '#fef3c7' : '#f1f5f9',
+                      color: publicationStatusOpt.metadata?.color === 'red' ? '#b91c1c' : publicationStatusOpt.metadata?.color === 'blue' ? '#1d4ed8' : publicationStatusOpt.metadata?.color === 'green' ? '#15803d' : publicationStatusOpt.metadata?.color === 'amber' ? '#b45309' : '#475569',
+                      fontWeight: 'bold',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '4px',
+                      fontSize: '0.85rem'
+                    }}>
+                      {publicationStatusOpt.name}
+                    </span>
+                  ) : (
+                    <span className="badge badge-default">No evaluado</span>
+                  )}
+                </div>
+                {publicationStatusOpt?.metadata?.minimum_conditions && (
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    Condiciones mínimas: {publicationStatusOpt.metadata.minimum_conditions}
+                  </p>
+                )}
+              </div>
+
+              {contribution.publication_notes && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Notas de Publicación</span>
+                  <p style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                    {contribution.publication_notes}
+                  </p>
+                </div>
+              )}
+
+              {(contribution.publication_scheduled_at || contribution.published_at || contribution.withdrawn_at) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  {contribution.publication_scheduled_at && (
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Programado para</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{formatDateTimeToAR(contribution.publication_scheduled_at)}</span>
+                    </div>
+                  )}
+                  {contribution.published_at && (
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Publicado el</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--hope-green)' }}>{formatDateTimeToAR(contribution.published_at)}</span>
+                    </div>
+                  )}
+                  {contribution.withdrawn_at && (
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Retirado el</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#dc2626' }}>{formatDateTimeToAR(contribution.withdrawn_at)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>Indicadores Editoriales Activos</span>
+                {activeIndicatorsWithDetails.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {activeIndicatorsWithDetails.map((ind: any) => {
+                      const color = ind.opt?.metadata?.color || 'gray';
+                      return (
+                        <span key={ind.id} className="badge" style={{
+                          backgroundColor: color === 'red' ? '#fee2e2' : color === 'orange' ? '#ffedd5' : color === 'blue' ? '#dbeafe' : color === 'purple' ? '#f3e8ff' : color === 'amber' ? '#fef3c7' : color === 'indigo' ? '#e0e7ff' : '#f1f5f9',
+                          color: color === 'red' ? '#b91c1c' : color === 'orange' ? '#c2410c' : color === 'blue' ? '#1d4ed8' : color === 'purple' ? '#6b21a8' : color === 'amber' ? '#b45309' : color === 'indigo' ? '#3730a3' : '#475569',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.35rem 0.6rem',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem'
+                        }}>
+                          <span>⚠️ {ind.opt?.name || 'Indicador'}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span style={{ color: 'var(--hope-green)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    ✓ Sin indicadores críticos activos (Aporte limpio)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Ficha 6: Formulario de Modificación de Estado y Notas */}
           <div className="card" style={{ padding: '2rem' }}>
             <ContributionEditForm
@@ -797,6 +925,13 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               initialLevel={contribution.authorization_level}
               initialCredits={contribution.credit_preference}
               consentSource={contribution.consent_source || 'web_form'}
+              initialPublicationStatusOptionId={contribution.publication_status_option_id}
+              initialPublicationNotes={contribution.publication_notes}
+              initialPublicationScheduledAt={contribution.publication_scheduled_at}
+              initialActiveIndicatorOptionIds={(contribution.contribution_editorial_indicators || [])
+                .filter((ind: any) => ind.is_active)
+                .map((ind: any) => ind.indicator_option_id)
+              }
             />
           </div>
 

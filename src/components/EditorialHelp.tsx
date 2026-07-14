@@ -16,6 +16,24 @@ interface EditorialHelpProps {
   className?: string;
 }
 
+// Caché a nivel de módulo para evitar llamadas REST duplicadas en la misma página
+let cachedOptionsPromise: Promise<any> | null = null;
+const fetchAllOptions = () => {
+  if (!cachedOptionsPromise) {
+    cachedOptionsPromise = fetch('/api/select-options')
+      .then(res => {
+        if (!res.ok) throw new Error('Error al obtener opciones');
+        return res.json();
+      })
+      .catch(err => {
+        console.error('Error fetching select options in EditorialHelp:', err);
+        cachedOptionsPromise = null; // Reintentar en la próxima carga si falló
+        return null;
+      });
+  }
+  return cachedOptionsPromise;
+};
+
 export default function EditorialHelp({
   helpKey,
   initialSelectedValue,
@@ -23,6 +41,7 @@ export default function EditorialHelp({
 }: EditorialHelpProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeKey, setActiveKey] = useState<string>('');
+  const [dbOption, setDbOption] = useState<any>(null);
   
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -32,6 +51,7 @@ export default function EditorialHelp({
   const isLevel = helpKey === 'authorizationLevel';
   const isCredit = helpKey === 'creditPreference';
   const isIndicator = helpKey.startsWith('indicators.');
+  const isPublication = helpKey.startsWith('publication.');
 
   useEffect(() => {
     if (initialSelectedValue) {
@@ -43,7 +63,6 @@ export default function EditorialHelp({
         setActiveKey(creditToKeyMap[initialSelectedValue] || 'full_name');
       }
     } else {
-      // Claves por defecto si no hay valor inicial
       if (isStatus) setActiveKey('received');
       else if (isLevel) setActiveKey('A');
       else if (isCredit) setActiveKey('full_name');
@@ -52,8 +71,42 @@ export default function EditorialHelp({
     if (isIndicator) {
       const indicatorKey = helpKey.split('.')[1];
       setActiveKey(indicatorKey || '');
+    } else if (isPublication) {
+      const publicationKey = helpKey.split('.')[1];
+      setActiveKey(publicationKey || '');
     }
-  }, [initialSelectedValue, helpKey, isStatus, isLevel, isCredit, isIndicator]);
+  }, [initialSelectedValue, helpKey, isStatus, isLevel, isCredit, isIndicator, isPublication]);
+
+  // Cargar detalles de la base de datos cuando el popover se abra
+  useEffect(() => {
+    if (!isOpen || activeKey === '') return;
+
+    const loadDbDetails = async () => {
+      const allOpts = await fetchAllOptions();
+      if (!allOpts) return;
+
+      let matched = null;
+      if (isLevel) {
+        matched = allOpts.authorization_level?.find((o: any) => o.value === activeKey);
+      } else if (isCredit) {
+        const valMap: Record<string, string> = {
+          'full_name': 'Nombre completo',
+          'initials': 'Solo iniciales',
+          'anonymous': 'Anónimo'
+        };
+        const dbVal = valMap[activeKey] || activeKey;
+        matched = allOpts.credit_preference?.find((o: any) => o.value === dbVal || o.name === dbVal);
+      } else if (isIndicator) {
+        matched = allOpts.editorial_indicator?.find((o: any) => o.code === activeKey);
+      } else if (isPublication) {
+        matched = allOpts.publication_status?.find((o: any) => o.code === activeKey);
+      }
+
+      setDbOption(matched || null);
+    };
+
+    loadDbDetails();
+  }, [isOpen, activeKey, isLevel, isCredit, isIndicator, isPublication]);
 
   // Cierre con Escape y click outside
   useEffect(() => {
@@ -88,7 +141,6 @@ export default function EditorialHelp({
   // Manejo de foco (Focus Trap & Return)
   useEffect(() => {
     if (isOpen) {
-      // Retrasar levemente para permitir el renderizado
       const focusTimeout = setTimeout(() => {
         if (popoverRef.current) {
           const focusable = popoverRef.current.querySelectorAll(
@@ -116,13 +168,11 @@ export default function EditorialHelp({
     const lastElement = focusableElements[focusableElements.length - 1];
 
     if (e.shiftKey) {
-      // Shift + Tab
       if (document.activeElement === firstElement) {
         lastElement.focus();
         e.preventDefault();
       }
     } else {
-      // Tab
       if (document.activeElement === lastElement) {
         firstElement.focus();
         e.preventDefault();
@@ -140,33 +190,50 @@ export default function EditorialHelp({
 
   const closePopover = () => {
     setIsOpen(false);
-    // Retornar el foco al botón disparador
     setTimeout(() => {
       triggerRef.current?.focus();
     }, 50);
   };
 
-  // Obtener el contenido de ayuda según la categoría activa
-  let content: HelpContent | undefined;
+  // Obtener el contenido de ayuda local de fallback
+  let fallbackContent: HelpContent | undefined;
   if (isStatus) {
-    content = editorialHelp.editorialStatus[activeKey];
+    fallbackContent = editorialHelp.editorialStatus[activeKey];
   } else if (isLevel) {
-    content = editorialHelp.authorizationLevel[activeKey];
+    fallbackContent = editorialHelp.authorizationLevel[activeKey];
   } else if (isCredit) {
-    content = editorialHelp.creditPreference[activeKey];
+    fallbackContent = editorialHelp.creditPreference[activeKey];
   } else if (isIndicator) {
-    content = editorialHelp.indicators[activeKey];
+    fallbackContent = editorialHelp.indicators[activeKey];
+  } else if (isPublication) {
+    // Si no está definido localmente, fallback vacío
+    const pubHelp = (editorialHelp as any).publication || {};
+    fallbackContent = pubHelp[activeKey];
   }
+
+  // Mezclar textos: priorizar base de datos viva, luego fallback del config local
+  const displayTitle = dbOption?.name || fallbackContent?.title || activeKey;
+  const displayDescription = dbOption?.description || fallbackContent?.description || 'Sin descripción disponible.';
+  
+  // Indicadores específicos
+  const whenToUse = dbOption?.metadata?.activation_criteria || fallbackContent?.whenToUse;
+  const howToResolve = dbOption?.metadata?.resolution_instructions || fallbackContent?.howToResolve;
+  
+  // Estados de publicación específicos
+  const conditions = dbOption?.metadata?.minimum_conditions 
+    ? [dbOption.metadata.minimum_conditions] 
+    : (fallbackContent?.conditions || []);
+
+  const whyExists = fallbackContent?.whyExists || dbOption?.description || 'Requisito del sistema para la gestión del patrimonio histórico.';
 
   // Generar ID único para vinculación ARIA
   const popoverId = `editorial-help-popover-${helpKey.replace(/\./g, '-')}`;
-  const triggerAriaLabel = `Ayuda contextual para ${
-    isStatus ? 'Estado Editorial' : isLevel ? 'Nivel de Autorización' : isCredit ? 'Preferencia de Crédito' : 'Indicador'
+  const triggerAriaLabel = `Ayuda para ${
+    isStatus ? 'Estado Editorial' : isLevel ? 'Nivel de Autorización' : isCredit ? 'Preferencia de Crédito' : 'Campo Editorial'
   }`;
 
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', position: 'relative' }} className={className}>
-      {/* Estilos responsivos inyectados */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 640px) {
           .help-popover-container {
@@ -231,10 +298,8 @@ export default function EditorialHelp({
 
       {isOpen && (
         <>
-          {/* Backdrop para móviles */}
           <div className="help-popover-backdrop" onClick={closePopover} />
 
-          {/* Panel Popover */}
           <div
             id={popoverId}
             ref={popoverRef}
@@ -263,9 +328,8 @@ export default function EditorialHelp({
             }}
             className="help-popover-container"
           >
-            {/* Header del Popover */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 600, fontFamily: 'var(--font-headings)', color: 'var(--primary-blue)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem' }}>
+              <span style={{ fontWeight: 600, color: 'var(--primary-blue)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem' }}>
                 <HelpCircle size={16} />
                 Manual Editorial Contextual
               </span>
@@ -291,8 +355,8 @@ export default function EditorialHelp({
               </button>
             </div>
 
-            {/* Aviso Informativo de Navegación */}
-            {(isStatus || isLevel || isCredit) && (
+            {/* Aviso de navegación informativa */}
+            {(isStatus || isLevel || isCredit || isPublication) && (
               <div style={{
                 backgroundColor: 'var(--primary-blue-light)',
                 border: '1px solid rgba(21, 136, 230, 0.15)',
@@ -310,7 +374,7 @@ export default function EditorialHelp({
               </div>
             )}
 
-            {/* Selectores de Navegación Interna (Tabs o Dropdowns) */}
+            {/* Selector de navegación para estados editoriales */}
             {isStatus && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <label htmlFor="help-status-select" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -339,6 +403,7 @@ export default function EditorialHelp({
               </div>
             )}
 
+            {/* Tabs para niveles de autorización */}
             {isLevel && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 {Object.keys(editorialHelp.authorizationLevel).map((key) => {
@@ -367,6 +432,7 @@ export default function EditorialHelp({
               </div>
             )}
 
+            {/* Tabs para preferencias de créditos */}
             {isCredit && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 {Object.entries(editorialHelp.creditPreference).map(([key, val]) => {
@@ -395,111 +461,76 @@ export default function EditorialHelp({
               </div>
             )}
 
-            {/* Contenido Documental */}
-            {content && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', overflowY: 'auto', maxHeight: '280px', paddingRight: '2px' }}>
+            {/* Contenido Documental Seguro (sin HTML arbitrario) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', overflowY: 'auto', maxHeight: '280px', paddingRight: '2px' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}>
+                  {displayTitle}
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                  {displayDescription}
+                </p>
+              </div>
+
+              {fallbackContent?.details && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                  <strong>Alcance:</strong> {fallbackContent.details}
+                </div>
+              )}
+
+              {/* Condiciones mínimas para estados de publicación */}
+              {conditions && conditions.length > 0 && (
                 <div>
-                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}>
-                    {content.title}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {content.description}
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--hope-green)', display: 'block', marginBottom: '0.2rem' }}>
+                    Requisitos y Condiciones
+                  </span>
+                  <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {conditions.map((cond, idx) => (
+                      <li key={idx} style={{ marginBottom: '2px', listStyleType: 'square' }}>{cond}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Criterios e instrucciones de resolución para indicadores */}
+              {whenToUse && (
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Criterio de Activación:</strong>
+                  <span style={{ fontSize: '0.8rem' }}>{whenToUse}</span>
+                </div>
+              )}
+
+              {howToResolve && (
+                <div style={{ marginTop: '0.25rem' }}>
+                  <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cómo resolverlo:</strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--primary-blue-hover)', fontWeight: 500 }}>{howToResolve}</span>
+                </div>
+              )}
+
+              {fallbackContent?.permissions && (
+                <div style={{ fontSize: '0.75rem', padding: '0.4rem 0.5rem', backgroundColor: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '4px', color: '#166534' }}>
+                  <strong>Permisos:</strong> {fallbackContent.permissions}
+                </div>
+              )}
+
+              {fallbackContent?.restrictions && (
+                <div style={{ fontSize: '0.75rem', padding: '0.4rem 0.5rem', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '4px', color: '#991b1b' }}>
+                  <strong>Restricciones:</strong> {fallbackContent.restrictions}
+                </div>
+              )}
+
+              {/* Bloque: ¿Por qué existe este campo? */}
+              {whyExists && (
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--neutral-grey)', display: 'block', marginBottom: '2px' }}>
+                    ¿Por qué existe este campo?
+                  </span>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    {whyExists}
                   </p>
                 </div>
-
-                {/* Detalles para niveles de autorización */}
-                {content.details && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-                    <strong>Alcance:</strong> {content.details}
-                  </div>
-                )}
-
-                {/* Condiciones para estados */}
-                {content.conditions && content.conditions.length > 0 && (
-                  <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--hope-green)', display: 'block', marginBottom: '0.2rem' }}>
-                      Requisitos y Condiciones
-                    </span>
-                    <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {content.conditions.map((cond, idx) => (
-                        <li key={idx} style={{ marginBottom: '2px', listStyleType: 'square' }}>{cond}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Tareas pendientes para estados */}
-                {content.missing && content.missing.length > 0 && (
-                  <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', color: '#b45309', display: 'block', marginBottom: '0.2rem' }}>
-                      Habitualmente falta
-                    </span>
-                    <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {content.missing.map((mis, idx) => (
-                        <li key={idx} style={{ marginBottom: '2px', listStyleType: 'disc' }}>{mis}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Próximo paso para estados */}
-                {content.nextStep && (
-                  <div style={{ fontSize: '0.8rem', backgroundColor: '#fafaf6', border: '1px dashed var(--border-warm)', padding: '0.4rem 0.5rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <strong style={{ color: 'var(--neutral-grey)' }}>Paso sugerido:</strong>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{content.nextStep}</span>
-                  </div>
-                )}
-
-                {/* Permisos y restricciones para niveles */}
-                {content.permissions && (
-                  <div style={{ fontSize: '0.75rem', padding: '0.4rem 0.5rem', backgroundColor: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '4px', color: '#166534' }}>
-                    <strong>Permisos:</strong> {content.permissions}
-                  </div>
-                )}
-                {content.restrictions && (
-                  <div style={{ fontSize: '0.75rem', padding: '0.4rem 0.5rem', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '4px', color: '#991b1b' }}>
-                    <strong>Restricciones:</strong> {content.restrictions}
-                  </div>
-                )}
-
-                {/* Significado para preferencias */}
-                {content.significance && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', borderLeft: '3px solid var(--primary-blue)', paddingLeft: '0.5rem', fontStyle: 'italic' }}>
-                    {content.significance}
-                  </div>
-                )}
-
-                {/* Indicadores: cuándo y cómo */}
-                {content.whenToUse && (
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cuándo corresponde:</strong>
-                    <span style={{ fontSize: '0.8rem' }}>{content.whenToUse}</span>
-                  </div>
-                )}
-                {content.howToResolve && (
-                  <div style={{ marginTop: '0.25rem' }}>
-                    <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cómo resolverlo:</strong>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--primary-blue-hover)' }}>{content.howToResolve}</span>
-                  </div>
-                )}
-
-                {/* SECCIÓN INTERNA: ¿Por qué existe este campo? */}
-                {content.whyExists && (
-                  <div style={{
-                    marginTop: '0.5rem',
-                    paddingTop: '0.5rem',
-                    borderTop: '1px solid var(--border-color)',
-                  }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--neutral-grey)', display: 'block', marginBottom: '2px' }}>
-                      ¿Por qué existe este campo?
-                    </span>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                      {content.whyExists}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </>
       )}

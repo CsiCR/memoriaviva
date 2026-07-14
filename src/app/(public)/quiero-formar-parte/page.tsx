@@ -32,7 +32,7 @@ export default function QuieroFormarParte() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Opciones de relación con la ciudad dinámicas desde la base de datos
-  const [relationOptions, setRelationOptions] = useState<{ value: string; label: string }[]>([]);
+  const [relationOptions, setRelationOptions] = useState<{ value: string; name: string }[]>([]);
 
   useEffect(() => {
     const loadRelations = async () => {
@@ -340,7 +340,7 @@ export default function QuieroFormarParte() {
             >
               <option value="">Selecciona una opción...</option>
               {relationOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>{opt.name}</option>
               ))}
             </select>
             {formErrors.relation_to_city && <span style={{ color: 'var(--danger-color)', fontSize: '0.78rem', marginTop: '0.25rem', display: 'block' }}>{formErrors.relation_to_city}</span>}

@@ -71,7 +71,7 @@ export default function Aportar() {
   const [uploadProgress, setUploadProgress] = useState<string>('');
 
   // Opciones dinámicas desde la base de datos
-  const [dbOptions, setDbOptions] = useState<Record<string, { value: string; label: string }[]>>({
+  const [dbOptions, setDbOptions] = useState<Record<string, { value: string; name: string }[]>>({
     contribution_type: [],
     relation_to_city: [],
     authorization_level: [],
@@ -606,7 +606,7 @@ export default function Aportar() {
                 >
                   <option value="">Seleccione una opción...</option>
                   {dbOptions.relation_to_city.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{opt.name}</option>
                   ))}
                 </select>
               </div>
@@ -696,7 +696,7 @@ export default function Aportar() {
                 >
                   <option value="">Seleccione una opción...</option>
                   {dbOptions.contribution_type.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{opt.name}</option>
                   ))}
                 </select>
               </div>
@@ -983,7 +983,7 @@ export default function Aportar() {
                 >
                   <option value="">Seleccione un nivel...</option>
                   {dbOptions.authorization_level.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{opt.name}</option>
                   ))}
                 </select>
               </div>
@@ -1001,7 +1001,7 @@ export default function Aportar() {
                 >
                   <option value="">Seleccione una preferencia...</option>
                   {dbOptions.credit_preference.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{opt.name}</option>
                   ))}
                 </select>
               </div>

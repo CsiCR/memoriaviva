@@ -120,7 +120,22 @@ A partir de las observaciones anteriores, se implementaron las siguientes mejora
 
 ---
 
-## 8. Comentarios del Equipo Editorial
+## 9. Mejoras de la Versión 2 (Arquitectura Editorial y Publicación)
+
+Con la implementación de la Fase 2, se consolidó un flujo de datos más maduro y con auditoría estricta:
+
+### 1. Desacoplamiento Editorial y Publicación
+El estado administrativo interno ya no se confunde con la disponibilidad pública. Se introdujo el catálogo administrable `select_options` para los estados de publicación y los indicadores, permitiendo al equipo parametrizar su comportamiento (ej. especificar si un indicador bloquea o no la publicación).
+
+### 2. Ciclo de Trazabilidad e Historial Lógico
+El sistema registra de forma transparente cuándo se activa, quién resuelve y cuándo se soluciona un indicador. En caso de reactivación, se conserva el registro histórico anterior, garantizando la auditoría sobre la calidad de procesamiento del patrimonio histórico.
+
+### 3. Seguridad de Datos Avanzada
+Se implementaron directivas estrictas de RLS (Row Level Security). El público general puede consultar únicamente categorías básicas (vínculos, formatos aceptados y preferencias de crédito legales). La configuración interna de control editorial y publicación está reservada exclusivamente para el personal autenticado de la plataforma.
+
+---
+
+## 10. Comentarios del Equipo Editorial
 
 > "Es muy valioso contar con el registro de auditoría en la hora oficial de nuestro país (Buenos Aires). Al revisar la carga de testimonios que ocurren tarde en la noche, podemos asociarlos con precisión a las planillas físicas de entrevistas recolectadas ese mismo día."
 > — *Edith Gómez, Centro Chileno*

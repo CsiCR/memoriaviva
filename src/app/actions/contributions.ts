@@ -73,40 +73,60 @@ export async function updateContributionStatus(
     newConsentFilePath = filePath;
   }
 
-  // 3. Ejecutar actualización del Aporte
-  const { error } = await supabase
-    .from('contributions')
-    .update({
-      editorial_status: editorialStatus,
-      internal_notes: internalNotes || null,
-      consent_verified: consentVerified,
-      authorization_level: authorizationLevel || currentContribution?.authorization_level,
-      credit_preference: creditPreference || currentContribution?.credit_preference,
-      consent_file_path: newConsentFilePath,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id);
+  const publicationStatusOptionId = formData.get('publication_status_option_id') as string;
+  const publicationNotes = formData.get('publication_notes') as string;
+  const publicationScheduledAt = formData.get('publication_scheduled_at') as string;
+  const activeIndicatorOptionIdsRaw = formData.get('active_indicator_option_ids') as string;
+  const indicatorNotes = formData.get('indicator_notes') as string;
 
-  if (error) {
-    console.error('Error al actualizar aporte en Server Action:', error);
-    throw new Error('Error al guardar los cambios en la base de datos.');
+  let activeIndicatorOptionIds: string[] = [];
+  if (activeIndicatorOptionIdsRaw) {
+    try {
+      activeIndicatorOptionIds = JSON.parse(activeIndicatorOptionIdsRaw);
+    } catch (e) {
+      activeIndicatorOptionIds = [];
+    }
   }
 
-  // 4. Si cambió el nivel, los créditos o se subió una nueva firma, escribir en consent_records (Historial)
-  const levelChanged = authorizationLevel && currentContribution && currentContribution.authorization_level !== authorizationLevel;
-  const creditChanged = creditPreference && currentContribution && currentContribution.credit_preference !== creditPreference;
-  const fileUploaded = consentFile && consentFile.size > 0;
+  // 3. Ejecutar actualización transaccional mediante la RPC
+  const { error: rpcError } = await supabase.rpc('update_editorial_dimensions', {
+    p_contribution_id: id,
+    p_editorial_status: editorialStatus,
+    p_publication_status_option_id: publicationStatusOptionId || null,
+    p_publication_notes: publicationNotes || null,
+    p_publication_scheduled_at: publicationScheduledAt || null,
+    p_internal_notes: internalNotes || null,
+    p_active_indicator_option_ids: activeIndicatorOptionIds,
+    p_indicator_notes: indicatorNotes || null
+  });
 
-  if ((levelChanged || creditChanged || fileUploaded) && currentContribution) {
-    const consentTextVersion = `Modificación de Consentimiento por Editor. Caso: Revalidación manual${fileUploaded ? ' con archivo' : ''}`;
+  if (rpcError) {
+    console.error('Error al ejecutar RPC update_editorial_dimensions:', rpcError);
+    throw new Error(rpcError.message || 'Error al guardar los cambios editoriales.');
+  }
+
+  // 4. Si se subió un nuevo archivo de consentimiento, procesarlo
+  const fileUploaded = consentFile && consentFile.size > 0;
+  if (fileUploaded && currentContribution) {
+    const consentTextVersion = `Revalidación manual de Consentimiento con archivo físico`;
     
+    // Actualizar la ruta del archivo de consentimiento en la contribución
+    await supabase
+      .from('contributions')
+      .update({
+        consent_file_path: newConsentFilePath,
+        consent_verified: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
     await supabase
       .from('consent_records')
       .insert({
         contributor_id: currentContribution.contributor_id,
         contribution_id: id,
-        authorization_level: authorizationLevel || currentContribution.authorization_level,
-        credit_preference: creditPreference || currentContribution.credit_preference,
+        authorization_level: currentContribution.authorization_level,
+        credit_preference: currentContribution.credit_preference,
         owns_or_has_permission: true,
         accepts_cataloging: true,
         consent_text_version: consentTextVersion,

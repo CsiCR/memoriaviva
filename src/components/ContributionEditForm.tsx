@@ -346,8 +346,14 @@ export default function ContributionEditForm({
         gap: '1rem'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>🧠</span> Motor Editorial <span style={{ fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#e2e8f0', color: '#475569', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>v3.0.0</span>
+          <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span>🧠</span> Motor Editorial 
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#e2e8f0', color: '#475569', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+              Plataforma v3.0.0
+            </span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#dbeafe', color: '#1e40af', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+              Algoritmo v1.0
+            </span>
           </h4>
           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Diagnóstico en tiempo real</span>
         </div>

@@ -297,7 +297,8 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               <span>{contribution.editorial_status}</span>
               <EditorialHelp helpKey="editorialStatus" initialSelectedValue={contribution.editorial_status} />
             </span>
-          </div>
+          )}
+        </div>
       </div>
 
       {userRole === 'admin' && hasConsentConsistencyIssue && (

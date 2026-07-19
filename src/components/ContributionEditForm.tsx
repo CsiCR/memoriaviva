@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { updateContributionStatus } from '@/app/actions/contributions';
 import { 
   Save, 
@@ -25,6 +25,8 @@ import {
   Info
 } from 'lucide-react';
 import EditorialHelp from './EditorialHelp';
+import { evaluateContribution, ContributionInput } from '@/lib/editorial';
+import { mapStatusToCode, mapContributionTypeToContentType } from '@/lib/editorial/editorialConstants';
 
 interface SelectOption {
   id: string;
@@ -51,6 +53,20 @@ interface ContributionEditFormProps {
   initialPublicationNotes: string | null;
   initialPublicationScheduledAt: string | null;
   initialActiveIndicatorOptionIds: string[];
+  // Campos adicionales para el Motor Editorial
+  description?: string | null;
+  contributionType?: string | null;
+  files?: Array<{
+    id?: string;
+    file_name: string;
+    file_size?: number;
+    file_role?: string | null;
+    processing_status?: string | null;
+  }>;
+  consentRecords?: Array<{
+    accepted_at?: string | null;
+    authorization_level?: string | null;
+  }>;
 }
 
 // Mapear nombres de iconos de base de datos a componentes Lucide
@@ -87,6 +103,10 @@ export default function ContributionEditForm({
   initialPublicationNotes,
   initialPublicationScheduledAt,
   initialActiveIndicatorOptionIds,
+  description,
+  contributionType,
+  files = [],
+  consentRecords = []
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
@@ -163,6 +183,78 @@ export default function ContributionEditForm({
   // Detectar si el estado de publicación seleccionado requiere fecha programada
   const selectedStatusOpt = dbOptions.publication_status.find(opt => opt.id === publicationStatusOptionId);
   const requiresDate = selectedStatusOpt?.metadata?.requires_publication_date === true;
+
+  // CONSTRUCCIÓN DEL MODELO DE ENTRADA Y EVALUACIÓN MEDIANTE EL MOTOR EDITORIAL (v3.0.0)
+  const editorialInput = useMemo<ContributionInput>(() => {
+    const mappedContentType = mapContributionTypeToContentType(contributionType);
+    const currentPubOpt = dbOptions.publication_status.find(o => o.id === publicationStatusOptionId);
+    
+    return {
+      id,
+      title: null,
+      description: description || null,
+      internal_notes: notes || null,
+      content_type: mappedContentType,
+      editorial_status: {
+        id: null,
+        code: mapStatusToCode(status),
+        name: status
+      },
+      publication_status: {
+        id: publicationStatusOptionId || null,
+        code: currentPubOpt?.code || null,
+        name: currentPubOpt?.name || null
+      },
+      publication_notes: publicationNotes || null,
+      publication_scheduled_at: publicationScheduledAt || null,
+      consent_verified: consentVerified,
+      authorization_level: level || null,
+      credit_preference: credits || null,
+      consent_source: consentSource || null,
+      files: (files || []).map((f) => ({
+        id: f.id,
+        file_name: f.file_name || '',
+        file_size: f.file_size || 0,
+        file_role: f.file_role || null,
+        processing_status: f.processing_status || null
+      })),
+      consent_records: (consentRecords || []).map((c) => ({
+        accepted_at: c.accepted_at || null,
+        authorization_level: c.authorization_level || null
+      })),
+      active_indicators: dbOptions.editorial_indicator
+        .filter(opt => activeIndicatorOptionIds.includes(opt.id))
+        .map(opt => ({
+          id: opt.id,
+          category: opt.category,
+          value: opt.value,
+          name: opt.name,
+          code: opt.code,
+          metadata: opt.metadata
+        }))
+    };
+  }, [
+    id,
+    description,
+    contributionType,
+    status,
+    publicationStatusOptionId,
+    dbOptions,
+    notes,
+    publicationNotes,
+    publicationScheduledAt,
+    consentVerified,
+    level,
+    credits,
+    consentSource,
+    files,
+    consentRecords,
+    activeIndicatorOptionIds
+  ]);
+
+  const editorialEvaluation = useMemo(() => {
+    return evaluateContribution(editorialInput);
+  }, [editorialInput]);
 
   const handleIndicatorCheckboxChange = (indicatorId: string, checked: boolean) => {
     if (checked) {
@@ -241,6 +333,128 @@ export default function ContributionEditForm({
           <span>{error}</span>
         </div>
       )}
+
+      {/* PANEL: Motor Editorial */}
+      <div style={{
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        backgroundColor: '#f8fafc',
+        padding: '1.5rem',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>🧠</span> Motor Editorial <span style={{ fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#e2e8f0', color: '#475569', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>v3.0.0</span>
+          </h4>
+          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Diagnóstico en tiempo real</span>
+        </div>
+        
+        <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+          {/* Puede publicarse */}
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Puede publicarse</span>
+            <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              {editorialEvaluation.eligibleForPublication ? (
+                <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.2rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <CheckCircle2 size={20} /> SÍ
+                </span>
+              ) : (
+                <span style={{ color: '#ef4444', fontWeight: 700, fontSize: '1.2rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <XCircle size={20} /> NO
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Progreso Editorial */}
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Progreso Editorial</span>
+            <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', maxWidth: '120px' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${editorialEvaluation.editorialProgress}%`,
+                  backgroundColor: editorialEvaluation.editorialProgress >= 80 ? '#16a34a' : editorialEvaluation.editorialProgress >= 50 ? '#f59e0b' : '#ef4444',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1e293b' }}>
+                {editorialEvaluation.editorialProgress}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {editorialEvaluation.missingRequirements.length > 0 && (
+          <>
+            <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.35rem' }}>Pendientes</span>
+              <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {editorialEvaluation.missingRequirements.map((req, idx) => (
+                  <li key={idx} style={{ fontSize: '0.85rem', color: '#b91c1c', fontWeight: 500 }}>
+                    {req}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+
+        {editorialEvaluation.warnings.length > 0 && (
+          <>
+            <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.35rem' }}>Advertencias</span>
+              <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {editorialEvaluation.warnings.map((warn, idx) => {
+                  const isCritical = warn.toLowerCase().includes("publicado") || warn.toLowerCase().includes("crítica");
+                  return (
+                    <li key={idx} style={{ fontSize: '0.85rem', color: isCritical ? '#b91c1c' : '#d97706', fontWeight: isCritical ? 600 : 500 }}>
+                      {warn}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </>
+        )}
+
+        <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
+
+        {/* Siguiente Acción */}
+        <div>
+          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.15rem' }}>Siguiente Acción Sugerida</span>
+          <span style={{
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            color: '#1e3a8a',
+            backgroundColor: '#eff6ff',
+            padding: '0.35rem 0.6rem',
+            borderRadius: '4px',
+            border: '1px solid #bfdbfe',
+            display: 'inline-block'
+          }}>
+            👉 {editorialEvaluation.recommendedNextAction}
+          </span>
+        </div>
+
+        <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
+
+        {/* Resumen */}
+        <div>
+          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Resumen</span>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#334155', lineHeight: 1.4, fontWeight: 500 }}>
+            {editorialEvaluation.summary}
+          </p>
+        </div>
+      </div>
 
       {/* BLOQUE A: Gestión Editorial */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>

@@ -932,6 +932,10 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 .filter((ind: any) => ind.is_active)
                 .map((ind: any) => ind.indicator_option_id)
               }
+              description={contribution.description}
+              contributionType={contribution.contribution_type}
+              files={filesWithSignedUrls || []}
+              consentRecords={contribution.consent_records || []}
             />
           </div>
 

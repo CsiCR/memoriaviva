@@ -4,7 +4,8 @@
 export const APP_VERSION = {
   version: "3.0.1",
   stage: "3A",
-  codename: "Motor Editorial Institucional"
+  codename: "Motor Editorial Institucional",
+  releasedAt: "19/07/2026"
 };
 
 export const EDITORIAL_ENGINE_VERSION = {

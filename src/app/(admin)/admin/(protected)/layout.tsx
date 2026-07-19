@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { signOut } from '@/app/actions/auth';
 import { LayoutDashboard, FileText, Users, LogOut, BookOpen, User } from 'lucide-react';
 import AdminNotificationsBell from '@/components/AdminNotificationsBell';
+import { APP_VERSION } from '@/config/version';
 
 export default async function AdminProtectedLayout({
   children,
@@ -212,6 +213,24 @@ export default async function AdminProtectedLayout({
         <div style={{ flexGrow: 1, padding: '2rem', overflowY: 'auto' }}>
           {children}
         </div>
+
+        {/* Footer Institucional */}
+        <footer style={{
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          padding: '0.75rem 2rem',
+          fontSize: '0.8rem',
+          color: '#64748b',
+          flexShrink: 0,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>Memoria Viva Pico Truncado &middot; Plataforma v{APP_VERSION.version}</span>
+          <Link href="/admin/sistema" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span>ℹ️</span> Información del Sistema
+          </Link>
+        </footer>
       </main>
     </div>
   );

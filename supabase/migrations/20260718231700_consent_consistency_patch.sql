@@ -1,3 +1,18 @@
+-- 0. Ajustar la función general de updated_at para excluir cambios técnicos de consent_verified en contributions
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Si el único cambio es consent_verified, evitamos modificar updated_at
+  IF TG_TABLE_NAME = 'contributions' AND 
+     (to_jsonb(OLD) - 'consent_verified' - 'updated_at') = (to_jsonb(NEW) - 'consent_verified' - 'updated_at') THEN
+    RETURN NEW;
+  END IF;
+
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- 1. Crear función pura para evaluar la validez canónica del consentimiento
 CREATE OR REPLACE FUNCTION public.has_valid_consent(p_contribution_id uuid)
 RETURNS boolean

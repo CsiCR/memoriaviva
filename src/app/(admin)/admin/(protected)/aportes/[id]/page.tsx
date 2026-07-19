@@ -5,6 +5,7 @@ import { ArrowLeft, User, FileText, Shield, File, Download, ExternalLink, Calend
 import ContributionEditForm from '@/components/ContributionEditForm';
 import EditorialHelp from '@/components/EditorialHelp';
 import { formatDateToAR, formatDateTimeToAR, formatDateTimeForAudit } from '@/utils/date';
+import { evaluateContribution } from '@/lib/editorial';
 
 import AdminAddFilesForm from '@/components/AdminAddFilesForm';
 
@@ -21,6 +22,20 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   const { id } = await params;
   const { from } = await searchParams;
   const supabase = await createClient();
+
+  // Obtener rol del usuario autenticado
+  const { data: { user } } = await supabase.auth.getUser();
+  let userRole = 'editor';
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    if (profile) {
+      userRole = profile.role;
+    }
+  }
 
   // 1. Obtener el aporte completo (incluyendo avisos de archivos grandes e indicadores)
   const { data: contribution, error } = await supabase
@@ -71,6 +86,65 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     });
   }
 
+  // 1.5. Evaluar elegibilidad y calcular consistencia de consentimiento
+  const contributionInput = {
+    id: contribution.id,
+    title: contribution.title,
+    description: contribution.description,
+    internal_notes: contribution.internal_notes,
+    content_type: contribution.content_type,
+    editorial_status: {
+      code: contribution.editorial_status ? String(contribution.editorial_status).toLowerCase() : null,
+      name: contribution.editorial_status || null,
+      id: null
+    },
+    publication_status: publicationStatusOpt ? {
+      id: publicationStatusOpt.id,
+      code: publicationStatusOpt.code,
+      name: publicationStatusOpt.name
+    } : null,
+    publication_notes: contribution.publication_notes,
+    publication_scheduled_at: contribution.publication_scheduled_at,
+    consent_verified: contribution.consent_verified || false,
+    authorization_level: contribution.authorization_level,
+    credit_preference: contribution.credit_preference,
+    consent_source: contribution.consent_source,
+    files: (contribution.contribution_files || []).map((f: any) => ({
+      id: f.id,
+      file_name: f.original_filename || '',
+      file_size: f.file_size || 0,
+      file_role: f.file_role || null,
+      processing_status: f.processing_status || null
+    })),
+    consent_records: (contribution.consent_records || []).map((c: any) => ({
+      accepted_at: c.accepted_at || null,
+      authorization_level: c.authorization_level || null,
+      owns_or_has_permission: c.owns_or_has_permission,
+      accepts_cataloging: c.accepts_cataloging
+    })),
+    active_indicators: activeIndicatorsWithDetails.map((ind: any) => ({
+      id: ind.opt?.id || ind.indicator_option_id,
+      category: ind.opt?.category || 'editorial_indicator',
+      value: ind.opt?.value || '',
+      name: ind.opt?.name || 'Indicador',
+      code: ind.opt?.code || null,
+      metadata: ind.opt?.metadata || null
+    }))
+  };
+
+  const evaluation = evaluateContribution(contributionInput);
+
+  const hasValidConsentRecord = (contribution.consent_records || []).some(
+    (record: any) =>
+      Boolean(record.accepted_at) &&
+      record.owns_or_has_permission === true &&
+      record.accepts_cataloging === true
+  );
+  const hasConsentConsistencyIssue = hasValidConsentRecord !== contribution.consent_verified;
+
+  if (hasConsentConsistencyIssue) {
+    console.error(`[INCIDENTE CONSISTENCIA CONSENTIMIENTO] Aporte ID ${contribution.id}: hasValidConsentRecord = ${hasValidConsentRecord}, contributions.consent_verified = ${contribution.consent_verified}`);
+  }
 
   // 2. Generar Signed URLs para cada archivo cargado (expiran en 15 minutos)
   const filesWithSignedUrls = await Promise.all(
@@ -223,9 +297,46 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               <span>{contribution.editorial_status}</span>
               <EditorialHelp helpKey="editorialStatus" initialSelectedValue={contribution.editorial_status} />
             </span>
-          )}
-        </div>
+          </div>
       </div>
+
+      {userRole === 'admin' && hasConsentConsistencyIssue && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fee2e2',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          color: '#991b1b',
+          fontSize: '0.85rem'
+        }}>
+          <strong>⚠️ Discrepancia Técnica de Consentimiento Detectada</strong>: 
+          El aporte tiene un registro de consentimiento válido en <code>consent_records</code> ({hasValidConsentRecord ? 'SÍ' : 'NO'}), pero la columna caché <code>consent_verified</code> de la contribución es <code>{contribution.consent_verified ? 'TRUE' : 'FALSE'}</code>. 
+          Por favor, reejecute el backfill o guarde la ficha para sincronizar.
+        </div>
+      )}
+
+      {publicationStatusOpt?.code === 'publishable' && !evaluation.eligibleForPublication && (
+        <div style={{
+          backgroundColor: '#fffbeb',
+          border: '1px solid #fef3c7',
+          borderRadius: '8px',
+          padding: '1.25rem',
+          marginBottom: '1.5rem',
+          color: '#b45309',
+          fontSize: '0.875rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.35rem'
+        }}>
+          <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span>⚠️</span> Advertencia Administrativa
+          </div>
+          <div>
+            El estado administrativo indica &ldquo;Publicable&rdquo;, pero el Motor Editorial detecta requisitos pendientes. Revise la evaluación antes de publicar.
+          </div>
+        </div>
+      )}
 
       {/* Grid Principal */}
       <div style={{
@@ -565,6 +676,23 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> Consentimiento Firmado
             </h2>
 
+            <div style={{ marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Estado del Consentimiento</span>
+              {contribution.consent_verified ? (
+                <span className="badge" style={{ backgroundColor: '#e8f5e9', color: '#2e7d32', fontWeight: 700, padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  ✓ Consentimiento vigente
+                </span>
+              ) : contribution.consent_records && contribution.consent_records.length > 0 ? (
+                <span className="badge" style={{ backgroundColor: '#ffebee', color: '#c62828', fontWeight: 700, padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  ⚠️ Consentimiento inválido o revocado
+                </span>
+              ) : (
+                <span className="badge" style={{ backgroundColor: '#fff8e1', color: '#f57f17', fontWeight: 700, padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  ⏳ Consentimiento pendiente
+                </span>
+              )}
+            </div>
+
             {contribution.consent_records && contribution.consent_records.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
                 <div>
@@ -575,17 +703,17 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Preferencia de Créditos</span>
                   <strong style={{ fontSize: '0.95rem' }}>{contribution.consent_records[0].credit_preference}</strong>
                 </div>
-                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-start', color: 'var(--hope-green)', fontWeight: 600 }}>
-                  <span>✓</span>
+                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-start', color: contribution.consent_records[0].owns_or_has_permission ? 'var(--hope-green)' : '#c62828', fontWeight: 600 }}>
+                  <span>{contribution.consent_records[0].owns_or_has_permission ? '✓' : '✗'}</span>
                   <span>Declaró ser titular o contar con autorización del copyright.</span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-start', color: 'var(--hope-green)', fontWeight: 600 }}>
-                  <span>✓</span>
+                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-start', color: contribution.consent_records[0].accepts_cataloging ? 'var(--hope-green)' : '#c62828', fontWeight: 600 }}>
+                  <span>{contribution.consent_records[0].accepts_cataloging ? '✓' : '✗'}</span>
                   <span>Aceptó la recepción, catalogación y preservación del material.</span>
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Firmado el:</span>
-                  <span>{formatDateTimeToAR(contribution.consent_records[0].accepted_at)}</span>
+                  <span>{contribution.consent_records[0].accepted_at ? formatDateTimeToAR(contribution.consent_records[0].accepted_at) : 'No firmado'}</span>
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   Doc. de Consentimiento: {contribution.consent_records[0].consent_text_version}

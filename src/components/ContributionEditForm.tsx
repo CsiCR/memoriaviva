@@ -27,6 +27,7 @@ import {
 import EditorialHelp from './EditorialHelp';
 import { evaluateContribution, ContributionInput } from '@/lib/editorial';
 import { mapStatusToCode, mapContributionTypeToContentType } from '@/lib/editorial/editorialConstants';
+import { EDITORIAL_ENGINE_VERSION } from '@/config/version';
 
 interface SelectOption {
   id: string;
@@ -348,11 +349,8 @@ export default function ContributionEditForm({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span>🧠</span> Motor Editorial 
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#e2e8f0', color: '#475569', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-              Plataforma v3.0.0
-            </span>
             <span style={{ fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#dbeafe', color: '#1e40af', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-              Algoritmo v1.0
+              Reglas v{EDITORIAL_ENGINE_VERSION.version.substring(0, 3)}
             </span>
           </h4>
           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Diagnóstico en tiempo real</span>
@@ -648,6 +646,19 @@ export default function ContributionEditForm({
           <span style={{ backgroundColor: '#fff7ed', color: '#ea580c', width: '24px', height: '24px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>C</span>
           Configuración de Publicación
         </h4>
+        {selectedStatusOpt?.code === 'publishable' && !editorialEvaluation.eligibleForPublication && (
+          <div style={{
+            backgroundColor: '#fffbeb',
+            border: '1px solid #fef3c7',
+            borderRadius: '8px',
+            padding: '1rem',
+            color: '#b45309',
+            fontSize: '0.85rem',
+            fontWeight: 500
+          }}>
+            <strong>⚠️ Advertencia Administrativa</strong>: El estado administrativo indica &ldquo;Publicable&rdquo;, pero el Motor Editorial detecta requisitos pendientes. Revise la evaluación antes de publicar.
+          </div>
+        )}
 
         <div className="grid grid-2" style={{ gap: '1rem' }}>
           <div className="form-group" style={{ margin: 0 }}>

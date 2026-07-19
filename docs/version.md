@@ -1,12 +1,12 @@
 # Memoria Viva Pico Truncado - Registro de Versiones
 
 ## Versión funcional actual
-**v3.0.0**
+**v3.0.1**
 *   **Estado**: estable
 *   **Etapa**: 3A
-*   **Módulo**: Motor de Elegibilidad
-*   **Pruebas**: 30/30 aprobadas
-*   **Escenarios**: 23
+*   **Módulo**: Motor de Elegibilidad (Parche de consistencia de consentimiento)
+*   **Pruebas del Motor**: 30/30 aprobadas (23 escenarios)
+*   **Pruebas de Triggers**: 8/8 aserciones aprobadas
 *   **TypeScript**: aprobado
 *   **Lint**: aprobado
 

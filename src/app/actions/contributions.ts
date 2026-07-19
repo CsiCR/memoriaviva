@@ -109,13 +109,11 @@ export async function updateContributionStatus(
   const fileUploaded = consentFile && consentFile.size > 0;
   if (fileUploaded && currentContribution) {
     const consentTextVersion = `Revalidación manual de Consentimiento con archivo físico`;
-    
     // Actualizar la ruta del archivo de consentimiento en la contribución
     await supabase
       .from('contributions')
       .update({
         consent_file_path: newConsentFilePath,
-        consent_verified: true,
         updated_at: new Date().toISOString()
       })
       .eq('id', id);

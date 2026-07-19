@@ -2,8 +2,12 @@
 // Archivo: src/config/version.ts
 
 export const APP_VERSION = {
-  version: "3.0.0",
-  codename: "Motor Editorial",
+  version: "3.0.1",
   stage: "3A",
-  releasedAt: "2026-07-18"
+  codename: "Motor Editorial Institucional"
+};
+
+export const EDITORIAL_ENGINE_VERSION = {
+  version: "1.0.0",
+  ruleset: "E1-E8"
 };

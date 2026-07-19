@@ -1,6 +1,6 @@
-# Motor Editorial - Etapa 3A: Motor de Elegibilidad (v3.0.0)
+# Motor Editorial - Etapa 3A: Motor de Elegibilidad (Reglas v1.0 / Plataforma v3.0.1)
 
-Este documento detalla las especificaciones técnicas del **Motor Editorial** implementado en la versión **v3.0.0** de la plataforma Memoria Viva Pico Truncado.
+Este documento detalla las especificaciones técnicas del **Motor Editorial** y sus reglas en la plataforma Memoria Viva Pico Truncado.
 
 El motor es un módulo de lógica pura desacoplado de la base de datos y de la interfaz de usuario, responsable de diagnosticar la calidad e idoneidad de un aporte para su divulgación pública.
 

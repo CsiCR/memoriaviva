@@ -1,7 +1,14 @@
 # Memoria Viva Pico Truncado - Registro de Versiones
 
 ## Versión funcional actual
-**v3.0.0** — *Motor Editorial Institucional*
+**v3.0.0**
+*   **Estado**: estable
+*   **Etapa**: 3A
+*   **Módulo**: Motor de Elegibilidad
+*   **Pruebas**: 30/30 aprobadas
+*   **Escenarios**: 23
+*   **TypeScript**: aprobado
+*   **Lint**: aprobado
 
 ### Etapas e Hitos Implementados
 *   **[✓] Plataforma Base**: Configuración de Next.js, RLS y conexión Supabase.

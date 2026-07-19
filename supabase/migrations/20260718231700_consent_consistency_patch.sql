@@ -31,7 +31,7 @@ AS $$
   );
 $$;
 
-REVOKE ALL ON FUNCTION public.has_valid_consent(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.has_valid_consent(uuid) FROM PUBLIC, anon, authenticated;
 
 -- 2. Crear función para actualizar la caché sin alterar updated_at
 CREATE OR REPLACE FUNCTION public.refresh_contribution_consent_verified(p_contribution_id uuid)
@@ -48,7 +48,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.refresh_contribution_consent_verified(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.refresh_contribution_consent_verified(uuid) FROM PUBLIC, anon, authenticated;
 
 -- 3. Crear función del trigger de sincronización
 CREATE OR REPLACE FUNCTION public.sync_contribution_consent_verified()
@@ -75,7 +75,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.sync_contribution_consent_verified() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sync_contribution_consent_verified() FROM PUBLIC, anon, authenticated;
 
 -- 4. Crear trigger idempotente en la tabla consent_records
 DROP TRIGGER IF EXISTS sync_consent_verified_trigger ON public.consent_records;

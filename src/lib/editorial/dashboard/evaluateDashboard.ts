@@ -3,6 +3,7 @@
 
 import { EvaluatedContribution, DashboardFilter, DashboardResult, SmartAction } from './dashboardTypes';
 import { filterContributions } from './dashboardFilters';
+import { buildSmartActionFilter } from '../navigation/dashboardNavigation';
 import { calculateProductivityStats } from './dashboardMetrics';
 import { 
   calculateStageDistribution, 
@@ -163,7 +164,8 @@ export function evaluateDashboard(
       severity: "info",
       title: "Validaciones históricas pendientes",
       description: `Hay ${histPendingCount} aportes esperando validación histórica.`,
-      affectedCount: histPendingCount
+      affectedCount: histPendingCount,
+      contributionFilter: buildSmartActionFilter("HISTORICAL_VALIDATION_PENDING")
     });
   }
 
@@ -175,7 +177,8 @@ export function evaluateDashboard(
       severity: "critical",
       title: "Falta de consentimiento",
       description: `Existen ${blockedForConsent} aportes sin consentimiento verificado ni firmado.`,
-      affectedCount: blockedForConsent
+      affectedCount: blockedForConsent,
+      contributionFilter: buildSmartActionFilter("CONSENT_PENDING")
     });
   }
 
@@ -188,7 +191,8 @@ export function evaluateDashboard(
       severity: "warning",
       title: "Publicaciones con inconsistencias",
       description: `Hay ${totalInconsistentPubs} aportes publicados con advertencias o inconsistencias.`,
-      affectedCount: totalInconsistentPubs
+      affectedCount: totalInconsistentPubs,
+      contributionFilter: buildSmartActionFilter("PUBLISHED_WITH_WARNINGS")
     });
   }
 
@@ -200,7 +204,8 @@ export function evaluateDashboard(
       severity: "info",
       title: "Aportes publicables listos",
       description: `Hay ${eligibleButNotPublished} publicables listos para ser publicados definitivamente.`,
-      affectedCount: eligibleButNotPublished
+      affectedCount: eligibleButNotPublished,
+      contributionFilter: buildSmartActionFilter("ELIGIBLE_NOT_PUBLISHED")
     });
   }
 

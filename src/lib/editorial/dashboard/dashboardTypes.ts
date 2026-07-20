@@ -4,6 +4,8 @@
 import { EditorialProgressResult } from '../progress/progressTypes';
 import { EditorialEvaluation } from '../types';
 
+import { ContributionListFilter } from '../navigation/navigationTypes';
+
 export interface DashboardFilter {
   dateStart?: string | null;
   dateEnd?: string | null;
@@ -38,7 +40,12 @@ export interface EvaluatedContribution {
     code: string;
     severity: "info" | "warning" | "blocking" | "critical";
   }>;
+  rawContributionType?: string | null;
+  catalogCode?: string | null;
+  contributorDni?: string | null;
+  contributorFullName?: string | null;
   historicalValidationStatus?: string | null;
+  oversizedFileNotices?: any[];
 }
 
 export interface SmartAction {
@@ -48,6 +55,7 @@ export interface SmartAction {
   title: string;
   description: string;
   affectedCount: number;
+  contributionFilter: ContributionListFilter;
 }
 
 export interface DashboardResult {

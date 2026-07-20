@@ -24,6 +24,17 @@ import {
   EvaluatedContribution, 
   DashboardFilter 
 } from '@/lib/editorial/dashboard';
+import { 
+  buildContributionListUrl,
+  buildSmartActionFilter,
+  buildStageFilter,
+  buildBottleneckFilter,
+  buildRiskFilter,
+  buildQualityRangeFilter,
+  buildPublicationStatusFilter,
+  buildIndicatorSeverityFilter,
+  buildRecommendationFilter
+} from '@/lib/editorial/navigation';
 import { STAGES } from '@/lib/editorial/progress/progressConstants';
 
 interface DashboardViewProps {
@@ -350,15 +361,25 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
             gap: '1rem'
           }}>
             {result.smartActions.map(action => (
-              <div key={action.code} style={{
-                backgroundColor: '#ffffff',
-                border: `1px solid ${action.severity === 'critical' ? '#fecaca' : action.severity === 'warning' ? '#fde68a' : '#bfdbfe'}`,
-                borderRadius: '8px',
-                padding: '1rem',
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'flex-start'
-              }}>
+              <Link 
+                key={action.code} 
+                href={buildContributionListUrl(action.contributionFilter)}
+                style={{
+                  backgroundColor: '#ffffff',
+                  border: `1px solid ${action.severity === 'critical' ? '#fecaca' : action.severity === 'warning' ? '#fde68a' : '#bfdbfe'}`,
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  display: 'flex',
+                  gap: '0.75rem',
+                  alignItems: 'flex-start',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
+                }}
+                className="dashboard-smart-card"
+                title={`Ver los ${action.affectedCount} aportes de: ${action.title}`}
+              >
                 <span style={{
                   fontSize: '1.25rem',
                   backgroundColor: action.severity === 'critical' ? '#fef2f2' : action.severity === 'warning' ? '#fffbeb' : '#f0f9ff',
@@ -370,7 +391,7 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
                 }}>
                   {action.severity === 'critical' ? '🚨' : action.severity === 'warning' ? '⚠️' : 'ℹ️'}
                 </span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                     <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{action.title}</strong>
                     <span style={{ 
@@ -381,14 +402,14 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
                       padding: '0.1rem 0.4rem',
                       borderRadius: '4px'
                     }}>
-                      {action.affectedCount} aportes
+                      {action.affectedCount} (Ver →)
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.8rem', color: '#475569', lineHeight: 1.4 }}>
                     {action.description}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -416,30 +437,30 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
             <Activity size={18} style={{ color: '#0ea5e9' }} /> Estado General del Proyecto
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+            <Link href={buildContributionListUrl({})} className="card-interactive-sub" style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'all 0.2s ease' }} title="Ver todos los aportes">
               <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Total Aportes</span>
               <strong style={{ fontSize: '1.5rem', color: '#0f172a' }}>{result.totalContributions}</strong>
-            </div>
+            </Link>
             <div style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
               <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Avance Promedio</span>
               <strong style={{ fontSize: '1.5rem', color: '#0f172a' }}>{result.averageProgress}%</strong>
             </div>
-            <div style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+            <Link href={buildContributionListUrl({ eligibility: "eligible" })} className="card-interactive-sub" style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'all 0.2s ease' }} title="Ver aportes elegibles">
               <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Elegibles (v3.0)</span>
               <strong style={{ fontSize: '1.25rem', color: '#16a34a' }}>{result.eligibleCount}</strong>
-            </div>
-            <div style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildPublicationStatusFilter("published"))} className="card-interactive-sub" style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'all 0.2s ease' }} title="Ver aportes publicados">
               <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Publicados</span>
               <strong style={{ fontSize: '1.25rem', color: '#2563eb' }}>{result.publishedCount}</strong>
-            </div>
-            <div style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+            </Link>
+            <Link href={buildContributionListUrl({ bottleneckCodes: ["CONSENT", "FILES", "HISTORICAL_VAL", "INDICATORS"] })} className="card-interactive-sub" style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'all 0.2s ease' }} title="Ver aportes bloqueados">
               <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Bloqueados</span>
               <strong style={{ fontSize: '1.25rem', color: '#dc2626' }}>{result.blockedCount}</strong>
-            </div>
-            <div style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildStageFilter("RECEIVED"))} className="card-interactive-sub" style={{ padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '8px', textDecoration: 'none', color: 'inherit', display: 'block', transition: 'all 0.2s ease' }} title="Ver aportes recibidos sin procesar">
               <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Por Procesar</span>
               <strong style={{ fontSize: '1.25rem', color: '#d97706' }}>{result.pendingReviewCount}</strong>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -480,22 +501,22 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: '#475569' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Link href={buildContributionListUrl({ bottleneckCodes: ["CONSENT", "FILES", "HISTORICAL_VAL", "INDICATORS"] })} className="dashboard-list-item-link" style={{ display: 'flex', justifyContent: 'space-between', textDecoration: 'none', color: 'inherit', padding: '0.1rem 0' }}>
               <span>Aportes con Bloqueos:</span>
               <strong style={{ color: '#dc2626' }}>{result.editorialHealth.blockedPercentage}%</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            </Link>
+            <Link href={buildContributionListUrl({ warningCodes: ["POST_PUBLICATION_INCONSISTENCY", "HISTORICAL_VALIDATION_CONFLICT", "UNKNOWN_VALIDATION"] })} className="dashboard-list-item-link" style={{ display: 'flex', justifyContent: 'space-between', textDecoration: 'none', color: 'inherit', padding: '0.1rem 0' }}>
               <span>Aportes con Advertencias:</span>
               <strong style={{ color: '#d97706' }}>{result.editorialHealth.warningPercentage}%</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            </Link>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.1rem 0' }}>
               <span>Progreso Promedio de la Muestra:</span>
               <strong style={{ color: '#0f172a' }}>{result.editorialHealth.averageProgress}%</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Link href={buildContributionListUrl(buildRiskFilter("eligibleButNotPublished"))} className="dashboard-list-item-link" style={{ display: 'flex', justifyContent: 'space-between', textDecoration: 'none', color: 'inherit', padding: '0.1rem 0' }}>
               <span>Elegibles Sin Publicar:</span>
               <strong style={{ color: '#2563eb' }}>{result.editorialHealth.publishablePercentage}%</strong>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -564,9 +585,24 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Layers size={18} style={{ color: '#0ea5e9' }} /> Distribución por Etapas de Progreso
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {result.stageDistribution.map(stageItem => (
-              <div key={stageItem.code} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <Link 
+                key={stageItem.code} 
+                href={buildContributionListUrl(buildStageFilter(stageItem.code))}
+                style={{
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '0.25rem',
+                  textDecoration: 'none', 
+                  color: 'inherit',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '6px',
+                  transition: 'all 0.2s ease'
+                }}
+                className="dashboard-stage-link"
+                title={`Ver aportes en etapa: ${stageItem.label}`}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600 }}>
                   <span style={{ color: '#334155' }}>{stageItem.label}</span>
                   <span style={{ color: '#64748b' }}>{stageItem.count} ({stageItem.percentage}%)</span>
@@ -579,7 +615,7 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
                     borderRadius: '4px'
                   }} />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -598,18 +634,45 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BarChart2 size={18} style={{ color: '#f59e0b' }} /> Calidad Editorial (% de Avance)
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {result.qualityDistribution.map(item => (
-              <div key={item.range} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ width: '65px', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>{item.range}</span>
-                <div style={{ flexGrow: 1, height: '14px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${item.percentage}%`, backgroundColor: item.range === '100%' ? '#16a34a' : '#3b82f6', borderRadius: '4px' }} />
-                </div>
-                <span style={{ width: '65px', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>
-                  {item.count} ({item.percentage}%)
-                </span>
-              </div>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {result.qualityDistribution.map(item => {
+              // Obtener límites del rango de progreso
+              const getBounds = (range: string) => {
+                if (range === '100%') return { min: 100, max: 100 };
+                if (range === '81-99%') return { min: 81, max: 99 };
+                if (range === '61-80%') return { min: 61, max: 80 };
+                if (range === '41-60%') return { min: 41, max: 60 };
+                if (range === '21-40%') return { min: 21, max: 40 };
+                return { min: 0, max: 20 };
+              };
+              const bounds = getBounds(item.range);
+              return (
+                <Link 
+                  key={item.range} 
+                  href={buildContributionListUrl(buildQualityRangeFilter(bounds.min, bounds.max))}
+                  style={{
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '1rem',
+                    textDecoration: 'none', 
+                    color: 'inherit',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  className="dashboard-quality-link"
+                  title={`Ver aportes con progreso de ${item.range}`}
+                >
+                  <span style={{ width: '65px', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>{item.range}</span>
+                  <div style={{ flexGrow: 1, height: '14px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${item.percentage}%`, backgroundColor: item.range === '100%' ? '#16a34a' : '#3b82f6', borderRadius: '4px' }} />
+                  </div>
+                  <span style={{ width: '65px', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>
+                    {item.count} ({item.percentage}%)
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
@@ -628,17 +691,32 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
             <AlertTriangle size={18} style={{ color: '#ef4444' }} /> Cuellos de Botella (Bloqueos)
           </h3>
           {result.bottlenecks.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {result.bottlenecks.map(b => (
-                <div key={b.code} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <Link 
+                  key={b.code} 
+                  href={buildContributionListUrl(buildBottleneckFilter(b.code))}
+                  style={{
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '0.25rem',
+                    textDecoration: 'none', 
+                    color: 'inherit',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  className="dashboard-bottleneck-link"
+                  title={`Ver aportes bloqueados por: ${b.label}`}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600 }}>
                     <span style={{ color: '#dc2626' }}>{b.label}</span>
-                    <span style={{ color: '#64748b' }}>{b.count} aportes ({b.percentage}%)</span>
+                    <span style={{ color: '#64748b' }}>{b.count} ({b.percentage}%)</span>
                   </div>
                   <div style={{ width: '100%', height: '8px', backgroundColor: '#fef2f2', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${b.percentage}%`, backgroundColor: '#ef4444', borderRadius: '4px' }} />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -691,11 +769,29 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
           {result.topRecommendations.length > 0 ? (
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {result.topRecommendations.map(rec => (
-                <li key={rec.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', padding: '0.35rem 0.5rem', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
-                  <span style={{ color: '#334155', fontWeight: 600 }}>{rec.title}</span>
-                  <span style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', fontWeight: 700, padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.75rem' }}>
-                    {rec.count}
-                  </span>
+                <li key={rec.code}>
+                  <Link 
+                    href={buildContributionListUrl(buildRecommendationFilter(rec.code))}
+                    style={{
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      fontSize: '0.85rem', 
+                      padding: '0.35rem 0.5rem', 
+                      backgroundColor: '#f8fafc', 
+                      borderRadius: '6px',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      transition: 'all 0.2s ease'
+                    }}
+                    className="dashboard-recommendation-link"
+                    title={`Ver aportes con recomendación: ${rec.title}`}
+                  >
+                    <span style={{ color: '#334155', fontWeight: 600 }}>{rec.title}</span>
+                    <span style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', fontWeight: 700, padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.75rem' }}>
+                      {rec.count} (Ver →)
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -721,38 +817,38 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
             <AlertTriangle size={18} style={{ color: '#ef4444' }} /> Alertas de Riesgo Editorial
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px solid #f1f5f9' }}>
+            <Link href={buildContributionListUrl(buildRiskFilter("publishedWithWarnings"))} className="dashboard-risk-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes publicados con advertencias">
               <span style={{ color: '#475569' }}>Publicados con advertencias:</span>
               <strong style={{ color: result.risks.publishedWithWarnings > 0 ? '#dc2626' : '#1e293b' }}>
                 {result.risks.publishedWithWarnings}
               </strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px solid #f1f5f9' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildRiskFilter("publishedWithoutConsent"))} className="dashboard-risk-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes publicados sin consentimiento">
               <span style={{ color: '#475569' }}>Publicados sin consentimiento:</span>
               <strong style={{ color: result.risks.publishedWithoutConsent > 0 ? '#dc2626' : '#1e293b' }}>
                 {result.risks.publishedWithoutConsent}
               </strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px solid #f1f5f9' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildRiskFilter("unknownValidations"))} className="dashboard-risk-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes con validación histórica desconocida">
               <span style={{ color: '#475569' }}>Validaciones desconocidas (unknown):</span>
               <strong style={{ color: result.risks.unknownValidations > 0 ? '#d97706' : '#1e293b' }}>
                 {result.risks.unknownValidations}
               </strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px solid #f1f5f9' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildRiskFilter("historicalConflicts"))} className="dashboard-risk-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes con conflictos de estado histórico">
               <span style={{ color: '#475569' }}>Conflictos históricos:</span>
               <strong style={{ color: result.risks.historicalConflicts > 0 ? '#b91c1c' : '#1e293b' }}>
                 {result.risks.historicalConflicts}
               </strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px solid #f1f5f9' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildRiskFilter("eligibleButNotPublished"))} className="dashboard-risk-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes elegibles sin publicar">
               <span style={{ color: '#475569' }}>Elegibles sin publicar:</span>
               <strong style={{ color: '#16a34a' }}>{result.risks.eligibleButNotPublished}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildRiskFilter("blockedForConsent"))} className="dashboard-risk-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes bloqueados por consentimiento">
               <span style={{ color: '#475569' }}>Bloqueados por consentimiento:</span>
               <strong style={{ color: '#dc2626' }}>{result.risks.blockedForConsent}</strong>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -771,22 +867,22 @@ export default function DashboardView({ evaluatedContributions }: DashboardViewP
             <Layers size={18} style={{ color: '#2563eb' }} /> Estados de Publicación
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #f1f5f9' }}>
-              <span style={{ color: '#64748b' }}>Aportes Publicados:</span>
+            <Link href={buildContributionListUrl(buildPublicationStatusFilter("published"))} className="dashboard-pub-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes publicados">
+              <span style={{ color: '#64748b' }}>Aportes Publicados (Published):</span>
               <strong style={{ color: '#0f172a' }}>{result.publicationMetrics.publishedCount}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #f1f5f9' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildPublicationStatusFilter("publishable"))} className="dashboard-pub-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes listos para publicar">
               <span style={{ color: '#64748b' }}>Listos para Publicar (Publishable):</span>
               <strong style={{ color: '#16a34a' }}>{result.publicationMetrics.publishableCount}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #f1f5f9' }}>
+            </Link>
+            <Link href={buildContributionListUrl(buildPublicationStatusFilter("scheduled"))} className="dashboard-pub-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes programados">
               <span style={{ color: '#64748b' }}>Publicación Programada (Scheduled):</span>
               <strong style={{ color: '#d97706' }}>{result.publicationMetrics.scheduledCount}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Acceso Restringido (Restricted):</span>
+            </Link>
+            <Link href={buildContributionListUrl(buildPublicationStatusFilter("withdrawn"))} className="dashboard-pub-link" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0.5rem', textDecoration: 'none', color: 'inherit', borderRadius: '4px', transition: 'all 0.2s ease' }} title="Ver aportes retirados">
+              <span style={{ color: '#64748b' }}>Retirados (Withdrawn):</span>
               <strong style={{ color: '#dc2626' }}>{result.publicationMetrics.restrictedCount}</strong>
-            </div>
+            </Link>
           </div>
         </div>
 

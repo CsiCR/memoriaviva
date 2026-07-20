@@ -1,5 +1,36 @@
 # Memoria Viva Pico Truncado - Registro de Versiones
 
+## v3.2.1 — Dashboard de Gestión Editorial (Navegación contextual)
+
+Estado: Estable
+
+Fecha: 2026-07
+
+Etapa: 3B.2
+
+Navegación Contextual del Dashboard Editorial
+Reglas D1 + Contrato de Navegación
+Versión 1.1.0
+
+### Incorporaciones
+
+- Contrato canónico de filtros de aportes (`ContributionListFilter`) y helpers de serialización.
+- Mapeo canónico de KPIs a filtros operacionales del Dashboard sin acoplamiento interno.
+- Filtros interactivos del listado `/admin/aportes` cargados de `searchParams` y ejecutados mediante los motores.
+- Chips visuales en la cabecera del listado para cada filtro activo, removibles en un clic.
+- Paginación del listado en memoria y controles de navegación pura HTML/Link.
+- Accesibilidad mejorada (enlaces semánticos, foco por teclado y hover micro-animado).
+
+### Validación
+
+Dashboard Editorial: 27/27
+Navegación y Filtros: 14/14
+Motor de Progreso: 44/44
+Motor Editorial: 30/30
+TypeScript: OK
+Lint: OK
+Build: OK
+
 ## v3.2.0 — Dashboard de Gestión Editorial
 
 Estado: Estable

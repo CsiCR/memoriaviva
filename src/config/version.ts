@@ -2,9 +2,9 @@
 // Archivo: src/config/version.ts
 
 export const APP_VERSION = {
-  version: "3.2.0",
+  version: "3.2.1",
   stage: "3B.2",
-  codename: "Dashboard Editorial",
+  codename: "Dashboard Editorial - Navegación contextual",
   releasedAt: "20/07/2026"
 };
 

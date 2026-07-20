@@ -1065,6 +1065,11 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               contributionType={contribution.contribution_type}
               files={filesWithSignedUrls || []}
               consentRecords={contribution.consent_records || []}
+              contributor={contribution.contributors}
+              historicalContext={contribution.historical_context}
+              createdAt={contribution.created_at}
+              updatedAt={contribution.updated_at}
+              publishedAt={contribution.published_at}
             />
           </div>
 

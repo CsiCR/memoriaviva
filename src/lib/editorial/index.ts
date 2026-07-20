@@ -7,3 +7,5 @@ export * from './editorialMessages';
 export * from './editorialScore';
 export * from './editorialRules';
 export * from './evaluateContribution';
+export * from './progress';
+export * from './dashboard';

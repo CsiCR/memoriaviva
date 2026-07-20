@@ -1,4 +1,4 @@
-import { APP_VERSION, EDITORIAL_ENGINE_VERSION } from '@/config/version';
+import { APP_VERSION, EDITORIAL_ENGINE_VERSION, EDITORIAL_PROGRESS_VERSION, EDITORIAL_DASHBOARD_VERSION } from '@/config/version';
 import Link from 'next/link';
 import { ArrowLeft, Cpu, HardDrive, ShieldCheck, Calendar } from 'lucide-react';
 
@@ -81,10 +81,18 @@ export default async function SystemInfoPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Versión del Motor Editorial</span>
-                <span className="badge" style={{ backgroundColor: '#f0fdf4', color: '#166534', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem', display: 'inline-block', marginTop: '0.25rem' }}>
-                  Reglas v{EDITORIAL_ENGINE_VERSION.version} ({EDITORIAL_ENGINE_VERSION.ruleset})
-                </span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Versiones de Motores Editoriales</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <span className="badge" style={{ backgroundColor: '#f0fdf4', color: '#166534', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', display: 'inline-block', alignSelf: 'flex-start' }}>
+                    Motor Editorial &middot; Reglas v{EDITORIAL_ENGINE_VERSION.version} ({EDITORIAL_ENGINE_VERSION.ruleset})
+                  </span>
+                  <span className="badge" style={{ backgroundColor: '#f5f3ff', color: '#5b21b6', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', display: 'inline-block', alignSelf: 'flex-start' }}>
+                    Progreso Editorial &middot; Reglas v{EDITORIAL_PROGRESS_VERSION.version} ({EDITORIAL_PROGRESS_VERSION.ruleset})
+                  </span>
+                  <span className="badge" style={{ backgroundColor: '#fff7ed', color: '#c2410c', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', display: 'inline-block', alignSelf: 'flex-start' }}>
+                    Dashboard Editorial &middot; Reglas v{EDITORIAL_DASHBOARD_VERSION.version} ({EDITORIAL_DASHBOARD_VERSION.ruleset})
+                  </span>
+                </div>
               </div>
 
               <div>

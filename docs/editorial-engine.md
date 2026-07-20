@@ -121,3 +121,11 @@ El puntaje se compone de seis dimensiones de evaluación estructuradas:
 ## 5. Ejecución del Diagnóstico
 
 El motor es ejecutado en tiempo de renderizado de React mediante `useMemo` dentro de la interfaz `ContributionEditForm` y retorna un informe completo en tiempo real con las incidencias, advertencias, puntaje de calidad y siguientes pasos de acción recomendados.
+
+---
+
+## 6. Coexistencia con el Motor de Progreso Editorial (Etapa 3B.1)
+
+A partir de la versión **v3.1.0**, la plataforma incorpora de forma paralela y desacoplada el **Motor de Progreso Editorial** (Reglas P1-P9 / Módulo `src/lib/editorial/progress/`). 
+
+El Motor de Elegibilidad (E1–E8) se mantiene intacto e independiente, garantizando que no existan interferencias entre la lógica binaria de publicación y el cálculo de avance editorial continuo. Ambos motores son funciones puras que operan sobre sus respectivos contratos y se previsualizan de forma dinámica e independiente en la interfaz.

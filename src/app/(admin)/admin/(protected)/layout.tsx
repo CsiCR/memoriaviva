@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { signOut } from '@/app/actions/auth';
-import { LayoutDashboard, FileText, Users, LogOut, BookOpen, User } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, LogOut, BookOpen, User, BarChart2 } from 'lucide-react';
 import AdminNotificationsBell from '@/components/AdminNotificationsBell';
 import { APP_VERSION } from '@/config/version';
 
@@ -132,6 +132,21 @@ export default async function AdminProtectedLayout({
               }}
               className="admin-sidebar-link">
                 <FileText size={18} /> Aportes Recibidos
+              </Link>
+            </li>
+            <li>
+              <Link href="/admin/dashboard" style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                color: '#cbd5e1',
+                fontSize: '0.9rem',
+                fontWeight: 500
+              }}
+              className="admin-sidebar-link">
+                <BarChart2 size={18} /> Dashboard Editorial
               </Link>
             </li>
             <li>

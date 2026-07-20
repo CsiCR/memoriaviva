@@ -25,9 +25,14 @@ import {
   Info
 } from 'lucide-react';
 import EditorialHelp from './EditorialHelp';
-import { evaluateContribution, ContributionInput } from '@/lib/editorial';
+import { 
+  evaluateContribution, 
+  ContributionInput, 
+  mapContributionToProgressInput, 
+  evaluateEditorialProgress 
+} from '@/lib/editorial';
 import { mapStatusToCode, mapContributionTypeToContentType } from '@/lib/editorial/editorialConstants';
-import { EDITORIAL_ENGINE_VERSION } from '@/config/version';
+import { EDITORIAL_ENGINE_VERSION, EDITORIAL_PROGRESS_VERSION } from '@/config/version';
 
 interface SelectOption {
   id: string;
@@ -68,6 +73,11 @@ interface ContributionEditFormProps {
     accepted_at?: string | null;
     authorization_level?: string | null;
   }>;
+  contributor?: Record<string, unknown> | null;
+  historicalContext?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  publishedAt?: string | null;
 }
 
 // Mapear nombres de iconos de base de datos a componentes Lucide
@@ -107,7 +117,12 @@ export default function ContributionEditForm({
   description,
   contributionType,
   files = [],
-  consentRecords = []
+  consentRecords = [],
+  contributor,
+  historicalContext,
+  createdAt,
+  updatedAt,
+  publishedAt
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
@@ -256,6 +271,120 @@ export default function ContributionEditForm({
   const editorialEvaluation = useMemo(() => {
     return evaluateContribution(editorialInput);
   }, [editorialInput]);
+
+  const isDirty = useMemo(() => {
+    const initialIndsSorted = [...initialActiveIndicatorOptionIds].sort().join(',');
+    const currentIndsSorted = [...activeIndicatorOptionIds].sort().join(',');
+
+    const initialDateStr = initialPublicationScheduledAt
+      ? new Date(initialPublicationScheduledAt).toISOString().slice(0, 16)
+      : '';
+    const currentDateStr = publicationScheduledAt
+      ? new Date(publicationScheduledAt).toISOString().slice(0, 16)
+      : '';
+
+    return (
+      status !== initialStatus ||
+      notes !== (initialNotes || '') ||
+      consentVerified !== initialConsentVerified ||
+      publicationStatusOptionId !== (initialPublicationStatusOptionId || '') ||
+      publicationNotes !== (initialPublicationNotes || '') ||
+      currentDateStr !== initialDateStr ||
+      currentIndsSorted !== initialIndsSorted
+    );
+  }, [
+    status, initialStatus,
+    notes, initialNotes,
+    consentVerified, initialConsentVerified,
+    publicationStatusOptionId, initialPublicationStatusOptionId,
+    publicationNotes, initialPublicationNotes,
+    publicationScheduledAt, initialPublicationScheduledAt,
+    activeIndicatorOptionIds, initialActiveIndicatorOptionIds
+  ]);
+
+  const savedProgressResult = useMemo(() => {
+    if (loadingOptions) return null;
+    try {
+      const savedContribution = {
+        id,
+        title: null,
+        description: description || null,
+        internal_notes: initialNotes || null,
+        contribution_type: contributionType,
+        consent_verified: initialConsentVerified,
+        authorization_level: level,
+        credit_preference: credits,
+        consent_source: consentSource,
+        files: files || [],
+        contributors: contributor,
+        historical_context: historicalContext,
+        created_at: createdAt,
+        updated_at: updatedAt,
+        published_at: publishedAt
+      };
+      
+      const savedPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === initialPublicationStatusOptionId);
+      const savedActiveIndicators = dbOptions.editorial_indicator
+        .filter((opt: SelectOption) => initialActiveIndicatorOptionIds.includes(opt.id))
+        .map((opt: SelectOption) => ({
+          indicator_option_id: opt.id,
+          is_active: true,
+          opt
+        }));
+
+      const progressInput = mapContributionToProgressInput(savedContribution, savedPubStatusOpt, savedActiveIndicators);
+      return evaluateEditorialProgress(progressInput);
+    } catch (e) {
+      console.error("Error calculating saved progress:", e);
+      return null;
+    }
+  }, [
+    id, description, initialNotes, contributionType, initialConsentVerified, level, credits, consentSource,
+    files, contributor, historicalContext, createdAt, updatedAt, publishedAt,
+    dbOptions, initialPublicationStatusOptionId, initialActiveIndicatorOptionIds, loadingOptions
+  ]);
+
+  const currentProgressResult = useMemo(() => {
+    if (loadingOptions) return null;
+    try {
+      const currentContribution = {
+        id,
+        title: null,
+        description: description || null,
+        internal_notes: notes || null,
+        contribution_type: contributionType,
+        consent_verified: consentVerified,
+        authorization_level: level,
+        credit_preference: credits,
+        consent_source: consentSource,
+        files: files || [],
+        contributors: contributor,
+        historical_context: historicalContext,
+        created_at: createdAt,
+        updated_at: updatedAt,
+        published_at: publishedAt
+      };
+      
+      const currentPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === publicationStatusOptionId);
+      const currentActiveIndicators = dbOptions.editorial_indicator
+        .filter((opt: SelectOption) => activeIndicatorOptionIds.includes(opt.id))
+        .map((opt: SelectOption) => ({
+          indicator_option_id: opt.id,
+          is_active: true,
+          opt
+        }));
+
+      const progressInput = mapContributionToProgressInput(currentContribution, currentPubStatusOpt, currentActiveIndicators);
+      return evaluateEditorialProgress(progressInput);
+    } catch (e) {
+      console.error("Error calculating current progress:", e);
+      return null;
+    }
+  }, [
+    id, description, notes, contributionType, consentVerified, level, credits, consentSource,
+    files, contributor, historicalContext, createdAt, updatedAt, publishedAt,
+    dbOptions, publicationStatusOptionId, activeIndicatorOptionIds, loadingOptions
+  ]);
 
   const handleIndicatorCheckboxChange = (indicatorId: string, checked: boolean) => {
     if (checked) {
@@ -459,6 +588,198 @@ export default function ContributionEditForm({
           </p>
         </div>
       </div>
+
+      {/* PANEL: Progreso Editorial */}
+      {currentProgressResult && (
+        <div style={{
+          border: '1px solid #cbd5e1',
+          borderRadius: '8px',
+          backgroundColor: '#fafaf9',
+          padding: '1.5rem',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#1c1917', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span>📈</span> Progreso Editorial
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#f3e8ff', color: '#6b21a8', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                Reglas v{EDITORIAL_PROGRESS_VERSION.version.substring(0, 3)}
+              </span>
+              {isDirty && (
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                  ⚠️ Vista previa (cambios no guardados)
+                </span>
+              )}
+            </h4>
+            <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 500 }}>Medición de avance</span>
+          </div>
+
+          <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
+
+          {/* Porcentaje y Barra de progreso */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1c1917' }}>
+                {currentProgressResult.progress}%
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600 }}>
+                {currentProgressResult.completedWeight} / {currentProgressResult.totalWeight} pts
+              </span>
+            </div>
+            
+            <div 
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={currentProgressResult.progress}
+              style={{ width: '100%', height: '10px', backgroundColor: '#e7e5e4', borderRadius: '5px', overflow: 'hidden' }}
+            >
+              <div style={{
+                height: '100%',
+                width: `${currentProgressResult.progress}%`,
+                backgroundColor: currentProgressResult.progress >= 90 ? '#16a34a' : currentProgressResult.progress >= 50 ? '#f59e0b' : '#dc2626',
+                borderRadius: '5px',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+          </div>
+
+          {/* Etapa actual e hito */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>Estado Actual</span>
+              <strong style={{ color: '#292524', fontSize: '0.9rem' }}>{currentProgressResult.currentStage.label}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>Próximo Hito</span>
+              <strong style={{ color: '#292524', fontSize: '0.9rem' }}>{currentProgressResult.nextMilestone || 'Ninguno (Publicado)'}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>Pasos Restantes</span>
+              <strong style={{ color: '#292524', fontSize: '0.9rem' }}>{currentProgressResult.remainingSteps}</strong>
+            </div>
+          </div>
+
+          <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
+
+          {/* Tareas detalladas */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                Tareas Completadas / No Requeridas ({currentProgressResult.completedItems.length})
+              </span>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {currentProgressResult.completedItems.map(item => (
+                  <li key={item.code} style={{ fontSize: '0.8rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
+                    <span>✓</span> {item.label} <span style={{ fontSize: '0.7rem', color: '#78716c' }}>({item.earnedWeight} pts)</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {currentProgressResult.blockedItems.length > 0 && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#b91c1c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                  Bloqueado / Cuello de Botella ({currentProgressResult.blockedItems.length})
+                </span>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {currentProgressResult.blockedItems.map(item => (
+                    <li key={item.code} style={{ fontSize: '0.8rem', color: '#dc2626', display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontWeight: 600 }}>
+                      <span style={{ marginTop: '1px' }}>⚠️</span> 
+                      <div>
+                        {item.label}
+                        {item.reason && <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 400, marginTop: '1px' }}>{item.reason}</div>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {currentProgressResult.pendingItems.length > 0 && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                  Pendiente ({currentProgressResult.pendingItems.length})
+                </span>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {currentProgressResult.pendingItems.map(item => (
+                    <li key={item.code} style={{ fontSize: '0.8rem', color: '#d97706', display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontWeight: 500 }}>
+                      <span style={{ marginTop: '1px' }}>○</span>
+                      <div>
+                        {item.label}
+                        {item.reason && <div style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 400, marginTop: '1px' }}>{item.reason}</div>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {currentProgressResult.conflicts.length > 0 && (
+            <>
+              <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
+              <div style={{ backgroundColor: '#fff1f2', border: '1px solid #ffe4e6', borderRadius: '4px', padding: '0.5rem 0.75rem' }}>
+                <span style={{ fontSize: '0.75rem', color: '#be123c', fontWeight: 700, display: 'block', marginBottom: '0.15rem' }}>
+                  ⚠️ Conflictos Detectados ({currentProgressResult.conflicts.length})
+                </span>
+                {currentProgressResult.conflicts.map(conf => (
+                  <span key={conf} style={{ fontSize: '0.75rem', color: '#be123c', fontWeight: 600, display: 'block' }}>
+                    &bull; {conf === "CONFLICT_HISTORICAL_VALIDATION" 
+                      ? "Contradicción entre el estado de validación histórica y los indicadores activos." 
+                      : conf}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+
+          {currentProgressResult.hasPostPublicationInconsistencies && (
+            <>
+              <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
+              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '4px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.75rem', fontWeight: 600 }}>
+                🚨 Aporte publicado con inconsistencias o bloqueos activos post-publicación.
+              </div>
+            </>
+          )}
+
+          <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
+
+          {/* Siguiente Acción y Resumen */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {currentProgressResult.nextAction && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>Próxima Acción Recomendada</span>
+                <span style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: currentProgressResult.nextAction.severity === "blocking" ? '#991b1b' : '#1e3a8a',
+                  backgroundColor: currentProgressResult.nextAction.severity === "blocking" ? '#fef2f2' : '#eff6ff',
+                  padding: '0.35rem 0.6rem',
+                  borderRadius: '4px',
+                  border: currentProgressResult.nextAction.severity === "blocking" ? '1px solid #fecaca' : '1px solid #bfdbfe',
+                  display: 'inline-block'
+                }}>
+                  👉 {currentProgressResult.nextAction.title}
+                </span>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#57534e' }}>
+                  {currentProgressResult.nextAction.description}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>Resumen Narrativo</span>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#292524', lineHeight: 1.4, fontWeight: 500 }}>
+                {currentProgressResult.summary}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* BLOQUE A: Gestión Editorial */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>

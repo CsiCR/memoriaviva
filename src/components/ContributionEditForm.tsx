@@ -79,6 +79,7 @@ interface ContributionEditFormProps {
   updatedAt?: string | null;
   publishedAt?: string | null;
   title?: string | null;
+  historicalValidationStatus?: string | null;
 }
 
 // Mapear nombres de iconos de base de datos a componentes Lucide
@@ -124,7 +125,8 @@ export default function ContributionEditForm({
   createdAt,
   updatedAt,
   publishedAt,
-  title
+  title,
+  historicalValidationStatus
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
@@ -322,7 +324,9 @@ export default function ContributionEditForm({
         historical_context: historicalContext,
         created_at: createdAt,
         updated_at: updatedAt,
-        published_at: publishedAt
+        published_at: publishedAt,
+        editorial_status: initialStatus,
+        historical_validation_status: historicalValidationStatus
       };
       
       const savedPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === initialPublicationStatusOptionId);
@@ -343,7 +347,8 @@ export default function ContributionEditForm({
   }, [
     id, description, initialNotes, contributionType, initialConsentVerified, level, credits, consentSource,
     files, contributor, historicalContext, createdAt, updatedAt, publishedAt,
-    dbOptions, initialPublicationStatusOptionId, initialActiveIndicatorOptionIds, loadingOptions
+    dbOptions, initialPublicationStatusOptionId, initialActiveIndicatorOptionIds, loadingOptions,
+    title, initialStatus, historicalValidationStatus
   ]);
 
   const currentProgressResult = useMemo(() => {
@@ -364,7 +369,9 @@ export default function ContributionEditForm({
         historical_context: historicalContext,
         created_at: createdAt,
         updated_at: updatedAt,
-        published_at: publishedAt
+        published_at: publishedAt,
+        editorial_status: status,
+        historical_validation_status: historicalValidationStatus
       };
       
       const currentPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === publicationStatusOptionId);
@@ -385,7 +392,8 @@ export default function ContributionEditForm({
   }, [
     id, description, notes, contributionType, consentVerified, level, credits, consentSource,
     files, contributor, historicalContext, createdAt, updatedAt, publishedAt,
-    dbOptions, publicationStatusOptionId, activeIndicatorOptionIds, loadingOptions
+    dbOptions, publicationStatusOptionId, activeIndicatorOptionIds, loadingOptions,
+    title, status, historicalValidationStatus
   ]);
 
   const handleIndicatorCheckboxChange = (indicatorId: string, checked: boolean) => {

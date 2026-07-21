@@ -1055,6 +1055,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               initialLevel={contribution.authorization_level}
               initialCredits={contribution.credit_preference}
               consentSource={contribution.consent_source || 'web_form'}
+              historicalValidationStatus={contribution.historical_validation_status}
               initialPublicationStatusOptionId={contribution.publication_status_option_id}
               initialPublicationNotes={contribution.publication_notes}
               initialPublicationScheduledAt={contribution.publication_scheduled_at}

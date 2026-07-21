@@ -1048,6 +1048,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
           <div className="card" style={{ padding: '2rem' }}>
             <ContributionEditForm
               id={contribution.id}
+              title={contribution.title}
               initialStatus={contribution.editorial_status}
               initialNotes={contribution.internal_notes}
               initialConsentVerified={contribution.consent_verified || false}

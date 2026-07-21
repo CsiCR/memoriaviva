@@ -78,6 +78,7 @@ interface ContributionEditFormProps {
   createdAt?: string | null;
   updatedAt?: string | null;
   publishedAt?: string | null;
+  title?: string | null;
 }
 
 // Mapear nombres de iconos de base de datos a componentes Lucide
@@ -122,7 +123,8 @@ export default function ContributionEditForm({
   historicalContext,
   createdAt,
   updatedAt,
-  publishedAt
+  publishedAt,
+  title
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
@@ -207,7 +209,7 @@ export default function ContributionEditForm({
     
     return {
       id,
-      title: null,
+      title: title || null,
       description: description || null,
       internal_notes: notes || null,
       content_type: mappedContentType,
@@ -307,7 +309,7 @@ export default function ContributionEditForm({
     try {
       const savedContribution = {
         id,
-        title: null,
+        title: title || null,
         description: description || null,
         internal_notes: initialNotes || null,
         contribution_type: contributionType,
@@ -349,7 +351,7 @@ export default function ContributionEditForm({
     try {
       const currentContribution = {
         id,
-        title: null,
+        title: title || null,
         description: description || null,
         internal_notes: notes || null,
         contribution_type: contributionType,

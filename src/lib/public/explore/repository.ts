@@ -371,6 +371,7 @@ export class SupabaseExploreRepository implements ExploreRepository {
         updated_at: rowObj.updated_at as string,
         content_type: contentType,
         files: mappedFiles,
+        contributor: rowObj.contributor as any,
         publication_status: { id: rowObj.publication_status_option_id as string | null, code: "published", name: "Publicado" },
         editorial_status: { id: "", code: "approved_archive", name: "Aprobado para archivo" },
       } as unknown as ContributionInput;

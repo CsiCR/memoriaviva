@@ -48,6 +48,7 @@ export function buildBasePublishedQuery(supabase: SupabaseClient, publishedOptId
       publication_status_option_id,
       contribution_type,
       contributor_id,
+      contributor:contributors(id, full_name, relation_to_city, neighborhood_or_institution),
       contribution_files(
         id,
         file_name,

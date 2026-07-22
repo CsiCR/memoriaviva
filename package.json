@@ -4,9 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "tsx scripts/generate-manifest.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:public": "tsx scripts/test-public-contracts.ts",
+    "prelaunch:audit": "tsx scripts/prelaunch-audit.ts",
+    "smoke:staging": "tsx scripts/smoke-production.ts",
+    "smoke:production": "tsx scripts/smoke-production.ts --confirm",
     "seed-admin": "tsx scripts/seed-admin.ts"
   },
   "dependencies": {

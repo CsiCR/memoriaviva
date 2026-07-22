@@ -1,0 +1,11 @@
+{
+  "version": "3.2.1",
+  "releaseName": "First Public Beta",
+  "buildDate": "2026-07-22T07:51:22.083Z",
+  "gitCommit": "5afb455",
+  "environment": "development",
+  "schemaVersion": "1",
+  "tests": 389,
+  "lint": "passed",
+  "build": "passed"
+}

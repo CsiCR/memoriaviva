@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description: "Iniciativa colaborativa enfocada en la preservación del patrimonio y la identidad local de Pico Truncado, impulsada por Edith Gómez, el Centro Chileno de Pico Truncado y Adrián Montet (Unión Vecinal Barrio YPF).",
   keywords: ["Pico Truncado", "Memoria Viva", "Archivo Histórico", "Patrimonio", "Barrio YPF", "Testimonios"],
   authors: [{ name: "Proyecto Memoria Viva" }],
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1588e6",
 };
 
 export default function RootLayout({

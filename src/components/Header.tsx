@@ -3,11 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, BookOpen } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import { clientEnv } from '@/lib/config/env';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+
+  const showStagingBanner = clientEnv.NEXT_PUBLIC_APP_ENV === "staging";
+  const showBetaBanner = clientEnv.NEXT_PUBLIC_SHOW_BETA_BANNER;
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
@@ -21,7 +25,43 @@ export default function Header() {
   ];
 
   return (
-    <header className="site-header">
+    <>
+      {showStagingBanner && (
+        <div 
+          id="staging-warning-banner"
+          style={{ 
+            backgroundColor: '#d97706', 
+            color: '#ffffff', 
+            padding: '0.5rem 1rem', 
+            textAlign: 'center', 
+            fontSize: '0.9rem', 
+            fontWeight: 600, 
+            letterSpacing: '0.5px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}
+        >
+          ⚠️ Entorno de Prueba y Revisión Interna — Memoria Viva Pico Truncado
+        </div>
+      )}
+      {showBetaBanner && (
+        <div 
+          id="beta-version-banner"
+          style={{ 
+            backgroundColor: 'var(--primary-blue)', 
+            color: '#ffffff', 
+            padding: '0.5rem 1rem', 
+            textAlign: 'center', 
+            fontSize: '0.9rem', 
+            fontWeight: 500,
+            letterSpacing: '0.3px',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}
+        >
+          Versión inicial del Archivo Histórico Digital. Seguimos incorporando historias y mejorando la experiencia.
+        </div>
+      )}
+      <header className="site-header">
+
       <div className="container header-container">
         <Link href="/" className="site-logo" onClick={closeMenu} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img src="/icon-192.png" alt="Logo Cerro Pico Truncado" style={{ height: '36px', width: 'auto', borderRadius: '4px' }} />
@@ -120,5 +160,7 @@ export default function Header() {
         </nav>
       )}
     </header>
+    </>
   );
 }
+

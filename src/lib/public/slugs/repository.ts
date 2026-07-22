@@ -665,7 +665,7 @@ export class SupabasePublicIdentityRepository implements PublicIdentityRepositor
     const cleanSlug = slug.toLowerCase().trim();
     const { data, error } = await this.supabase
       .from("public_slugs")
-      .select("*, public_identities(*)")
+      .select("*, public_identities!fk_identity_type(*)")
       .eq("entity_type", entityType)
       .eq("slug", cleanSlug)
       .maybeSingle();
@@ -828,7 +828,7 @@ export class SupabasePublicIdentityRepository implements PublicIdentityRepositor
       // Consultar si pertenece a otra identidad distinta a la excluida
       const { data, error } = await this.supabase
         .from("public_slugs")
-        .select("identity_id, public_identities(entity_uuid)")
+        .select("identity_id, public_identities!fk_identity_type(entity_uuid)")
         .eq("entity_type", entityType)
         .eq("slug", cleanSlug)
         .maybeSingle();

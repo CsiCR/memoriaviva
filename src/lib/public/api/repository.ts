@@ -476,7 +476,7 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
   async getPublicSitemapEntries(): Promise<PublicSitemapEntry[]> {
     const { data, error } = await this.supabase
       .from("public_slugs")
-      .select("slug, public_identities(updated_at, status)")
+      .select("slug, public_identities!fk_identity_type(updated_at, status)")
       .eq("entity_type", "contribution")
       .eq("kind", "canonical");
 

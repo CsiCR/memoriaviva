@@ -1,5 +1,28 @@
 import type { Metadata, Viewport } from "next";
+import { Montserrat, Open_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-headings-google",
+  display: "swap",
+});
+
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-body-google",
+  display: "swap",
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-serif-google",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Memoria Viva Pico Truncado — Archivo Histórico Comunitario",
@@ -18,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${montserrat.variable} ${openSans.variable} ${playfairDisplay.variable}`}>
       <body>
         {children}
       </body>

@@ -45,19 +45,39 @@ export default function ContributionCard({ contribution }: ContributionCardProps
         }}
       >
         {contribution.imageUrl ? (
-          <img
-            src={contribution.imageUrl}
-            alt={`Fotografía o archivo de: ${contribution.title}`}
-            loading="lazy"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
+          <>
+            {/* Fondo difuminado para relleno estético */}
+            <img
+              src={contribution.imageUrl}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                top: "-10%",
+                left: "-10%",
+                width: "120%",
+                height: "120%",
+                objectFit: "cover",
+                filter: "blur(12px) brightness(0.85)",
+                opacity: 0.65,
+              }}
+            />
+            {/* Imagen real auto-ajustada sin recortes */}
+            <img
+              src={contribution.imageUrl}
+              alt={`Fotografía o archivo de: ${contribution.title}`}
+              loading="lazy"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                zIndex: 1,
+              }}
+            />
+          </>
         ) : (
           <div
             style={{

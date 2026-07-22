@@ -22,7 +22,7 @@ export const publicStorySchema = z
     title: z.string(),
     description: z.string().nullable(),
     coverMedia: publicMediaSchema.nullable(),
-    publishedAt: z.string().datetime(), // ISO string
+    publishedAt: z.string().datetime({ offset: true }), // ISO string con offset
     contributions: z.array(publicContributionReferenceSchema),
     credits: z.array(publicCreditsSchema),
   })

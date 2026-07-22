@@ -34,8 +34,8 @@ export const publicContributionSchema = z
     mentionedInstitutions: z.array(publicInstitutionReferenceSchema),
     historicalContext: z.string().nullable(),
     catalogCode: z.string().nullable(),
-    publishedAt: z.string().datetime(), // ISO string
-    updatedAt: z.string().datetime(),   // ISO string
+    publishedAt: z.string().datetime({ offset: true }), // ISO string con offset
+    updatedAt: z.string().datetime({ offset: true }),   // ISO string con offset
     credits: publicCreditsSchema,
     media: z.array(publicMediaSchema),
     references: z.array(publicReferenceSchema),

@@ -13,6 +13,7 @@ import {
   generatePublicNotFoundMetadata,
 } from "@/lib/public/seo";
 import crypto from "crypto";
+import { formatDateToAR } from "@/utils/date";
 
 // Revalidación nativa de Next.js (SSG/ISR) cada 5 minutos
 export const revalidate = 300;
@@ -193,7 +194,7 @@ export default async function ContributionPage({ params }: PageProps) {
         {contribution.credits && (
           <footer style={{ borderTop: "1px solid var(--border-warm)", paddingTop: "1.5rem", fontSize: "0.9rem", color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <div>Aporte registrado para la comunidad por: <strong>{contribution.credits.displayName}</strong></div>
-            <div>Fecha de publicación: {new Date(contribution.publishedAt).toLocaleDateString()}</div>
+            <div>Fecha de publicación: {formatDateToAR(contribution.publishedAt)}</div>
           </footer>
         )}
       </article>

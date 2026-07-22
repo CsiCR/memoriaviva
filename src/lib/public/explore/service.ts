@@ -52,10 +52,19 @@ export function mapToCardModel(pub: PublicContribution): ContributionCardModel {
   // 3. Resolver autor o crédito de forma pública
   const authorName = pub.credits.displayName || "Anónimo";
 
+function formatArgentinaDate(isoDateStr: string): string {
+  const parts = isoDateStr.split("-");
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  }
+  return isoDateStr;
+}
+
   // 4. Resolver etiqueta de tiempo histórico
   let dateLabel = pub.historicalDate.displayLabel;
   if (pub.historicalDate.precision === "exact" && pub.historicalDate.isoDate) {
-    dateLabel = pub.historicalDate.isoDate;
+    dateLabel = formatArgentinaDate(pub.historicalDate.isoDate);
   } else if (pub.historicalDate.precision === "decade" && pub.historicalDate.decade) {
     dateLabel = `Década de ${pub.historicalDate.decade}`;
   } else if (pub.historicalDate.precision === "year" && pub.historicalDate.year) {

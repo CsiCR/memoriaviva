@@ -51,6 +51,12 @@ interface DbContributionRow {
   updated_at: string;
   publication_status_option_id: string | null;
   contribution_files: DbContributionFile[] | null;
+  contributor: {
+    id: string;
+    full_name: string;
+    relation_to_city: string | null;
+    neighborhood_or_institution: string | null;
+  } | null;
 }
 
 export class InMemoryPublicApiRepository implements PublicApiRepository {
@@ -262,6 +268,7 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
         created_at,
         updated_at,
         publication_status_option_id,
+        contributor:contributors(id, full_name, relation_to_city, neighborhood_or_institution),
         contribution_files(
           id,
           file_name,
@@ -360,6 +367,7 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
         publication_scheduled_at: item.publication_scheduled_at,
         created_at: item.created_at,
         updated_at: item.updated_at,
+        contributor: item.contributor,
         files,
         publication_status: {
           id: item.publication_status_option_id || "",
@@ -410,6 +418,7 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
         created_at,
         updated_at,
         publication_status_option_id,
+        contributor:contributors(id, full_name, relation_to_city, neighborhood_or_institution),
         contribution_files(
           id,
           file_name,
@@ -459,6 +468,7 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
       publication_scheduled_at: item.publication_scheduled_at,
       created_at: item.created_at,
       updated_at: item.updated_at,
+      contributor: item.contributor,
       files,
       publication_status: {
         id: item.publication_status_option_id || "",

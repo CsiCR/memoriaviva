@@ -58,6 +58,15 @@ export function mimeTypeFromFileName(fileName: string): string {
  * Mapea y normaliza las fechas del aporte en un único objeto coherente PublicHistoricalDate.
  * Resuelve incongruencias calculando año y década a partir de la fecha exacta si existe.
  */
+function formatArgentinaDate(isoDateStr: string): string {
+  const parts = isoDateStr.split("-");
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  }
+  return isoDateStr;
+}
+
 export function toPublicHistoricalDate(
   exactDate: string | null | undefined,
   approximateDecade: string | null | undefined
@@ -72,7 +81,7 @@ export function toPublicHistoricalDate(
         isoDate: exactDate,
         year: year,
         decade: decade,
-        displayLabel: `Fecha exacta: ${exactDate}`,
+        displayLabel: `Fecha exacta: ${formatArgentinaDate(exactDate)}`,
       };
     }
   }

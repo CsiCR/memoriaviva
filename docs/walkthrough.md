@@ -84,7 +84,15 @@ Para preservar la estabilidad de la plataforma y sus flujos existentes, confirma
 
 ## Próximos Pasos
 
-1. Revisión y aprobación final del usuario.
-2. Cierre formal de las Etapas 1 y 2.
-3. Creación del Pull Request o revisión de la rama.
-4. Esperar el master prompt para iniciar la Etapa 3.
+1. Cierre formal de las Etapas 1 y 2.
+2. Creación del Pull Request o revisión de la rama.
+3. Esperar el master prompt para iniciar la Etapa 3.
+
+---
+
+## Consideraciones para Próximas Etapas (Lecciones Aprendidas)
+
+- **Reutilización del Hero**: El sistema responsivo de Hero y transición gradual está diseñado de forma modular, permitiendo reutilizar su lógica para futuras campañas históricas o portadas temáticas del museo.
+- **Consistencia de Lenguaje Visual**: Es clave mantener el mismo lenguaje editorial (Playfair Display para títulos expresivos en serif, Montserrat para acentos y Open Sans para cuerpo) en las nuevas secciones que se construyan durante la Etapa 3.
+- **Rendimiento Móvil Incremental**: A medida que se incorporen nuevos componentes interactivos en las siguientes etapas, se debe monitorear y optimizar de forma continua el rendimiento en dispositivos móviles.
+- **Validación Incremental**: Mantener estrictamente el enfoque de validación incremental validado en esta etapa (Visual → Técnica con Linter/Tests → Aprobación de Integración).

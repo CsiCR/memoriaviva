@@ -76,11 +76,12 @@ export default function Hero({ title, subtitle }: HeroProps) {
         </span>
 
         <h1 className="museum-hero-title museum-animate museum-delay-2">
-          Nuestra historia. <span>Nuestro lugar.</span>
+          Nuestra historia.<br />
+          <span>Nuestro lugar.</span>
         </h1>
 
         <p className="museum-hero-intro museum-animate museum-delay-2">
-          Memoria Viva Pico Truncado es un espacio comunitario donde nuestras historias se encuentran, se preservan y se comparten con las generaciones presentes y futuras.
+          Cada fotografía, cada documento y cada relato forman parte de la memoria colectiva de nuestra ciudad.
         </p>
 
         <div className="museum-hero-buttons museum-animate museum-delay-3">

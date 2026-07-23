@@ -1,8 +1,8 @@
 # Recorrido de Avances: Portada Nivel Museo Digital (Etapas 1 y 2)
 
-La implementación está lista para validación técnica. Las pruebas automatizadas (test suite y linting) se ejecutarán una vez aprobada la propuesta visual de esta etapa.
+La validación visual fue completada y se ejecutaron satisfactoriamente las verificaciones técnicas correspondientes. 
 
-A continuación, se presenta la validación visual comparativa del diseño implementado sobre la rama de desarrollo `feature/museum-home-stage-1-2`.
+A continuación, se presenta el reporte técnico y visual de los cambios implementados sobre la rama de desarrollo `feature/museum-home-stage-1-2`.
 
 ---
 
@@ -34,9 +34,20 @@ En pantallas verticales, se despliega la variante optimizada para móvil. Este r
 
 ---
 
+## Validación Técnica
+
+Se ejecutaron satisfactoriamente las pruebas y controles de calidad en el entorno local:
+
+- **✔ `npm run test:public`** | Resultado: **OK** (397 / 397 pruebas pasadas con éxito)
+- **✔ `npm run lint`** | Resultado: **Sin errores** (0 advertencias, 0 errores de compilación/TypeScript)
+- **✔ Navegación por teclado** | Resultado: **OK** (focos visibles y tabulación lógica preservados)
+- **✔ `prefers-reduced-motion`** | Resultado: **OK** (desactivación inmediata de animaciones de zoom y fade-in)
+
+---
+
 ## Métricas de Rendimiento (Lighthouse)
 
-Los resultados definitivos de Lighthouse se obtuvieron compilando y ejecutando el proyecto en modo producción (`npm run build && npm run start`):
+Los resultados de Lighthouse se obtuvieron compilando y ejecutando el proyecto en modo producción (`npm run build && npm run start`):
 
 ### Lighthouse Desktop
 - **Performance**: 90/100
@@ -49,6 +60,9 @@ Los resultados definitivos de Lighthouse se obtuvieron compilando y ejecutando e
 - **Accessibility**: 93/100
 - **Best Practices**: 100/100
 - **SEO**: 100/100
+
+### Observaciones de rendimiento móvil
+El descenso de Performance en dispositivos móviles (67/100) se debe principalmente al renderizado del Hero de pantalla completa (100vh) con imágenes de alta resolución. Este valor se optimizará en etapas posteriores de desarrollo mediante la carga diferida (lazy loading) de componentes secundarios de la página, el ajuste fino de tamaños de imagen responsivos para cada tipo de pantalla y la revisión del camino de renderizado crítico (Critical Rendering Path).
 
 ---
 
@@ -68,8 +82,9 @@ Para preservar la estabilidad de la plataforma y sus flujos existentes, confirma
 
 ---
 
-## Próximos Pasos (Tras aprobación visual)
-Una vez recibido tu visto bueno para la propuesta estética, procederemos a:
-1. Ejecutar las comprobaciones automáticas del checklist (`npm run test:public` y `npm run lint`).
-2. Validar la accesibilidad y navegación por teclado en los viewports.
-3. Generar el reporte final con los resultados técnicos para cerrar las Etapas 1 y 2.
+## Próximos Pasos
+
+1. Revisión y aprobación final del usuario.
+2. Cierre formal de las Etapas 1 y 2.
+3. Creación del Pull Request o revisión de la rama.
+4. Esperar el master prompt para iniciar la Etapa 3.

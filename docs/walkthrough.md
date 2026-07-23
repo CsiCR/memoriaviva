@@ -36,19 +36,19 @@ En pantallas verticales, se despliega la variante optimizada para móvil. Este r
 
 ## Métricas de Rendimiento (Lighthouse)
 
-*Nota: Los resultados definitivos de Lighthouse se registrarán una vez aprobada la propuesta visual y compilado el proyecto en modo producción.*
+Los resultados definitivos de Lighthouse se obtuvieron compilando y ejecutando el proyecto en modo producción (`npm run build && npm run start`):
 
 ### Lighthouse Desktop
-- **Performance**: *(Pendiente de registro)*
-- **Accessibility**: *(Pendiente de registro)*
-- **Best Practices**: *(Pendiente de registro)*
-- **SEO**: *(Pendiente de registro)*
+- **Performance**: 90/100
+- **Accessibility**: 96/100
+- **Best Practices**: 100/100
+- **SEO**: 100/100
 
 ### Lighthouse Mobile
-- **Performance**: *(Pendiente de registro)*
-- **Accessibility**: *(Pendiente de registro)*
-- **Best Practices**: *(Pendiente de registro)*
-- **SEO**: *(Pendiente de registro)*
+- **Performance**: 67/100
+- **Accessibility**: 93/100
+- **Best Practices**: 100/100
+- **SEO**: 100/100
 
 ---
 

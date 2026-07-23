@@ -5,11 +5,11 @@ import puppeteer from "puppeteer";
 import * as path from "path";
 
 const filename = process.argv[2] || "screenshot.jpg";
-const isMobile = process.argv[3] === "mobile";
+const mode = process.argv[3] || "desktop";
 const targetPath = path.resolve(process.argv[4] || filename);
 
 async function main() {
-  console.log(`=== INICIANDO CAPTURA: ${filename} (Mobile: ${isMobile}) ===`);
+  console.log(`=== INICIANDO CAPTURA: ${filename} (Modo: ${mode}) ===`);
   console.log(`Destino: ${targetPath}`);
 
   // Iniciar navegador
@@ -21,7 +21,7 @@ async function main() {
   try {
     const page = await browser.newPage();
 
-    if (isMobile) {
+    if (mode === "mobile") {
       // Emular un iPhone X/11/12
       await page.setViewport({
         width: 375,
@@ -33,6 +33,18 @@ async function main() {
       // User agent de móvil
       await page.setUserAgent(
         "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+      );
+    } else if (mode === "tablet") {
+      // Emular un iPad
+      await page.setViewport({
+        width: 768,
+        height: 1024,
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 2,
+      });
+      await page.setUserAgent(
+        "Mozilla/5.0 (iPad; CPU OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
       );
     } else {
       // Resolucion desktop estandar

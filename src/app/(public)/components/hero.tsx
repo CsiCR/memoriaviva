@@ -23,7 +23,7 @@ export default function Hero({ title, subtitle }: HeroProps) {
   return (
     <section className="museum-hero" aria-label="Presentación del Museo Comunitario">
       {/* 1. Fondo de Imagen Responsiva para Desktop */}
-      <div className="hero-image-desktop absolute inset-0 z-0 museum-scale-in">
+      <div className="hero-image-desktop museum-scale-in" style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <Image
           src="/images/pico-truncado-hero.webp"
           alt=""
@@ -37,7 +37,7 @@ export default function Hero({ title, subtitle }: HeroProps) {
       </div>
 
       {/* 2. Fondo de Imagen Responsiva para Mobile */}
-      <div className="hero-image-mobile absolute inset-0 z-0 museum-scale-in">
+      <div className="hero-image-mobile museum-scale-in" style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <Image
           src="/images/pico-truncado-hero-mobile.webp"
           alt=""

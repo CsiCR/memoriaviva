@@ -89,9 +89,9 @@ La compilación estática e incremental se completó de forma exitosa y sin hydr
 ## 6. Capturas de Pantalla por Resolución
 
 Las imágenes a tamaño completo se encuentran guardadas en la carpeta de documentación:
-- **Vista Móvil:** `docs/museum-home/museum-home-mobile.jpg`
-- **Vista Tablet:** `docs/museum-home/museum-home-tablet.jpg`
-- **Vista Escritorio:** `docs/museum-home/museum-home-desktop.jpg`
+- **Vista Móvil:** `docs/archivo-historico-home/museum-home-mobile.jpg`
+- **Vista Tablet:** `docs/archivo-historico-home/museum-home-tablet.jpg`
+- **Vista Escritorio:** `docs/archivo-historico-home/museum-home-desktop.jpg`
 
 ---
 
@@ -115,4 +115,18 @@ El despliegue en el entorno de desarrollo/staging se ha completado con éxito:
 - **Proyecto en Vercel:** `csicrs-projects/memoriaviva`
 - **Resultado:** **READY (Go)**. El build en la nube de Vercel finalizó correctamente.
 - **Integridad:** Se comprobó mediante la suite técnica que las conexiones del backend y los datos en Supabase permanecen inalterados.
-- **Correcciones de Contraste:** Se actualizó `--hope-green` a `#246B43` (5.3:1 contraste) para cumplir con las normas de accesibilidad de texto WCAG AA, y se cambió la coloración del link "Conocer el Proyecto" a `#FAFAF5` (blanco crema) para excelente lectura, junto a una transición de color a azul claro en hover (`.museum-cta-link:hover`).
+- **Correcciones de Contraste:** Se actualizó `--hope-green` a `#246B43` (5.3:1 contraste) para cumplir con las normas de accesibilidad de texto WCAG AA, y se cambió la coloración del link "Conocer el Proyecto" a `#FAFAF5` (blanco crema) para excelente lectura, junto a una transición de color a azul claro en hover (`.museum-cta-link:hover`, nombre de clase interno heredado del componente original).
+
+---
+
+## 9. Estado de la Etapa
+
+**Estado:** APROBADA
+
+La etapa de refinamiento visual y narrativo del portal público se considera finalizada.
+
+Quedan pendientes únicamente las validaciones operativas previas al lanzamiento definitivo:
+- Auditoría Lighthouse real.
+- Validación manual de accesibilidad.
+- Revisión funcional completa del Preview de Vercel.
+- Checklist Go / No Go.

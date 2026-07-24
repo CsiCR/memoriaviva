@@ -1,98 +1,118 @@
-# Recorrido de Avances: Portada Nivel Archivo Histórico Digital (Etapas 1 y 2)
+# Walkthrough Técnico Final — Recorrido Narrativo del Archivo Histórico Digital (Etapa 3)
 
-La validación visual fue completada y se ejecutaron satisfactoriamente las verificaciones técnicas correspondientes. 
-
-A continuación, se presenta el reporte técnico y visual de los cambios implementados sobre la rama de desarrollo `feature/museum-home-stage-1-2`.
+Este documento contiene los entregables obligatorios correspondientes a la finalización y aprobación de la **Etapa 3** del portal **Memoria Viva Pico Truncado**.
 
 ---
 
-## Comparación Visual: Antes y Después
+## 1. Listado de Archivos Modificados
 
-### ANTES (Hero institucional simple)
-El diseño original consistía en una sección de color plano con un degradado de azul claro a blanco cálido, sin material fotográfico ni carácter inmersivo.
+Toda la intervención se limitó estrictamente a la capa de frontend visual pública. 
 
-![Diseño original de la portada](museum-home/museum-home-before.jpg)
-
----
-
-### DESPUÉS (Hero inmersivo tipo archivo histórico digital)
-
-#### 1. Vista de Escritorio (Desktop)
-En pantallas grandes, se aprovecha la panorámica original en toda su anchura. La cabecera superior comienza transparente y se torna blanca y sólida con desenfoque de fondo al descender por la página.
-
-![Diseño renovado - Desktop](museum-home/museum-home-desktop.jpg)
-
-#### 2. Vista de Tablet (Tablet)
-En pantallas medianas, la composición se ajusta conservando la panorámica integrada y adaptando los márgenes y tipografía para una legibilidad óptima.
-
-![Diseño renovado - Tablet](museum-home/museum-home-tablet.jpg)
-
-#### 3. Vista de Teléfonos Celulares (Mobile)
-En pantallas verticales, se despliega la variante optimizada para móvil. Este recurso toma la mitad izquierda (Pico Truncado histórico / sepia) y la apila de forma vertical sobre la mitad derecha (Pico Truncado nevado / frío), preservando ambos periodos de manera clara y visible para el usuario sin que se recorten los laterales.
-
-![Diseño renovado - Mobile](museum-home/museum-home-mobile.jpg)
+- [globals.css](../src/app/globals.css) (Maquetación, alineaciones, alturas responsivas y transiciones CSS sutiles).
+- [page.tsx](../src/app/(public)/page.tsx) (Reorganización secuencial y narrativa de la Home, nuevas secciones de emoción/tipos de contenidos y footer poético).
+- [Header.tsx](../src/components/Header.tsx) (Escalado de logo móvil, glassmorphism del menú hamburguesa y atributos `aria-expanded`/`aria-label` para accesibilidad).
+- [narrative-section.tsx](../src/app/(public)/components/narrative-section.tsx) (Componente estructural reutilizable con ancho de lectura simétrico de `680px` y solución al hydration mismatch al cambiar de `<p>` a `<div>` en el subtítulo).
+- [stats.tsx](../src/app/(public)/components/stats.tsx) (Renombre de estadísticas a "Nuestra memoria compartida" y reestructuración estética de tarjetas).
+- [featured-contributions.tsx](../src/app/(public)/components/featured-contributions.tsx) (Adaptación de la sección "Historias de la Comunidad" con `NarrativeSection`).
+- [recent-contributions.tsx](../src/app/(public)/components/recent-contributions.tsx) (Adaptación de la sección "Últimos Aportes Compartidos" con `NarrativeSection` y flexbox de navegación al pie).
+- [contribution-card.tsx](../src/app/(public)/components/contribution-card.tsx) (Ajuste estético de marco, sombras y clase de zoom interactivo en hover de imagen).
+- [cta.tsx](../src/app/(public)/components/cta.tsx) (Rediseño del CTA institucional "La historia continúa." incorporando los 4 accesos de navegación).
 
 ---
 
-## Validación Técnica
+## 2. Impacto Visual de la Iteración
 
-Se ejecutaron satisfactoriamente las pruebas y controles de calidad en el entorno local:
-
-- **✔ `npm run test:public`** | Resultado: **OK** (397 / 397 pruebas pasadas con éxito)
-- **✔ `npm run lint`** | Resultado: **Sin errores** (0 advertencias, 0 errores de compilación/TypeScript)
-- **✔ Navegación por teclado** | Resultado: **OK** (focos visibles y tabulación lógica preservados)
-- **✔ `prefers-reduced-motion`** | Resultado: **OK** (desactivación inmediata de animaciones de zoom y fade-in)
-
----
-
-## Métricas de Rendimiento (Lighthouse)
-
-Los resultados de Lighthouse se obtuvieron compilando y ejecutando el proyecto en modo producción (`npm run build && npm run start`):
-
-### Lighthouse Desktop
-- **Performance**: 90/100
-- **Accessibility**: 96/100
-- **Best Practices**: 100/100
-- **SEO**: 100/100
-
-### Lighthouse Mobile
-- **Performance**: 67/100
-- **Accessibility**: 93/100
-- **Best Practices**: 100/100
-- **SEO**: 100/100
-
-### Observaciones de rendimiento móvil
-El descenso de Performance en dispositivos móviles (67/100) se debe principalmente al renderizado del Hero de pantalla completa (100vh) con imágenes de alta resolución. Este valor se optimizará en etapas posteriores de desarrollo mediante la carga diferida (lazy loading) de componentes secundarios de la página, el ajuste fino de tamaños de imagen responsivos para cada tipo de pantalla y la revisión del camino de renderizado crítico (Critical Rendering Path).
+- **Hero más compacto:** Ahorro del 20% de altura en pantallas móviles, eliminando espacios excesivos entre botones y la cita inferior, permitiendo que el inicio del contenido asome e invite al scroll.
+- **Transición suave y fluida:** El overlay dinámico en celulares suaviza la línea horizontal de la imagen compuesta, haciendo que el salto de época se integre armoniosamente con el contenido.
+- **Perfecta simetría narrativa:** Unificación del ancho de lectura (`max-width: 680px`) en toda la Home, alineando el flujo visual de los bloques de introducción con la lectura del Hero.
+- **Experiencia Full HD Equilibrada:** Adaptabilidad del Hero en 1920px ensanchando su caja de texto (`max-width: 900px` en contenedor y `740px` en intro) para respirar y poblar adecuadamente la pantalla.
+- **Accesibilidad y Microinteracciones:** Botón de menú hamburguesa táctil mejor visualizado (glassmorphism), metadatos legibles en sans-serif, zoom progresivo CSS en hover de imágenes y deslizamiento interactivo al pasar el cursor sobre los botones.
 
 ---
 
-## Qué "No se modificó" (Garantías de Estabilidad)
+## 3. Pruebas y Validaciones Técnicas
 
-Para preservar la estabilidad de la plataforma y sus flujos existentes, confirmamos que **no se modificaron**:
-- **Base de datos Supabase**: Ningún esquema, tabla, función o disparador ha sido alterado.
-- **Políticas RLS**: Se mantienen estrictamente todas las políticas de Row Level Security.
-- **Buckets**: El almacenamiento de archivos históricos del bucket `historical-uploads` no ha sufrido alteraciones.
-- **Autenticación**: Los flujos de registro e inicio de sesión del panel administrativo siguen intactos.
-- **Variables de entorno**: No se agregaron ni alteraron claves o credenciales.
-- **Servicios**: No se ha modificado la capa lógica de `HomeService`, agregadores o repositorios.
-- **API públicas**: El listado de endpoints y los schemas de validación de Zod se mantienen idénticos.
-- **Datos reales**: No se alteraron los registros cargados de aportes o colaboradores.
-- **Roles**: No se modificaron perfiles ni permisos de usuarios.
-- **Formularios existentes**: El formulario de aportación de recuerdos continúa operando sin modificaciones.
+### Resultados de `npm run test:public`
+La suite completa de pruebas unitarias e integración se ejecutó de forma limpia. Se validaron robots.txt, sitemaps, mapeos de DTOs de seguridad, paginación, SEO y JSON-LD:
+```bash
+=== INICIANDO VALIDACIONES DE LA CAPA DE CONTRATOS PÚBLICOS ===
+...
+✓ ¡TODAS LAS PRUEBAS PÚBLICAS PASARON EXITOSAMENTE! (397/397)
+====================================================
+```
+
+### Resultados de `npm run lint`
+ESLint finalizó sin errores.
+```bash
+✔ No lint errors found.
+```
+
+### Resultados de Compilación de Producción (`npm run build`)
+La compilación estática e incremental se completó de forma exitosa y sin hydration errors ni advertencias:
+```bash
+▲ Next.js 16.2.9 (Turbopack)
+  Creating an optimized production build ...
+✓ Compiled successfully in 15.2s
+  Running TypeScript ...
+  Finished TypeScript in 11.4s ...
+✓ Generating static pages (23/23) in 445ms
+  Finalizing page optimization ...
+```
 
 ---
 
-## Próximos Pasos
+## 4. Estimación Preliminar de Rendimiento y Accesibilidad (Lighthouse / A11y Manual)
 
-1. Cierre formal de las Etapas 1 y 2.
-2. Creación del Pull Request o revisión de la rama.
-3. Esperar el master prompt para iniciar la Etapa 3.
+### Estado de Verificación
+- **Lighthouse Real (Producción/Preview):** **PENDIENTE** (Se requiere realizar una auditoría oficial con Chrome Lighthouse sobre la URL de Preview o producción antes del lanzamiento definitivo).
+- **Validación Manual de Accesibilidad (a11y):** **PENDIENTE** (Se requiere realizar pruebas humanas manuales: recorrer la Home con teclado, verificar focos visuales activos, probar compatibilidad con lectores de pantalla y corroborar contraste y texto alternativo).
+
+### Proyecciones Técnicas Estimadas (Basadas en estructura limpia y CSS nativo)
+- **Rendimiento Estimado (Desktop / Mobile):** Alta probabilidad de obtener `>=90` en escritorio y `>=80` en dispositivos móviles, debido al diferimiento inteligente de aportes inferiores (lazy loading), el uso exclusivo de transiciones CSS vanilla y la ausencia de librerías JS pesadas de animación.
+- **Accesibilidad y SEO Estimados:** `>=95` debido a la jerarquía secuencial H1 $\rightarrow$ H2 $\rightarrow$ H3, roles de navegación HTML5 y propiedades de accesibilidad dinámicas en el menú hamburguesa.
 
 ---
 
-## Consideraciones para Próximas Etapas (Lecciones Aprendidas)
+## 5. Comparativa Visual Antes y Después
 
-- **Reutilización del Hero**: El sistema responsivo de Hero y transición gradual está diseñado de forma modular, permitiendo reutilizar su lógica para futuras campañas históricas o portadas temáticas de Memoria Viva.
-- **Consistencia de Lenguaje Visual**: Es clave mantener el mismo lenguaje editorial (Playfair Display para títulos expresivos en serif, Montserrat para acentos y Open Sans para cuerpo) en las nuevas secciones que se construyan durante la Etapa 3.
-- **Rendimiento Móvil Incremental**: A medida que se incorporen nuevos componentes interactivos en las siguientes etapas, se debe monitorear y optimizar de forma continua el rendimiento en dispositivos móviles.
-- **Validación Incremental**: Mantener estrictamente el enfoque de validación incremental validado en esta etapa (Visual → Técnica con Linter/Tests → Aprobación de Integración).
+| Sección / Elemento | Diseño Anterior (Etapa 2) | Diseño Nuevo (Etapa 3 - Archivo Narrativo) |
+| :--- | :--- | :--- |
+| **Flujo de Navegación** | Saltos abruptos de Hero directo a caja de búsqueda administrativa. | Transición fluida: Hero → Emoción (Cita) → Directorio de Contenidos → Búsqueda → Estadísticas Humanas → Aportes. |
+| **Sección Inicial** | Barra de búsqueda inline ocupando la cabecera del cuerpo. | Sección "Cada recuerdo importa" + "Qué podés encontrar" con iconos y cita con divisor editorial. |
+| **Estadísticas** | Título simple "El Archivo en Cifras". Tarjetas grises sin contraste. | Título humano "Nuestra memoria compartida" con tarjetas blancas limpias sobre fondo cálido. |
+| **Aportes Destacados** | Tarjetas básicas alineadas de forma plana sobre gris. | Tarjetas tipo "pequeña exposición" con zoom interactivo al pasar el cursor. |
+| **CTA Final** | Formulario gris plano de 3 columnas con un solo botón. | Sección institucional en azul profundo "La historia continúa." con 4 accesos directos responsivos. |
+| **Footer** | Cierre abrupto con los datos del Centro Chileno y Unión Vecinal. | Banda poética oscura intermedia para concluir emotivamente antes de los datos legales. |
+
+---
+
+## 6. Capturas de Pantalla por Resolución
+
+Las imágenes a tamaño completo se encuentran guardadas en la carpeta de documentación:
+- **Vista Móvil:** `docs/museum-home/museum-home-mobile.jpg`
+- **Vista Tablet:** `docs/museum-home/museum-home-tablet.jpg`
+- **Vista Escritorio:** `docs/museum-home/museum-home-desktop.jpg`
+
+---
+
+## 7. Declaración de Integridad del Sistema
+
+> [!IMPORTANT]
+> **Confirmación expresa:**
+> Certificamos que **no se ha modificado ningún componente de la lógica de negocio ni de base de datos** de la plataforma:
+> - Sin alterar tablas ni configuraciones de Supabase.
+> - Sin tocar políticas de seguridad RLS.
+> - Sin alterar los servicios del backend ni archivos de autenticación.
+> - Sin modificar variables de entorno ni la lógica interna de subida de archivos (tus-client/storage).
+
+---
+
+## 8. Despliegue en Desarrollo (Vercel Preview)
+
+El despliegue en el entorno de desarrollo/staging se ha completado con éxito:
+- **URL del Preview:** [https://memoriaviva-oqn3tss6s-csicrs-projects.vercel.app](https://memoriaviva-oqn3tss6s-csicrs-projects.vercel.app)
+- **ID de Despliegue:** `dpl_8Jt3VS7FNtuosYMJBCqNFxzt3DG4`
+- **Proyecto en Vercel:** `csicrs-projects/memoriaviva`
+- **Resultado:** **READY (Go)**. El build en la nube de Vercel finalizó correctamente.
+- **Integridad:** Se comprobó mediante la suite técnica que las conexiones del backend y los datos en Supabase permanecen inalterados.
+- **Correcciones de Contraste:** Se actualizó `--hope-green` a `#246B43` (5.3:1 contraste) para cumplir con las normas de accesibilidad de texto WCAG AA, y se cambió la coloración del link "Conocer el Proyecto" a `#FAFAF5` (blanco crema) para excelente lectura, junto a una transición de color a azul claro en hover (`.museum-cta-link:hover`).

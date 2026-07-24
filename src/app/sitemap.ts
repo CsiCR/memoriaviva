@@ -7,6 +7,8 @@ import { createSeoContainer } from "@/lib/public/seo/server";
 import { buildDynamicSitemap } from "@/lib/public/seo/publishers/sitemap";
 import { clientEnv } from "@/lib/config/env";
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (clientEnv.NEXT_PUBLIC_APP_ENV === "staging") {
     throw new Error("Sitemap generation is disabled in staging environment.");

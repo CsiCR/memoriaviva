@@ -6,7 +6,7 @@ Este documento describe la arquitectura, flujos de datos, ejemplos de uso y rest
 
 ## 1. Visión y Desacoplamiento
 
-La filosofía del **Portal Público** es actuar como una experiencia pública cuidadosamente controlada (un museo digital comunitario) en lugar de una visualización cruda de la base de datos editorial.
+La filosofía del **Portal Público** es actuar como una experiencia pública cuidadosamente controlada (un archivo histórico digital comunitario) en lugar de una visualización cruda de la base de datos editorial.
 
 Para cumplir con esto, la arquitectura implementa un **desacoplamiento absoluto** entre:
 - **Modelo Editorial (Internal/Write)**: Gestionado administrativamente, con datos personales, notas internas, auditorías y almacenamiento privado.

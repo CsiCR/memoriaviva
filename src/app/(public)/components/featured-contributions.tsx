@@ -1,8 +1,9 @@
-// Componente de Aportes Destacados
+// Componente de Aportes Destacados (Edición Narrativa)
 // Archivo: src/app/(public)/components/featured-contributions.tsx
 
 import ContributionCard from "./contribution-card";
 import ContributionGrid from "./contribution-grid";
+import NarrativeSection from "./narrative-section";
 import { ContributionCardModel } from "@/lib/public/explore/types";
 
 interface FeaturedContributionsProps {
@@ -15,28 +16,19 @@ export default function FeaturedContributions({ contributions }: FeaturedContrib
   }
 
   return (
-    <section
-      className="section"
-      style={{
-        backgroundColor: "var(--neutral-grey-light)",
-        borderBottom: "1px solid var(--border-warm)",
-      }}
-      aria-label="Aportes destacados"
+    <NarrativeSection
+      title="Historias de la Comunidad"
+      subtitle="Fotografías y testimonios significativos compartidos por los vecinos sobre la historia de Pico Truncado."
+      ariaLabel="Historias de la comunidad"
+      backgroundColor="var(--neutral-grey-light)"
+      borderBottom={true}
     >
-      <div className="container">
-        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-          <h2 style={{ fontSize: "2rem" }}>Aportes Destacados</h2>
-          <p style={{ maxWidth: "600px", margin: "0 auto", color: "var(--text-secondary)" }}>
-            Fotografías y testimonios significativos seleccionados por su relevancia patrimonial para Pico Truncado.
-          </p>
-        </div>
-
-        <ContributionGrid>
-          {contributions.map((contribution) => (
-            <ContributionCard key={contribution.id} contribution={contribution} />
-          ))}
-        </ContributionGrid>
-      </div>
-    </section>
+      <ContributionGrid>
+        {contributions.map((contribution) => (
+          <ContributionCard key={contribution.id} contribution={contribution} />
+        ))}
+      </ContributionGrid>
+    </NarrativeSection>
   );
 }
+

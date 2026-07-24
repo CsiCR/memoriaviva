@@ -21,17 +21,17 @@ export default function ContributionCard({ contribution }: ContributionCardProps
 
   return (
     <article
-      className="card"
+      className="card museum-card-exhibit"
       style={{
         display: "flex",
         flexDirection: "column",
         height: "100%",
         border: "1px solid var(--border-warm)",
-        borderRadius: "var(--radius-md)",
+        borderRadius: "var(--radius-lg)",
         overflow: "hidden",
         backgroundColor: "var(--white)",
         transition: "var(--transition-smooth)",
-        boxShadow: "var(--shadow-sm)",
+        boxShadow: "var(--shadow-md)",
       }}
     >
       {/* Contenedor de Imagen de Portada / Fallback */}

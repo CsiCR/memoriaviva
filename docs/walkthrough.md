@@ -1,4 +1,4 @@
-# Recorrido de Avances: Portada Nivel Museo Digital (Etapas 1 y 2)
+# Recorrido de Avances: Portada Nivel Archivo Histórico Digital (Etapas 1 y 2)
 
 La validación visual fue completada y se ejecutaron satisfactoriamente las verificaciones técnicas correspondientes. 
 
@@ -15,7 +15,7 @@ El diseño original consistía en una sección de color plano con un degradado d
 
 ---
 
-### DESPUÉS (Hero inmersivo tipo museo digital)
+### DESPUÉS (Hero inmersivo tipo archivo histórico digital)
 
 #### 1. Vista de Escritorio (Desktop)
 En pantallas grandes, se aprovecha la panorámica original en toda su anchura. La cabecera superior comienza transparente y se torna blanca y sólida con desenfoque de fondo al descender por la página.
@@ -92,7 +92,7 @@ Para preservar la estabilidad de la plataforma y sus flujos existentes, confirma
 
 ## Consideraciones para Próximas Etapas (Lecciones Aprendidas)
 
-- **Reutilización del Hero**: El sistema responsivo de Hero y transición gradual está diseñado de forma modular, permitiendo reutilizar su lógica para futuras campañas históricas o portadas temáticas del museo.
+- **Reutilización del Hero**: El sistema responsivo de Hero y transición gradual está diseñado de forma modular, permitiendo reutilizar su lógica para futuras campañas históricas o portadas temáticas de Memoria Viva.
 - **Consistencia de Lenguaje Visual**: Es clave mantener el mismo lenguaje editorial (Playfair Display para títulos expresivos en serif, Montserrat para acentos y Open Sans para cuerpo) en las nuevas secciones que se construyan durante la Etapa 3.
 - **Rendimiento Móvil Incremental**: A medida que se incorporen nuevos componentes interactivos en las siguientes etapas, se debe monitorear y optimizar de forma continua el rendimiento en dispositivos móviles.
 - **Validación Incremental**: Mantener estrictamente el enfoque de validación incremental validado en esta etapa (Visual → Técnica con Linter/Tests → Aprobación de Integración).

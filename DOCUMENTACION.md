@@ -48,7 +48,7 @@ La plataforma se encuentra en su **Etapa 1 - MVP (Mínimo Producto Viable)**. En
 * **Controlador de Combos/Opciones Dinámicas**: Interfaz administrativa para gestionar categorías de selección (`select_options`).
 
 ### Funcionalidades Pendientes (Próximas Etapas)
-* **Portal Público de Consulta (Museo Virtual)**: Visualización y búsqueda abierta del catálogo de aportes autorizados (Nivel A).
+* **Portal Público de Consulta (exposiciones digitales o museo virtual en una etapa posterior)**: Visualización y búsqueda abierta del catálogo de aportes autorizados (Nivel A).
 * **Portal de Transparencia Activa**: Módulo público para auditar estadísticas y convenios.
 * **Automatización de Transcripción**: Módulo de IA para transcripción de testimonios de audio/video.
 * **Generador de Manuscritos**: Exportación en formato EPUB/PDF para compilación del libro de relatos históricos.
@@ -464,7 +464,7 @@ sequenceDiagram
 #### 5.1.2 Sobre el Proyecto
 * **Objetivo**: Concientizar sobre la iniciativa y explicitar la autoría de Edith Gómez y Adrián Montet.
 * **Ruta**: `/proyecto`
-* **Componentes**: Fichas de impulsores, grilla de propósitos futuros (Libro, E-book, Museo, Educación), reseña de la Unión Vecinal Barrio YPF.
+* **Componentes**: Fichas de impulsores, grilla de propósitos futuros (Libro, E-book, posible evolución hacia un museo, Educación), reseña de la Unión Vecinal Barrio YPF.
 * **Permisos**: Libre acceso.
 
 #### 5.1.3 Formulario de Aportes Públicos
@@ -871,8 +871,8 @@ El proyecto fue diseñado de manera modular para permitir la incorporación de n
 
 ## 16. OPORTUNIDADES DE EVOLUCIÓN
 
-### Módulo Público de Consulta (Museo Virtual)
-* Desarrollo de una ruta `/museo` que consuma la API de aportes, exponiendo galerías de imágenes con filtros geográficos (por barrios de Pico Truncado) y líneas de tiempo. Solo se consumirá material en estado "Aprobado" y niveles A/B.
+### Módulo Público de Consulta (exposiciones digitales o museo virtual en una etapa posterior)
+* Desarrollo de una ruta `/museo` como parte de una posible evolución futura hacia un museo comunitario que consuma la API de aportes, exponiendo galerías de imágenes con filtros geográficos (por barrios de Pico Truncado) y líneas de tiempo. Solo se consumirá material en estado "Aprobado" y niveles A/B.
 
 ### Automatización de Transcripción y Catalogación (IA)
 * Conexión del flujo de audio a modelos Whisper (OpenAI) o Chirp (Google Cloud) para transcribir automáticamente las grabaciones de entrevistas orales de campo en el momento de la carga.
@@ -887,7 +887,7 @@ El proyecto fue diseñado de manera modular para permitir la incorporación de n
 ### 1. Propósito e Impacto Comunitario
 El Proyecto **Memoria Viva Pico Truncado** es una iniciativa de salvaguarda cultural impulsada de forma conjunta por referentes clave de la comunidad de Pico Truncado: **Edith Gómez**, aportando la trayectoria de preservación del **Centro Chileno**, y **Adrián Montet**, en representación de la **Unión Vecinal Barrio YPF**, un sector fundacional de la ciudad ligado a la historia del petróleo y el ferrocarril. 
 
-La plataforma provee una solución técnica y legal al peligro inminente de la desaparición física de fuentes orales y la pérdida de archivos analógicos familiares (fotos, cartas, folletines) de los pioneros truncateños. Su objetivo final no es meramente el almacenamiento, sino la posterior edición de un **libro impreso e e-book histórico**, la estructuración de material pedagógico para las escuelas de la provincia y la creación de un **museo digital interactivo**.
+La plataforma provee una solución técnica y legal al peligro inminente de la desaparición física de fuentes orales y la pérdida de archivos analógicos familiares (fotos, cartas, folletines) de los pioneros truncateños. Su objetivo final no es meramente el almacenamiento, sino la posterior edición de un **libro impreso e e-book histórico**, la estructuración de material pedagógico para las escuelas de la provincia y una posible evolución futura hacia un museo comunitario.
 
 ### 2. Estructura y Enfoque del Desarrollo (MVP)
 En esta primera etapa (MVP), el sistema opera exclusivamente como un **motor de recolección segura, catalogación fina y auditoría de la cesión de derechos**. La arquitectura combina el entorno de ejecución Next.js 16 (con soporte para Server Actions) y el proveedor BaaS Supabase.

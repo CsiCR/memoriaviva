@@ -95,8 +95,10 @@ export default function Proyecto() {
               <FileText size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>Futuro Museo Virtual</h3>
-              <p style={{ fontSize: '0.9rem', margin: 0 }}>Una plataforma interactiva con líneas de tiempo y mapas históricos para recorrer la evolución de Pico Truncado.</p>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>Hacia nuevas formas de compartir la memoria</h3>
+              <p style={{ fontSize: '0.9rem', margin: 0 }}>
+                Consideramos el desarrollo de exposiciones digitales o un museo virtual en una etapa posterior, como una posible evolución futura hacia un museo comunitario para brindar experiencias museográficas futuras con líneas de tiempo y mapas interactivos.
+              </p>
             </div>
           </div>
         </div>

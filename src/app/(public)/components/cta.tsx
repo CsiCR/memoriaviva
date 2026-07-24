@@ -1,123 +1,157 @@
-// Componente de Llamado a la Acción Emocional (CTA)
+// Componente de Llamado a la Acción Emocional (CTA - Edición Narrativa)
 // Archivo: src/app/(public)/components/cta.tsx
 
 import Link from "next/link";
-import { Heart, Compass, UploadCloud } from "lucide-react";
 
 export default function CTA() {
   return (
     <section
-      className="section"
-      style={{
-        background: "linear-gradient(135deg, #FAFAF5 0%, #eef7ff 100%)",
-        borderTop: "1px solid var(--border-warm)",
-        borderBottom: "1px solid var(--border-warm)",
-        paddingTop: "5rem",
-        paddingBottom: "5rem",
-      }}
       aria-label="Invitación a participar"
+      style={{
+        background: "linear-gradient(135deg, #0b2545 0%, #134074 100%)",
+        color: "#FAFAF5",
+        padding: "6rem 0",
+        borderTop: "1px solid rgba(255,255,255,0.1)",
+        borderBottom: "1px solid rgba(255,255,255,0.1)",
+        width: "100%",
+        textAlign: "center",
+      }}
     >
-      <div className="container" style={{ maxWidth: "900px", textAlign: "center" }}>
-        <div style={{ marginBottom: "3.5rem" }}>
-          <h2 style={{ fontSize: "2.25rem", color: "#1a202c", marginBottom: "0.75rem" }}>
-            Preservemos Juntos Nuestra Historia
+      <div
+        className="container"
+        style={{
+          maxWidth: "800px",
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "2rem",
+        }}
+      >
+        <div>
+          <span
+            style={{
+              display: "inline-block",
+              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              color: "#FAFAF5",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              padding: "0.4rem 1.2rem",
+              borderRadius: "9999px",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              marginBottom: "1rem",
+              fontFamily: "var(--font-headings)",
+            }}
+          >
+            Construcción Colectiva
+          </span>
+          <h2
+            style={{
+              fontSize: "3rem",
+              fontWeight: 600,
+              color: "#FAFAF5",
+              marginBottom: "1rem",
+              fontFamily: "var(--font-headings)",
+              lineHeight: 1.2,
+            }}
+          >
+            La historia continúa.
           </h2>
           <p
             style={{
-              maxWidth: "700px",
-              margin: "0 auto",
-              color: "var(--text-secondary)",
-              fontSize: "1.1rem",
+              color: "rgba(250, 250, 245, 0.85)",
+              fontSize: "1.25rem",
               lineHeight: 1.6,
+              maxWidth: "600px",
+              margin: "0 auto",
             }}
           >
-            La memoria colectiva de Pico Truncado se reconstruye con los retazos de recuerdos, vivencias y registros de cada una de nuestras familias.
+            Miles de recuerdos aún esperan ser contados. Vos también podés formar parte.
           </p>
         </div>
 
-        <div className="grid grid-3" style={{ gap: "2rem", marginBottom: "3.5rem" }}>
-          <div
-            className="card"
+        {/* Grupo de Botones Principales */}
+        <div
+          style={{
+            display: "flex",
+            gap: "1rem",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            width: "100%",
+            marginTop: "1rem",
+          }}
+        >
+          <Link
+            href="/contributions"
+            className="btn"
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-              border: "1px solid var(--border-warm)",
-              padding: "2rem",
-              backgroundColor: "var(--white)",
-              borderRadius: "var(--radius-md)",
-              boxShadow: "var(--shadow-sm)",
+              backgroundColor: "#FAFAF5",
+              color: "#0b2545",
+              padding: "0.85rem 2rem",
+              boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
+              fontWeight: 600,
             }}
+            aria-label="Explorar todas las memorias compartidas"
           >
-            <div style={{ display: "flex", justifyContent: "center", color: "var(--primary-blue)" }}>
-              <Heart size={36} strokeWidth={1.5} />
-            </div>
-            <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>¿Por qué participar?</h3>
-            <p style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              Para asegurar que el patrimonio cultural, el esfuerzo de los pioneros y la identidad de nuestros barrios perdure.
-            </p>
-          </div>
-
-          <div
-            className="card"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-              border: "1px solid var(--border-warm)",
-              padding: "2rem",
-              backgroundColor: "var(--white)",
-              borderRadius: "var(--radius-md)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "center", color: "var(--hope-green)" }}>
-              <Compass size={36} strokeWidth={1.5} />
-            </div>
-            <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>¿Qué resguardamos?</h3>
-            <p style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              Fotografías, audios de pioneros, actas y cartas. Todo catalogado y tratado bajo riguroso consentimiento.
-            </p>
-          </div>
-
-          <div
-            className="card"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-              border: "1px solid var(--border-warm)",
-              padding: "2rem",
-              backgroundColor: "var(--white)",
-              borderRadius: "var(--radius-md)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "center", color: "#db2777" }}>
-              <UploadCloud size={36} strokeWidth={1.5} />
-            </div>
-            <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>¿Cómo colaborar?</h3>
-            <p style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              Cargando archivos directamente, narrando un recuerdo escrito, o contactándonos para digitalizar fotos en papel.
-            </p>
-          </div>
-        </div>
-
-        <div>
+            Explorar Memorias
+          </Link>
           <Link
             href="/aportar"
-            className="btn btn-primary"
+            className="btn btn-green"
             style={{
-              padding: "1rem 2.5rem",
-              fontSize: "1.1rem",
-              boxShadow: "var(--shadow-md)",
+              padding: "0.85rem 2rem",
+              boxShadow: "0 4px 15px rgba(46, 139, 87, 0.25)",
             }}
-            aria-label="Compartir un recuerdo o historia"
+            aria-label="Compartir un recuerdo con el archivo"
           >
-            Compartir mi historia
+            Aportar una Memoria
+          </Link>
+        </div>
+
+        {/* Grupo de Botones Secundarios */}
+        <div
+          style={{
+            display: "flex",
+            gap: "1.5rem",
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "wrap",
+            width: "100%",
+            marginTop: "0.5rem",
+          }}
+        >
+          <Link
+            href="/quiero-formar-parte"
+            className="btn btn-outline"
+            style={{
+              borderColor: "rgba(250, 250, 245, 0.4)",
+              color: "#FAFAF5",
+              padding: "0.6rem 1.5rem",
+              fontSize: "0.9rem",
+            }}
+            aria-label="Información para sumarse como colaborador voluntario"
+          >
+            Quiero formar parte
+          </Link>
+          <Link
+            href="/proyecto"
+            className="museum-cta-link"
+            style={{
+              color: "#FAFAF5",
+              fontSize: "0.9rem",
+              fontWeight: 500,
+              textDecoration: "underline",
+              transition: "color 0.2s",
+            }}
+            aria-label="Leer más detalles sobre el proyecto"
+          >
+            Conocer el Proyecto
           </Link>
         </div>
       </div>
     </section>
   );
 }
+

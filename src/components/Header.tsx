@@ -1,6 +1,6 @@
 'use client';
 
-// Componente Header Principal del Portal (Edición Museo)
+// Componente Header Principal del Portal (Portal Memoria Viva)
 // Archivo: src/components/Header.tsx
 
 import { useState, useEffect } from 'react';
@@ -24,6 +24,7 @@ export default function Header() {
 
   useEffect(() => {
     if (!isHome) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsScrolled(true);
       return;
     }
@@ -168,7 +169,8 @@ export default function Header() {
           <button
             className="mobile-menu-btn"
             onClick={toggleMenu}
-            aria-label="Abrir menú"
+            aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={isOpen}
             style={{
               background: 'none',
               border: 'none',

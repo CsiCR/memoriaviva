@@ -1,6 +1,6 @@
 'use client';
 
-// Componente Hero Principal del Portal (Edición Museo)
+// Componente Hero Principal del Portal (Portal Memoria Viva)
 // Archivo: src/app/(public)/components/hero.tsx
 
 import Image from "next/image";
@@ -12,7 +12,8 @@ interface HeroProps {
   subtitle: string;
 }
 
-export default function Hero({ title, subtitle }: HeroProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function Hero({ title: _title, subtitle: _subtitle }: HeroProps) {
   const handleScrollDown = () => {
     window.scrollTo({
       top: window.innerHeight - 72, // Restar altura de la cabecera aprox
@@ -21,7 +22,7 @@ export default function Hero({ title, subtitle }: HeroProps) {
   };
 
   return (
-    <section className="museum-hero" aria-label="Presentación del Museo Comunitario">
+    <section className="museum-hero" aria-label="Presentación del Archivo Histórico Digital">
       {/* 1. Fondo de Imagen Responsiva para Desktop */}
       <div className="hero-image-desktop museum-scale-in" style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <Image
@@ -53,7 +54,7 @@ export default function Hero({ title, subtitle }: HeroProps) {
       {/* 3. Overlay Gradual de Contraste para asegurar legibilidad */}
       <div className="museum-hero-overlay" />
 
-      {/* 4. Contenido del Museo */}
+      {/* 4. Contenido del Archivo Histórico Digital */}
       <div className="museum-hero-content">
         <span
           className="museum-animate museum-delay-1"
@@ -68,11 +69,11 @@ export default function Hero({ title, subtitle }: HeroProps) {
             fontWeight: 600,
             letterSpacing: "0.15em",
             textTransform: "uppercase",
-            marginBottom: "0.5rem",
+            marginBottom: "-1.1rem",
             fontFamily: "var(--font-headings)",
           }}
         >
-          Museo Comunitario Digital
+          Archivo Histórico Digital
         </span>
 
         <h1 className="museum-hero-title museum-animate museum-delay-2">
@@ -81,7 +82,7 @@ export default function Hero({ title, subtitle }: HeroProps) {
         </h1>
 
         <p className="museum-hero-intro museum-animate museum-delay-2">
-          Cada fotografía, cada documento y cada relato forman parte de la memoria colectiva de nuestra ciudad.
+          Cada fotografía, cada documento y cada recuerdo ayudan a preservar la historia de Pico Truncado para las próximas generaciones.
         </p>
 
         <div className="museum-hero-buttons museum-animate museum-delay-3">

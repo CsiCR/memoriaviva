@@ -1,10 +1,11 @@
-// Componente de Últimos Aportes
+// Componente de Últimos Aportes (Edición Narrativa)
 // Archivo: src/app/(public)/components/recent-contributions.tsx
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import ContributionCard from "./contribution-card";
 import ContributionGrid from "./contribution-grid";
+import NarrativeSection from "./narrative-section";
 import { ContributionCardModel } from "@/lib/public/explore/types";
 
 interface RecentContributionsProps {
@@ -13,31 +14,22 @@ interface RecentContributionsProps {
 
 export default function RecentContributions({ contributions }: RecentContributionsProps) {
   return (
-    <section
-      className="section"
-      style={{
-        backgroundColor: "var(--white)",
-        borderBottom: "1px solid var(--border-warm)",
-      }}
-      aria-label="Últimas adiciones al archivo"
-    >
-      <div className="container">
+    <NarrativeSection
+      title="Últimos Aportes Compartidos"
+      subtitle={
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-end",
-            marginBottom: "3rem",
+            alignItems: "center",
+            width: "100%",
             flexWrap: "wrap",
             gap: "1.5rem",
           }}
         >
-          <div>
-            <h2 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>Últimos Aportes Compartidos</h2>
-            <p style={{ margin: 0, color: "var(--text-secondary)" }}>
-              Recorridos fotográficos y testimonios documentales recientemente incorporados por la comunidad.
-            </p>
-          </div>
+          <span style={{ color: "var(--text-secondary)", fontSize: "1.1rem", maxWidth: "600px", display: "inline-block" }}>
+            Recorridos fotográficos y testimonios documentales recientemente incorporados por la comunidad.
+          </span>
           <Link
             href="/contributions"
             className="btn btn-outline"
@@ -51,29 +43,34 @@ export default function RecentContributions({ contributions }: RecentContributio
             Ver todo el archivo <ArrowRight size={16} />
           </Link>
         </div>
-
-        {contributions.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "4rem 2rem",
-              border: "2px dashed var(--border-warm)",
-              borderRadius: "var(--radius-md)",
-              backgroundColor: "var(--warm-white)",
-            }}
-          >
-            <p style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-secondary)" }}>
-              Aún no se han publicado aportes en esta sección.
-            </p>
-          </div>
-        ) : (
-          <ContributionGrid>
-            {contributions.map((contribution) => (
-              <ContributionCard key={contribution.id} contribution={contribution} />
-            ))}
-          </ContributionGrid>
-        )}
-      </div>
-    </section>
+      }
+      ariaLabel="Últimas adiciones al archivo"
+      backgroundColor="var(--white)"
+      borderBottom={true}
+      align="left"
+    >
+      {contributions.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "4rem 2rem",
+            border: "2px dashed var(--border-warm)",
+            borderRadius: "var(--radius-md)",
+            backgroundColor: "var(--warm-white)",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-secondary)" }}>
+            Aún no se han publicado aportes en esta sección.
+          </p>
+        </div>
+      ) : (
+        <ContributionGrid>
+          {contributions.map((contribution) => (
+            <ContributionCard key={contribution.id} contribution={contribution} />
+          ))}
+        </ContributionGrid>
+      )}
+    </NarrativeSection>
   );
 }
+

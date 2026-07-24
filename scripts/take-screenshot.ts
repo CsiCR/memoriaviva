@@ -46,12 +46,24 @@ async function main() {
       await page.setUserAgent(
         "Mozilla/5.0 (iPad; CPU OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
       );
+    } else if (mode === "1366") {
+      await page.setViewport({
+        width: 1366,
+        height: 768,
+        deviceScaleFactor: 1,
+      });
+    } else if (mode === "1440") {
+      await page.setViewport({
+        width: 1440,
+        height: 900,
+        deviceScaleFactor: 1,
+      });
     } else {
-      // Resolucion desktop estandar
+      // Resolucion desktop estandar (1280px)
       await page.setViewport({
         width: 1280,
         height: 800,
-        deviceScaleFactor: 1.5,
+        deviceScaleFactor: 1,
       });
     }
 

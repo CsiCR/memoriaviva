@@ -14,6 +14,7 @@ import {
 } from "@/lib/public/seo";
 import crypto from "crypto";
 import { formatDateToAR } from "@/utils/date";
+import { Music, Video, FileText, Download, Image as ImageIcon } from "lucide-react";
 
 // Revalidación nativa de Next.js (SSG/ISR) cada 5 minutos
 export const revalidate = 300;
@@ -168,20 +169,199 @@ export default async function ContributionPage({ params }: PageProps) {
         {/* Galería Multimedia */}
         {contribution.media && contribution.media.length > 0 && (
           <section style={{ marginBottom: "2.5rem", borderTop: "1px solid var(--border-warm)", paddingTop: "1.5rem" }}>
-            <h3 style={{ marginBottom: "1.5rem", fontSize: "1.3rem", color: "var(--text-main)" }}>Material Histórico y Fotografías</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+            <h3 style={{ marginBottom: "1.5rem", fontSize: "1.3rem", color: "var(--text-main)" }}>Material Histórico y Archivos</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "2.25rem" }}>
               {contribution.media.map((file) => (
                 <div key={file.id} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {file.mediaType === "image" && (
-                    <div style={{ position: "relative", overflow: "hidden", borderRadius: "8px", border: "1px solid var(--border-warm)" }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={file.publicUrl}
-                        alt={file.altText || file.title || "Fotografía del aporte"}
-                        style={{ width: "100%", height: "auto", display: "block" }}
-                      />
-                    </div>
+                    <>
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        color: "var(--primary-blue)",
+                        backgroundColor: "rgba(30, 64, 175, 0.06)",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        alignSelf: "flex-start",
+                        marginBottom: "0.25rem"
+                      }}>
+                        <ImageIcon size={14} /> Fotografía Histórica
+                      </div>
+                      <div style={{ position: "relative", overflow: "hidden", borderRadius: "8px", border: "1px solid var(--border-warm)" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={file.publicUrl}
+                          alt={file.altText || file.title || "Fotografía del aporte"}
+                          style={{ width: "100%", height: "auto", display: "block" }}
+                        />
+                      </div>
+                    </>
                   )}
+
+                  {file.mediaType === "audio" && (
+                    <>
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        color: "var(--primary-blue)",
+                        backgroundColor: "rgba(30, 64, 175, 0.06)",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        alignSelf: "flex-start",
+                        marginBottom: "0.25rem"
+                      }}>
+                        <Music size={14} /> Testimonio de Audio
+                      </div>
+                      <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.75rem",
+                        padding: "1.25rem",
+                        backgroundColor: "#F4F4EA",
+                        border: "1px solid var(--border-warm)",
+                        borderRadius: "8px",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: "var(--text-main)" }}>
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(30, 64, 175, 0.08)",
+                            color: "var(--primary-blue)"
+                          }}>
+                            <Music size={20} />
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column" }}>
+                            <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)" }}>Archivo de Audio</span>
+                            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Grabación de audio / testimonio oral</span>
+                          </div>
+                        </div>
+                        <audio controls src={file.publicUrl} style={{ width: "100%", marginTop: "0.5rem" }}>
+                          Tu navegador no soporta el elemento de audio.
+                        </audio>
+                      </div>
+                    </>
+                  )}
+
+                  {file.mediaType === "video" && (
+                    <>
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        color: "var(--primary-blue)",
+                        backgroundColor: "rgba(30, 64, 175, 0.06)",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        alignSelf: "flex-start",
+                        marginBottom: "0.25rem"
+                      }}>
+                        <Video size={14} /> Filmación Histórica
+                      </div>
+                      <div style={{
+                        position: "relative",
+                        overflow: "hidden",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-warm)",
+                        backgroundColor: "#000",
+                        maxHeight: "450px"
+                      }}>
+                        <video
+                          controls
+                          src={file.publicUrl}
+                          style={{ width: "100%", height: "auto", display: "block", maxHeight: "450px" }}
+                        >
+                          Tu navegador no soporta el elemento de video.
+                        </video>
+                      </div>
+                    </>
+                  )}
+
+                  {file.mediaType === "document" && (
+                    <>
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        color: "var(--primary-blue)",
+                        backgroundColor: "rgba(30, 64, 175, 0.06)",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        alignSelf: "flex-start",
+                        marginBottom: "0.25rem"
+                      }}>
+                        <FileText size={14} /> Documento Histórico
+                      </div>
+                      <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.75rem",
+                        padding: "1.25rem",
+                        backgroundColor: "#F4F4EA",
+                        border: "1px solid var(--border-warm)",
+                        borderRadius: "8px",
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: "var(--text-main)" }}>
+                            <div style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "40px",
+                              height: "40px",
+                              borderRadius: "50%",
+                              backgroundColor: "rgba(30, 64, 175, 0.08)",
+                              color: "var(--primary-blue)"
+                            }}>
+                              <FileText size={20} />
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                              <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)" }}>Documento Adjunto</span>
+                              <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                                {file.downloadSizeBytes
+                                  ? `Archivo PDF / Documento (${(file.downloadSizeBytes / 1024 / 1024).toFixed(2)} MB)`
+                                  : "Archivo PDF / Documento"}
+                              </span>
+                            </div>
+                          </div>
+                          <a
+                            href={file.publicUrl}
+                            download={file.title || "documento"}
+                            style={{
+                              padding: "0.4rem 0.8rem",
+                              fontSize: "0.85rem",
+                              borderRadius: "6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                              textDecoration: "none",
+                              color: "var(--primary-blue)",
+                              border: "1px solid var(--primary-blue)",
+                              backgroundColor: "transparent",
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Download size={14} /> Descargar documento
+                          </a>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   {file.title && <strong style={{ fontSize: "1.05rem", color: "var(--text-main)" }}>{file.title}</strong>}
                   {file.caption && <span style={{ fontSize: "0.95rem", color: "var(--text-secondary)", fontStyle: "italic" }}>{file.caption}</span>}
                 </div>

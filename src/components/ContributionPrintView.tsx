@@ -62,96 +62,12 @@ export const ContributionPrintView: React.FC<ContributionPrintViewProps> = ({
   return (
     <div className="print-only-show" style={{ fontFamily: 'Courier New, Courier, monospace', color: '#000', backgroundColor: '#fff', fontSize: '10pt' }}>
       
-      {/* PÁGINA 1: FICHA ARCHIVÍSTICA */}
-      <div className="print-page" style={{
-        height: '297mm',
-        width: '210mm',
-        padding: '20mm',
-        boxSizing: 'border-box',
-        position: 'relative',
-        border: '2px solid #000',
-        pageBreakAfter: 'always',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between'
-      }}>
-        <div>
-          {/* Encabezado */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
-            <div>
-              <strong style={{ fontSize: '1.1rem' }}>MEMORIA VIVA - PICO TRUNCADO</strong>
-              <div style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}>Archivo Histórico Comunitario</div>
-            </div>
-            <div style={{ textAlign: 'right', fontSize: '0.9rem' }}>
-              <strong>EXPEDIENTE: MV-{createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear()}-{id.substring(0, 6).toUpperCase()}</strong>
-            </div>
-          </div>
-
-          <div style={{ textAlign: 'center', margin: '30px 0' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', textDecoration: 'underline', textTransform: 'uppercase', margin: 0 }}>FICHA ARCHIVÍSTICA DE INGRESO</h2>
-          </div>
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', width: '35%', fontWeight: 'bold' }}>CÓDIGO DE EXPEDIENTE:</td>
-                <td style={{ padding: '8px 0' }}>MV-{createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear()}-{id.substring(0, 6).toUpperCase()}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>TÍTULO DEL APORTE:</td>
-                <td style={{ padding: '8px 0' }}>{editorialTitle || title || 'SIN TÍTULO'}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>NOMBRE DEL APORTANTE:</td>
-                <td style={{ padding: '8px 0' }}>{contributor?.full_name || 'Anónimo'}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>TIPO DE APORTE (ORIGINAL):</td>
-                <td style={{ padding: '8px 0' }}>{contributionType || '—'}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>CLASIFICACIÓN EDITORIAL:</td>
-                <td style={{ padding: '8px 0' }}>{editorialClassification || 'Sin clasificar'}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>FECHA DE RECEPCIÓN:</td>
-                <td style={{ padding: '8px 0' }}>{createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>ESTADO EDITORIAL ACTUAL:</td>
-                <td style={{ padding: '8px 0' }}>{status || '—'}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>NIVEL DE ACCESO:</td>
-                <td style={{ padding: '8px 0' }}>Nivel {publicationLevel || level || 'A'}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>RESPONSABLE EDITORIAL:</td>
-                <td style={{ padding: '8px 0' }}>{editorName || '—'} (ID: {editorResponsibleUserId || '—'})</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>ÍNDICE DE CALIDAD:</td>
-                <td style={{ padding: '8px 0' }}>{qualityIndex || '0'} ({qualityText || 'Sin calificar'})</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>CONFIABILIDAD HISTÓRICA:</td>
-                <td style={{ padding: '8px 0' }}>
-                  {'★'.repeat(historicalReliabilityStars)}
-                  {'☆'.repeat(5 - historicalReliabilityStars)} ({historicalReliabilityLabel || 'No evaluado'})
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>ESTADO DE PUBLICACIÓN:</td>
-                <td style={{ padding: '8px 0' }}>{selectedStatusName || 'No publicado'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ borderTop: '2px solid #000', paddingTop: '10px', textAlign: 'center', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
-          <span>Página 1 de 2</span>
-          <span>Archivo Histórico Comunitario Pico Truncado &middot; Memoria Viva</span>
-        </div>
+      {/* PÁGINA 1: FICHA ARCHIVÍSTICA (PRUEBA A4 TEMPORAL) */}
+      <div className="print-page">
+        <h1>PRUEBA A4</h1>
+        <p>UNO</p>
+        <p>DOS</p>
+        <p>TRES</p>
       </div>
 
       {/* PÁGINA 2: LÍNEA DE TIEMPO, BITÁCORA Y FIRMAS */}

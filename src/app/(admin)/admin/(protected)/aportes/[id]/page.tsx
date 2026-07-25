@@ -256,7 +256,9 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   const statusBadgeClass = `badge badge-${contribution.editorial_status.toLowerCase().replace(/á/g, 'a').replace(/ó/g, 'o').replace(/ /g, '-')}`;
 
   return (
-    <div id="editorial-assistant-section" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      {/* Portales de impresión (hermano a nivel de raíz para evitar display: none de contenedores) */}
+      <div id="print-portal-root"></div>
       
       {/* Botón Volver */}
       <div style={{ marginBottom: '1.5rem' }}>

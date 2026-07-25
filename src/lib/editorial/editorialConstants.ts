@@ -147,6 +147,7 @@ export const EDITORIAL_ACTION_TARGETS: Record<string, string> = {
   EDITORIAL_REVIEW: "internal-notes",
   HISTORICAL_VAL: "historical-validation-status",
   INDICATORS: "editorial-status",
+  PUBLICATION: "publication-settings",
 
   // progress recommendation codes
   ADD_CONSENT: "original-consent",

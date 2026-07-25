@@ -109,8 +109,9 @@ export async function updateContributionStatus(
     }
   }
 
-  // 3. Ejecutar actualización transaccional mediante la RPC
-  const { error: rpcError } = await supabase.rpc('update_editorial_dimensions', {
+  // 3. Ejecutar actualización transaccional mediante la RPC (signature con 19 parámetros)
+  console.info('[EXPEDIENTE][LOAD_PUBLICATION] Iniciando actualización transaccional de aporte', { contributionId: id });
+  let { error: rpcError } = await supabase.rpc('update_editorial_dimensions', {
     p_contribution_id: id,
     p_editorial_status: editorialStatus,
     p_publication_status_option_id: publicationStatusOptionId || null,
@@ -132,17 +133,42 @@ export async function updateContributionStatus(
     p_publication_credits: publicationCredits || null
   });
 
-  if (rpcError) {
-    console.error('Error al ejecutar RPC update_editorial_dimensions:', rpcError);
-    throw new Error(rpcError.message || 'Error al guardar los cambios editoriales.');
+  // Si la RPC con 19 parámetros no existe (PGRST202), intentamos el fallback con la versión anterior (8 parámetros)
+  if (rpcError && rpcError.code === 'PGRST202') {
+    console.warn('[EXPEDIENTE][SAVE_CONTRIBUTION_RPC_FALLBACK] La firma de RPC de 19 parámetros no se encuentra en la base de datos (migración 20260725000000 pendiente). Ejecutando fallback con 8 parámetros.');
+    const fallbackRes = await supabase.rpc('update_editorial_dimensions', {
+      p_contribution_id: id,
+      p_editorial_status: editorialStatus,
+      p_publication_status_option_id: publicationStatusOptionId || null,
+      p_publication_notes: publicationNotes || null,
+      p_publication_scheduled_at: publicationScheduledAt || null,
+      p_internal_notes: internalNotes || null,
+      p_active_indicator_option_ids: activeIndicatorOptionIds,
+      p_indicator_notes: indicatorNotes || null
+    } as any);
+    
+    rpcError = fallbackRes.error;
   }
+
+  if (rpcError) {
+    console.error('[EXPEDIENTE][SAVE_CONTRIBUTION_ERROR]', {
+      contributionId: id,
+      code: rpcError.code,
+      message: rpcError.message,
+      details: rpcError.details,
+      hint: rpcError.hint,
+    });
+    throw new Error('No fue posible guardar los cambios editoriales en la base de datos.');
+  }
+
+  console.info('[EXPEDIENTE][SAVE_CONTRIBUTION_SUCCESS]', { contributionId: id });
 
   // 4. Si se subió un nuevo archivo de consentimiento, procesarlo
   const fileUploaded = consentFile && consentFile.size > 0;
   if (fileUploaded && currentContribution) {
     const consentTextVersion = `Revalidación manual de Consentimiento con archivo físico`;
     // Actualizar la ruta del archivo de consentimiento en la contribución
-    await supabase
+    const { error: updateError } = await supabase
       .from('contributions')
       .update({
         consent_file_path: newConsentFilePath,
@@ -150,7 +176,18 @@ export async function updateContributionStatus(
       })
       .eq('id', id);
 
-    await supabase
+    if (updateError) {
+      console.error('[EXPEDIENTE][SAVE_CONSENT_FILE_PATH_ERROR]', {
+        contributionId: id,
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint
+      });
+      throw new Error('Error al actualizar la ruta del archivo de consentimiento.');
+    }
+
+    const { error: insertError } = await supabase
       .from('consent_records')
       .insert({
         contributor_id: currentContribution.contributor_id,
@@ -162,6 +199,17 @@ export async function updateContributionStatus(
         consent_text_version: consentTextVersion,
         consent_file_path: newConsentFilePath
       });
+
+    if (insertError) {
+      console.error('[EXPEDIENTE][SAVE_CONSENT_RECORD_ERROR]', {
+        contributionId: id,
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint
+      });
+      throw new Error('Error al registrar el consentimiento.');
+    }
   }
 
   // 5. Revalidar la ruta para mostrar los cambios actualizados

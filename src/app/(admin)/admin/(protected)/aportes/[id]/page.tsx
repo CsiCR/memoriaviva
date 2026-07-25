@@ -46,7 +46,8 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   }
 
   // 1. Obtener el aporte completo (incluyendo avisos de archivos grandes e indicadores)
-  const { data: contribution, error } = await supabase
+  console.info('[EXPEDIENTE][LOAD_CONTRIBUTION]', { contributionId: id });
+  const { data: contribution, error: contributionError } = await supabase
     .from('contributions')
     .select(`
       *,
@@ -60,12 +61,26 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     .eq('id', id)
     .single();
 
-  if (error || !contribution) {
-    console.error('Error al obtener detalle del aporte:', error);
+  if (contributionError) {
+    console.error('[EXPEDIENTE][LOAD_CONTRIBUTION_ERROR]', {
+      contributionId: id,
+      code: contributionError.code,
+      message: contributionError.message,
+      details: contributionError.details,
+      hint: contributionError.hint
+    });
     notFound();
   }
 
+  if (!contribution) {
+    console.warn('[EXPEDIENTE][LOAD_CONTRIBUTION_NOT_FOUND]', { contributionId: id });
+    notFound();
+  }
+
+  console.info('[EXPEDIENTE][LOAD_FILES]', { contributionId: id, filesCount: contribution.contribution_files?.length || 0 });
+
   // Obtener la opción de estado de publicación actual si existe
+  console.info('[EXPEDIENTE][LOAD_PUBLICATION]', { contributionId: id, hasPublicationOption: !!contribution.publication_status_option_id });
   let publicationStatusOpt = null;
   if (contribution.publication_status_option_id) {
     const { data: pubOpt, error: pubOptError } = await supabase
@@ -74,7 +89,14 @@ export default async function AdminContributionDetail({ params, searchParams }: 
       .eq('id', contribution.publication_status_option_id)
       .maybeSingle();
     if (pubOptError) {
-      console.error('[ERRORES EDITORIAL] Error al obtener la opción del estado de publicación:', pubOptError.message);
+      console.error('[EXPEDIENTE][LOAD_PUBLICATION_ERROR]', {
+        contributionId: id,
+        optionId: contribution.publication_status_option_id,
+        code: pubOptError.code,
+        message: pubOptError.message,
+        details: pubOptError.details,
+        hint: pubOptError.hint
+      });
     }
     publicationStatusOpt = pubOpt;
   }
@@ -83,10 +105,20 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   let activeIndicatorsWithDetails: any[] = [];
   const activeInds = (contribution.contribution_editorial_indicators || []).filter((ind: any) => ind.is_active);
   if (activeInds.length > 0) {
-    const { data: indOpts } = await supabase
+    const { data: indOpts, error: indOptsError } = await supabase
       .from('select_options')
       .select('*')
       .in('id', activeInds.map((ind: any) => ind.indicator_option_id));
+      
+    if (indOptsError) {
+      console.error('[EXPEDIENTE][LOAD_INDICATORS_OPTIONS_ERROR]', {
+        contributionId: id,
+        code: indOptsError.code,
+        message: indOptsError.message,
+        details: indOptsError.details,
+        hint: indOptsError.hint
+      });
+    }
     
     activeIndicatorsWithDetails = activeInds.map((ind: any) => {
       const opt = indOpts?.find((o: any) => o.id === ind.indicator_option_id);
@@ -151,6 +183,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     }))
   };
 
+  console.info('[EXPEDIENTE][LOAD_EDITORIAL_ENGINE]', { contributionId: id });
   const evaluation = evaluateContribution(contributionInput);
 
   const hasValidConsentRecord = (contribution.consent_records || []).some(
@@ -184,6 +217,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   );
 
   // Generar historial de consentimientos ordenados por fecha y obtener sus Signed URLs si tienen archivo
+  console.info('[EXPEDIENTE][LOAD_CONSENTS]', { contributionId: id, consentsCount: contribution.consent_records?.length || 0 });
   const consentHistory = await Promise.all(
     (contribution.consent_records || [])
       .slice()
@@ -225,13 +259,33 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     .eq('record_id', id)
     .order('created_at', { ascending: false });
 
+  if (auditError) {
+    console.error('[EXPEDIENTE][LOAD_AUDIT_LOGS_ERROR]', {
+      contributionId: id,
+      code: auditError.code,
+      message: auditError.message,
+      details: auditError.details,
+      hint: auditError.hint
+    });
+  }
+
   if (!auditError && rawAuditLogs) {
     const userIds = Array.from(new Set(rawAuditLogs.map(l => l.user_id).filter(Boolean)));
     if (userIds.length > 0) {
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', userIds);
+        
+      if (profilesError) {
+        console.error('[EXPEDIENTE][LOAD_AUDIT_PROFILES_ERROR]', {
+          contributionId: id,
+          code: profilesError.code,
+          message: profilesError.message,
+          details: profilesError.details,
+          hint: profilesError.hint
+        });
+      }
         
       auditLogs = rawAuditLogs.map(log => ({
         ...log,
@@ -240,8 +294,6 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     } else {
       auditLogs = rawAuditLogs.map(log => ({ ...log, profiles: null }));
     }
-  } else if (auditError) {
-    console.error('Error al obtener bitácora de cambios:', auditError.message);
   }
 
   // Función para formatear el detalle de los cambios en la bitácora
@@ -275,6 +327,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     return 'Acción registrada.';
   }
 
+  console.info('[EXPEDIENTE][RENDER_SECTION]', { contributionId: id, sectionName: 'MainLayout' });
   const statusBadgeClass = `badge badge-${(contribution.editorial_status || 'Recibido').toLowerCase().replace(/á/g, 'a').replace(/ó/g, 'o').replace(/ /g, '-')}`;
 
   return (

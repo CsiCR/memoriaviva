@@ -17,7 +17,7 @@ interface ContributionPrintViewProps {
   editorResponsibleUserId?: string | null;
   validatedByUserId?: string | null;
   publishedByUserId?: string | null;
-  qualityIndex?: string | null;
+  qualityIndex?: string | number | null;
   qualityText?: string | null;
   historicalReliabilityStars?: number;
   historicalReliabilityLabel?: string | null;
@@ -28,6 +28,7 @@ interface ContributionPrintViewProps {
   consentSource?: string | null;
   historicalValidationStatusState?: string | null;
   historicalValidationStatus?: string | null;
+  workflowResult?: any;
 }
 
 export const ContributionPrintView: React.FC<ContributionPrintViewProps> = ({
@@ -58,6 +59,7 @@ export const ContributionPrintView: React.FC<ContributionPrintViewProps> = ({
   consentSource,
   historicalValidationStatusState,
   historicalValidationStatus,
+  workflowResult,
 }) => {
   const year = createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear();
   const idShort = id.substring(0, 6).toUpperCase();
@@ -183,21 +185,50 @@ export const ContributionPrintView: React.FC<ContributionPrintViewProps> = ({
           <div style={{ marginTop: '15px' }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #000', paddingBottom: '4px' }}>I. HITOS DEL PROCESO ARCHIVÍSTICO</h3>
             <ul style={{ listStyleType: 'none', paddingLeft: 0, fontSize: '0.85rem', lineHeight: '1.4' }}>
-              <li style={{ marginBottom: '6px' }}>
-                [ {createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'} ] RECEPCIÓN: Ingreso y registro inicial del aporte original.
-              </li>
-              <li style={{ marginBottom: '6px' }}>
-                [ {consentRecords?.[0]?.accepted_at ? new Date(consentRecords[0].accepted_at).toLocaleDateString('es-AR') : 'PENDIENTE'} ] CONSENTIMIENTO: Aprobación legal de cesión ({consentSource || '—'}).
-              </li>
-              <li style={{ marginBottom: '6px' }}>
-                [ {editorialUpdatedAt ? new Date(editorialUpdatedAt).toLocaleDateString('es-AR') : (updatedAt ? new Date(updatedAt).toLocaleDateString('es-AR') : 'PENDIENTE')} ] TRABAJO EDITORIAL: Normalización y completitud de datos descriptivos.
-              </li>
-              <li style={{ marginBottom: '6px' }}>
-                [ {historicalValidationStatus === 'validated' ? 'COMPLETADO' : historicalValidationStatus === 'not_required' ? 'NO REQUERIDA' : 'PENDIENTE'} ] VALIDACIÓN HISTÓRICA: Corroboración contextual.
-              </li>
-              <li style={{ marginBottom: '6px' }}>
-                [ {publishedAt ? new Date(publishedAt).toLocaleDateString('es-AR') : 'PENDIENTE'} ] PUBLICACIÓN EN PORTAL: Activación de la ficha pública.
-              </li>
+              {workflowResult?.stages ? (
+                workflowResult.stages.map((stage: any) => {
+                  const dateText = stage.displayDate 
+                    ? new Date(stage.displayDate).toLocaleDateString('es-AR')
+                    : stage.status === 'not_required' ? 'NO REQUERIDA' : 'PENDIENTE';
+                  
+                  const statusLabel = 
+                    stage.status === 'completed' ? 'COMPLETADO' :
+                    stage.status === 'not_required' ? 'NO REQUERIDA' :
+                    stage.status === 'blocked' ? 'BLOQUEADO' : 'PENDIENTE';
+
+                  let stageDesc = '';
+                  if (stage.key === 'recepcion') stageDesc = 'Ingreso y registro inicial del aporte original.';
+                  else if (stage.key === 'consentimiento') stageDesc = `Aprobación legal de cesión (${consentSource || '—'}).`;
+                  else if (stage.key === 'descripcion') stageDesc = 'Normalización y completitud de datos descriptivos.';
+                  else if (stage.key === 'clasificacion') stageDesc = 'Clasificación y categorización de catálogo.';
+                  else if (stage.key === 'validacion') stageDesc = 'Corroboración contextual.';
+                  else if (stage.key === 'publicacion') stageDesc = 'Activación de la ficha pública.';
+
+                  return (
+                    <li key={stage.key} style={{ marginBottom: '6px' }}>
+                      [ {dateText} ] {stage.label.toUpperCase()}: {stageDesc} ({statusLabel})
+                    </li>
+                  );
+                })
+              ) : (
+                <>
+                  <li style={{ marginBottom: '6px' }}>
+                    [ {createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'} ] RECEPCIÓN: Ingreso y registro inicial del aporte original.
+                  </li>
+                  <li style={{ marginBottom: '6px' }}>
+                    [ {consentRecords?.[0]?.accepted_at ? new Date(consentRecords[0].accepted_at).toLocaleDateString('es-AR') : 'PENDIENTE'} ] CONSENTIMIENTO: Aprobación legal de cesión ({consentSource || '—'}).
+                  </li>
+                  <li style={{ marginBottom: '6px' }}>
+                    [ {editorialUpdatedAt ? new Date(editorialUpdatedAt).toLocaleDateString('es-AR') : (updatedAt ? new Date(updatedAt).toLocaleDateString('es-AR') : 'PENDIENTE')} ] TRABAJO EDITORIAL: Normalización y completitud de datos descriptivos.
+                  </li>
+                  <li style={{ marginBottom: '6px' }}>
+                    [ {historicalValidationStatus === 'validated' ? 'COMPLETADO' : historicalValidationStatus === 'not_required' ? 'NO REQUERIDA' : 'PENDIENTE'} ] VALIDACIÓN HISTÓRICA: Corroboración contextual.
+                  </li>
+                  <li style={{ marginBottom: '6px' }}>
+                    [ {publishedAt ? new Date(publishedAt).toLocaleDateString('es-AR') : 'PENDIENTE'} ] PUBLICACIÓN EN PORTAL: Activación de la ficha pública.
+                  </li>
+                </>
+              )}
             </ul>
           </div>
 

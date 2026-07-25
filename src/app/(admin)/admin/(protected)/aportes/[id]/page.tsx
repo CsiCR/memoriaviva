@@ -5,7 +5,8 @@ import { ArrowLeft, User, FileText, Shield, File, Download, ExternalLink, Calend
 import ContributionEditForm from '@/components/ContributionEditForm';
 import EditorialHelp from '@/components/EditorialHelp';
 import { formatDateToAR, formatDateTimeToAR, formatDateTimeForAudit } from '@/utils/date';
-import { evaluateContribution } from '@/lib/editorial';
+import { evaluateEditorialWorkflow } from '@/lib/editorial';
+import type { EditorialContribution } from '@/lib/editorial/engine/workflowTypes';
 
 import AdminAddFilesForm from '@/components/AdminAddFilesForm';
 
@@ -129,62 +130,59 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     });
   }
 
-  // 1.5. Evaluar elegibilidad y calcular consistencia de consentimiento
-  const contributionInput = {
+  // 1.5. Evaluar elegibilidad y calcular consistencia de consentimiento mediante el Motor Editorial
+  const contributionData: EditorialContribution = {
     id: contribution.id,
-    title: contribution.title,
-    description: contribution.description,
-    internal_notes: contribution.internal_notes,
-    content_type: contribution.content_type,
-    editorial_status: {
-      code: contribution.editorial_status ? String(contribution.editorial_status).toLowerCase() : null,
-      name: contribution.editorial_status || null,
-      id: null
-    },
-    publication_status: publicationStatusOpt ? {
-      id: publicationStatusOpt.id,
-      code: publicationStatusOpt.code,
-      name: publicationStatusOpt.name
-    } : null,
-    publication_notes: contribution.publication_notes,
-    publication_scheduled_at: contribution.publication_scheduled_at,
+    title: contribution.title || null,
+    description: contribution.description || null,
+    contribution_type: contribution.contribution_type || null,
+    created_at: contribution.created_at,
+    updated_at: contribution.updated_at,
+    published_at: contribution.published_at || null,
+    editorial_updated_at: contribution.editorial_updated_at || null,
     consent_verified: contribution.consent_verified || false,
-    authorization_level: contribution.authorization_level,
-    credit_preference: contribution.credit_preference,
-    consent_source: contribution.consent_source,
-    historical_validation_status: contribution.historical_validation_status,
-    historical_validation_notes: contribution.historical_validation_notes,
-    contributor: contribution.contributors ? {
-      full_name: contribution.contributors.full_name || 'Anónimo',
-      email: contribution.contributors.email || null,
-      phone: contribution.contributors.phone || null,
-      relation_to_city: contribution.contributors.relation_to_city || null
-    } : null,
-    files: (contribution.contribution_files || []).map((f: any) => ({
-      id: f.id,
-      file_name: f.original_filename || '',
-      file_size: f.file_size || 0,
-      file_role: f.file_role || null,
-      processing_status: f.processing_status || null
-    })),
+    consent_source: contribution.consent_source || null,
     consent_records: (contribution.consent_records || []).map((c: any) => ({
+      id: c.id || 'dummy-consent-id',
       accepted_at: c.accepted_at || null,
-      authorization_level: c.authorization_level || null,
-      owns_or_has_permission: c.owns_or_has_permission,
-      accepts_cataloging: c.accepts_cataloging
+      authorization_level: c.authorization_level || 'A',
+      credit_preference: c.credit_preference || 'Público',
+      owns_or_has_permission: c.owns_or_has_permission ?? true,
+      accepts_cataloging: c.accepts_cataloging ?? true,
+      consent_text_version: c.consent_text_version || '1.0'
     })),
-    active_indicators: activeIndicatorsWithDetails.map((ind: any) => ({
-      id: ind.opt?.id || ind.indicator_option_id,
-      category: ind.opt?.category || 'editorial_indicator',
-      value: ind.opt?.value || '',
-      name: ind.opt?.name || 'Indicador',
-      code: ind.opt?.code || null,
-      metadata: ind.opt?.metadata || null
-    }))
+    contributors: contribution.contributors ? {
+      id: String(contribution.contributors.id || ''),
+      full_name: String(contribution.contributors.full_name || 'Anónimo'),
+      dni: contribution.contributors.dni ? String(contribution.contributors.dni) : null,
+      phone: contribution.contributors.phone ? String(contribution.contributors.phone) : null,
+      email: contribution.contributors.email ? String(contribution.contributors.email) : null
+    } : null,
+    editorial_title: contribution.editorial_title || null,
+    editorial_description: contribution.editorial_description || null,
+    editorial_summary: contribution.editorial_summary || null,
+    editorial_context: contribution.editorial_context || null,
+    editorial_classification: contribution.editorial_classification || null,
+    editorial_status: contribution.editorial_status || null,
+    historical_validation_status: contribution.historical_validation_status || null,
+    historical_validation_notes: contribution.historical_validation_notes || null,
+    publication_title: contribution.publication_title || null,
+    publication_excerpt: contribution.publication_excerpt || null,
+    publication_level: contribution.publication_level || null,
+    publication_credits: contribution.publication_credits || null,
+    publication_status_option_id: contribution.publication_status_option_id || null,
+    publication_scheduled_at: contribution.publication_scheduled_at || null
   };
 
+  const pubOptParsed = publicationStatusOpt ? {
+    id: publicationStatusOpt.id,
+    code: publicationStatusOpt.code,
+    name: publicationStatusOpt.name,
+    metadata: publicationStatusOpt.metadata
+  } : null;
+
   console.info('[EXPEDIENTE][LOAD_EDITORIAL_ENGINE]', { contributionId: id });
-  const evaluation = evaluateContribution(contributionInput);
+  const workflowResult = evaluateEditorialWorkflow(contributionData, pubOptParsed);
 
   const hasValidConsentRecord = (contribution.consent_records || []).some(
     (record: any) =>
@@ -396,7 +394,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
         </div>
       )}
 
-      {publicationStatusOpt?.code === 'publishable' && !evaluation.eligibleForPublication && (
+      {publicationStatusOpt?.code === 'publishable' && workflowResult?.publicationEligibility !== 'ready' && (
         <div style={{
           backgroundColor: '#fffbeb',
           border: '1px solid #fef3c7',

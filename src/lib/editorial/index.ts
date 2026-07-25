@@ -10,3 +10,6 @@ export * from './evaluateContribution';
 export * from './progress';
 export * from './dashboard';
 export * from './navigation';
+export * from './engine/workflowTypes';
+export * from './engine/workflowDefinition';
+export * from './engine/evaluateWorkflow';

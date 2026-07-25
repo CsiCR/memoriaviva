@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:public": "tsx scripts/test-public-contracts.ts",
+    "test:workflow": "tsx scripts/test-editorial-workflow.ts",
     "prelaunch:audit": "tsx scripts/prelaunch-audit.ts",
     "smoke:staging": "tsx scripts/smoke-production.ts",
     "smoke:production": "tsx scripts/smoke-production.ts --confirm",

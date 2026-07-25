@@ -31,9 +31,10 @@ import {
   evaluateContribution, 
   ContributionInput, 
   mapContributionToProgressInput, 
-  evaluateEditorialProgress 
+  evaluateEditorialProgress,
+  evaluateEditorialWorkflow
 } from '@/lib/editorial';
-import { mapStatusToCode, mapContributionTypeToContentType } from '@/lib/editorial/editorialConstants';
+import { mapStatusToCode, mapContributionTypeToContentType, getQualityRating } from '@/lib/editorial/editorialConstants';
 import { EDITORIAL_ENGINE_VERSION, EDITORIAL_PROGRESS_VERSION } from '@/config/version';
 
 interface SelectOption {
@@ -268,101 +269,6 @@ export default function ContributionEditForm({
   const selectedStatusOpt = dbOptions.publication_status.find(opt => opt.id === publicationStatusOptionId);
   const requiresDate = selectedStatusOpt?.metadata?.requires_publication_date === true;
 
-  // CONSTRUCCIÓN DEL MODELO DE ENTRADA Y EVALUACIÓN MEDIANTE EL MOTOR EDITORIAL (v3.0.0)
-  const editorialInput = useMemo<ContributionInput>(() => {
-    const mappedContentType = mapContributionTypeToContentType(contributionType);
-    const currentPubOpt = dbOptions.publication_status.find(o => o.id === publicationStatusOptionId);
-    
-    return {
-      id,
-      title: editorialTitle || title || null,
-      description: editorialDescription || description || null,
-      internal_notes: notes || null,
-      content_type: mappedContentType,
-      editorial_status: {
-        id: null,
-        code: mapStatusToCode(status),
-        name: status
-      },
-      publication_status: {
-        id: publicationStatusOptionId || null,
-        code: currentPubOpt?.code || null,
-        name: currentPubOpt?.name || null
-      },
-      publication_notes: publicationNotes || null,
-      publication_scheduled_at: publicationScheduledAt || null,
-      consent_verified: consentVerified,
-      authorization_level: level || null,
-      credit_preference: credits || null,
-      consent_source: consentSource || null,
-      files: (files || []).map((f) => ({
-        id: f.id,
-        file_name: f.file_name || '',
-        file_size: f.file_size || 0,
-        file_role: f.file_role || null,
-        processing_status: f.processing_status || null
-      })),
-      consent_records: (consentRecords || []).map((c) => ({
-        accepted_at: c.accepted_at || null,
-        authorization_level: c.authorization_level || null
-      })),
-      active_indicators: dbOptions.editorial_indicator
-        .filter(opt => activeIndicatorOptionIds.includes(opt.id))
-        .map(opt => ({
-          id: opt.id,
-          category: opt.category,
-          value: opt.value,
-          name: opt.name,
-          code: opt.code,
-          metadata: opt.metadata
-        })),
-      editorial_title: editorialTitle || null,
-      editorial_description: editorialDescription || null,
-      editorial_summary: editorialSummary || null,
-      editorial_context: editorialContext || null,
-      editorial_classification: editorialClassification || null,
-      historical_validation_status: historicalValidationStatusState as any,
-      historical_validation_notes: historicalValidationNotes || null,
-      publication_title: publicationTitle || null,
-      publication_excerpt: publicationExcerpt || null,
-      publication_level: publicationLevel || null,
-      publication_credits: publicationCredits || null
-    };
-  }, [
-    id,
-    title,
-    description,
-    contributionType,
-    status,
-    publicationStatusOptionId,
-    dbOptions,
-    notes,
-    publicationNotes,
-    publicationScheduledAt,
-    consentVerified,
-    level,
-    credits,
-    consentSource,
-    files,
-    consentRecords,
-    activeIndicatorOptionIds,
-    editorialTitle,
-    editorialDescription,
-    editorialSummary,
-    editorialContext,
-    editorialClassification,
-    historicalValidationStatusState,
-    historicalValidationNotes,
-    publicationTitle,
-    publicationExcerpt,
-    publicationLevel,
-    publicationCredits
-  ]);
-
-  const editorialEvaluation = useMemo(() => {
-    return evaluateContribution(editorialInput);
-  }, [editorialInput]);
-
   const isDirty = useMemo(() => {
     const initialIndsSorted = [...initialActiveIndicatorOptionIds].sort().join(',');
     const currentIndsSorted = [...activeIndicatorOptionIds].sort().join(',');
@@ -473,63 +379,135 @@ export default function ContributionEditForm({
     initialPublicationTitle, initialPublicationExcerpt, initialPublicationLevel, initialPublicationCredits
   ]);
 
-  const currentProgressResult = useMemo(() => {
+
+
+  const workflowResult = useMemo(() => {
     if (loadingOptions) return null;
     try {
-      const currentContribution = {
+      const contributionData = {
         id,
         title: title || null,
         description: description || null,
-        internal_notes: notes || null,
-        contribution_type: contributionType,
+        contribution_type: contributionType || null,
+        created_at: createdAt || new Date().toISOString(),
+        updated_at: updatedAt || new Date().toISOString(),
+        published_at: publishedAt || null,
+        editorial_updated_at: editorialUpdatedAt || null,
         consent_verified: consentVerified,
-        authorization_level: level,
-        credit_preference: credits,
         consent_source: consentSource,
-        files: files || [],
-        contributors: contributor,
-        historical_context: historicalContext,
-        created_at: createdAt,
-        updated_at: updatedAt,
-        published_at: publishedAt,
-        editorial_status: status,
-        historical_validation_status: historicalValidationStatusState,
+        consent_records: (consentRecords || []).map((c: any) => ({
+          id: c.id || 'dummy-consent-id',
+          accepted_at: c.accepted_at || null,
+          authorization_level: c.authorization_level || 'A',
+          credit_preference: c.credit_preference || 'Público',
+          owns_or_has_permission: c.owns_or_has_permission ?? true,
+          accepts_cataloging: c.accepts_cataloging ?? true,
+          consent_text_version: c.consent_text_version || '1.0'
+        })),
+        contributors: contributor ? {
+          id: String(contributor.id || ''),
+          full_name: String(contributor.full_name || 'Anónimo'),
+          dni: contributor.dni ? String(contributor.dni) : null,
+          phone: contributor.phone ? String(contributor.phone) : null,
+          email: contributor.email ? String(contributor.email) : null
+        } : null,
         editorial_title: editorialTitle || null,
         editorial_description: editorialDescription || null,
         editorial_summary: editorialSummary || null,
         editorial_context: editorialContext || null,
         editorial_classification: editorialClassification || null,
+        editorial_status: status || null,
+        historical_validation_status: historicalValidationStatusState || null,
         historical_validation_notes: historicalValidationNotes || null,
         publication_title: publicationTitle || null,
         publication_excerpt: publicationExcerpt || null,
         publication_level: publicationLevel || null,
-        publication_credits: publicationCredits || null
+        publication_credits: publicationCredits || null,
+        publication_status_option_id: publicationStatusOptionId || null,
+        publication_scheduled_at: publicationScheduledAt || null
       };
-      
-      const currentPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === publicationStatusOptionId);
-      const currentActiveIndicators = dbOptions.editorial_indicator
-        .filter((opt: SelectOption) => activeIndicatorOptionIds.includes(opt.id))
-        .map((opt: SelectOption) => ({
-          indicator_option_id: opt.id,
-          is_active: true,
-          opt
-        }));
 
-      const progressInput = mapContributionToProgressInput(currentContribution, currentPubStatusOpt, currentActiveIndicators);
-      return evaluateEditorialProgress(progressInput);
+      const currentPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === publicationStatusOptionId);
+      const pubOptParsed = currentPubStatusOpt ? {
+        id: currentPubStatusOpt.id,
+        code: currentPubStatusOpt.code,
+        name: currentPubStatusOpt.name,
+        metadata: currentPubStatusOpt.metadata
+      } : null;
+
+      return evaluateEditorialWorkflow(contributionData, pubOptParsed);
     } catch (e) {
-      console.error("Error calculating current progress:", e);
+      console.error("[WORKFLOW_ENGINE] Error calculating workflow:", e);
       return null;
     }
   }, [
-    id, description, notes, contributionType, consentVerified, level, credits, consentSource,
-    files, contributor, historicalContext, createdAt, updatedAt, publishedAt,
-    dbOptions, publicationStatusOptionId, activeIndicatorOptionIds, loadingOptions,
-    title, status, historicalValidationStatusState,
-    editorialTitle, editorialDescription, editorialSummary,
-    editorialContext, editorialClassification, historicalValidationNotes,
-    publicationTitle, publicationExcerpt, publicationLevel, publicationCredits
+    loadingOptions, id, title, description, contributionType, createdAt, updatedAt, publishedAt, editorialUpdatedAt,
+    consentVerified, consentSource, consentRecords, contributor,
+    editorialTitle, editorialDescription, editorialSummary, editorialContext,
+    editorialClassification, status, historicalValidationStatusState, historicalValidationNotes,
+    publicationTitle, publicationExcerpt, publicationLevel, publicationCredits,
+    publicationStatusOptionId, publicationScheduledAt, dbOptions.publication_status
   ]);
+
+  const workflowTrafficLight = useMemo(() => {
+    if (!workflowResult) return 'yellow';
+    if (workflowResult.overallStatus === 'completed') return 'green';
+    if (workflowResult.overallStatus === 'blocked') return 'red';
+    if (workflowResult.overallStatus === 'in_progress') return 'orange';
+    return 'yellow';
+  }, [workflowResult]);
+
+  const workflowNextTask = useMemo(() => {
+    if (!workflowResult) return null;
+    return (
+      workflowResult.criticalIssues?.[0] ||
+      workflowResult.pendingTasks?.[0] ||
+      workflowResult.warnings?.[0] ||
+      null
+    );
+  }, [workflowResult]);
+
+  const recommendedNextAction = useMemo(() => {
+    return workflowNextTask
+      ? `Completar ${workflowNextTask.label.toLowerCase()}`
+      : 'Todo el proceso editorial está completado';
+  }, [workflowNextTask]);
+
+  const recommendedNextActionDescription = useMemo(() => {
+    return workflowNextTask
+      ? workflowNextTask.reason
+      : 'El expediente está listo para revisión final o publicación.';
+  }, [workflowNextTask]);
+
+  const recommendedNextActionTarget = useMemo(() => {
+    return workflowNextTask
+      ? workflowNextTask.targetFieldId
+      : null;
+  }, [workflowNextTask]);
+
+  const qualityRating = useMemo(() => {
+    return getQualityRating(workflowResult?.completionPercentage || 0);
+  }, [workflowResult?.completionPercentage]);
+
+  const historicalReliabilityStars = useMemo(() => {
+    if (historicalValidationStatusState === 'validated' || historicalValidationStatusState === 'not_required') {
+      return 5;
+    }
+    if (historicalValidationStatusState === 'rejected') {
+      return 1;
+    }
+    return 3;
+  }, [historicalValidationStatusState]);
+
+  const historicalReliabilityLabel = useMemo(() => {
+    if (historicalValidationStatusState === 'validated' || historicalValidationStatusState === 'not_required') {
+      return 'Alta';
+    }
+    if (historicalValidationStatusState === 'rejected') {
+      return 'Baja';
+    }
+    return 'Pendiente';
+  }, [historicalValidationStatusState]);
 
   // Checklist de Revisión Profesional (Manual)
   const [reviewProfessionalChecklist, setReviewProfessionalChecklist] = useState({
@@ -651,8 +629,8 @@ export default function ContributionEditForm({
       // Alt + ArrowRight (Alt + →): Siguiente acción recomendada
       else if (e.altKey && e.key === 'ArrowRight') {
         e.preventDefault();
-        if (editorialEvaluation.recommendedNextActionTarget) {
-          handleNavigation(editorialEvaluation.recommendedNextActionTarget);
+        if (recommendedNextActionTarget) {
+          handleNavigation(recommendedNextActionTarget);
         }
       }
       // Alt + ArrowLeft (Alt + ←): Volver al Asistente Editorial
@@ -666,7 +644,7 @@ export default function ContributionEditForm({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [editorialEvaluation.recommendedNextActionTarget]);
+  }, [recommendedNextActionTarget]);
 
   const handleIndicatorCheckboxChange = (indicatorId: string, checked: boolean) => {
     if (checked) {
@@ -741,45 +719,12 @@ export default function ContributionEditForm({
     );
   }
 
-  const stagePoints = {
-    recepcion: {
-      earned: (currentProgressResult?.details?.basicIdentificationScore || 0) + (currentProgressResult?.details?.consentScore || 0),
-      max: 30,
-      label: "Recepción y Consentimiento",
-      id: "consent"
-    },
-    descripcion: {
-      earned: (currentProgressResult?.details?.editorialDescriptionScore || 0) + (currentProgressResult?.details?.filesScore || 0),
-      max: 25,
-      label: "Descripción y Archivos",
-      id: "editorial-description"
-    },
-    clasificacion: {
-      earned: (currentProgressResult?.details?.editorialProcessingScore || 0) + (currentProgressResult?.details?.indicatorsScore || 0),
-      max: 15,
-      label: "Clasificación e Indicadores",
-      id: "editorial-status"
-    },
-    validacion: {
-      earned: (currentProgressResult?.details?.editorialReviewScore || 0) + (currentProgressResult?.details?.historicalValidationScore || 0),
-      max: 25,
-      label: "Revisión y Validación Histórica",
-      id: "historical-validation"
-    },
-    publicacion: {
-      earned: currentProgressResult?.details?.publicationScore || 0,
-      max: 5,
-      label: "Configuración de Publicación",
-      id: "publication-settings"
-    }
-  };
-
   const getActiveStage = () => {
-    if (stagePoints.recepcion.earned < stagePoints.recepcion.max) return "recepcion";
-    if (stagePoints.descripcion.earned < stagePoints.descripcion.max) return "descripcion";
-    if (stagePoints.clasificacion.earned < stagePoints.clasificacion.max) return "clasificacion";
-    if (stagePoints.validacion.earned < stagePoints.validacion.max) return "validacion";
-    return "publicacion";
+    if (!workflowResult) return "recepcion";
+    const firstIncomplete = workflowResult.stages.find(
+      s => s.status !== 'completed' && s.status !== 'not_required'
+    );
+    return firstIncomplete ? firstIncomplete.key : "publicacion";
   };
   const activeStageKey = getActiveStage();
 
@@ -818,16 +763,16 @@ export default function ContributionEditForm({
             </div>
             <div>
               {/* Sello de Estado */}
-              {editorialEvaluation.trafficLight === 'green' && (
+              {workflowTrafficLight === 'green' && (
                 <span className="dossier-header-stamp dossier-stamp-approved">Aprobado</span>
               )}
-              {editorialEvaluation.trafficLight === 'yellow' && (
+              {workflowTrafficLight === 'yellow' && (
                 <span className="dossier-header-stamp dossier-stamp-pending">Revisión</span>
               )}
-              {editorialEvaluation.trafficLight === 'orange' && (
+              {workflowTrafficLight === 'orange' && (
                 <span className="dossier-header-stamp dossier-stamp-pending">Incompleto</span>
               )}
-              {editorialEvaluation.trafficLight === 'red' && (
+              {workflowTrafficLight === 'red' && (
                 <span className="dossier-header-stamp dossier-stamp-incomplete">No Publicable</span>
               )}
             </div>
@@ -856,11 +801,11 @@ export default function ContributionEditForm({
               <span className="dossier-label">Confiabilidad Histórica</span>
               <div style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
                 <span style={{ fontSize: '1rem', letterSpacing: '0.05em' }}>
-                  {'★'.repeat(editorialEvaluation.historicalReliabilityStars)}
-                  {'☆'.repeat(5 - editorialEvaluation.historicalReliabilityStars)}
+                  {'★'.repeat(historicalReliabilityStars)}
+                  {'☆'.repeat(5 - historicalReliabilityStars)}
                 </span>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginLeft: '0.25rem' }}>
-                  ({editorialEvaluation.historicalReliabilityLabel})
+                  ({historicalReliabilityLabel})
                 </span>
               </div>
             </div>
@@ -870,42 +815,31 @@ export default function ContributionEditForm({
           <div style={{ margin: '1.5rem 0' }}>
             <span className="dossier-label" style={{ display: 'block', marginBottom: '0.5rem' }}>Línea de Tiempo del Expediente</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
-                <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Recepción</span>
-                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>{createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
-                <span style={{ color: consentVerified ? '#16a34a' : '#d97706', fontWeight: 700 }}>
-                  {consentVerified ? '✓ Consentimiento' : '⏳ Consentimiento'}
-                </span>
-                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                  {consentRecords?.[0]?.accepted_at ? new Date(consentRecords[0].accepted_at).toLocaleDateString('es-AR') : 'Pendiente'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
-                <span style={{ color: (description && description.length >= 40) ? '#16a34a' : '#d97706', fontWeight: 700 }}>
-                  {(description && description.length >= 40) ? '✓ Descripción' : '⏳ Descripción'}
-                </span>
-                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                  {updatedAt ? new Date(updatedAt).toLocaleDateString('es-AR') : 'Pendiente'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
-                <span style={{ color: (historicalValidationStatus === 'validated' || historicalValidationStatus === 'not_required') ? '#16a34a' : '#d97706', fontWeight: 700 }}>
-                  {(historicalValidationStatus === 'validated' || historicalValidationStatus === 'not_required') ? '✓ Validación' : '⏳ Validación'}
-                </span>
-                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                  {historicalValidationStatus === 'validated' ? 'Completado' : historicalValidationStatus === 'not_required' ? 'No requerida' : 'Pendiente'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
-                <span style={{ color: (status === 'Publicado' || publishedAt) ? '#16a34a' : '#94a3b8', fontWeight: 700 }}>
-                  {(status === 'Publicado' || publishedAt) ? '✓ Publicación' : '○ Publicación'}
-                </span>
-                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                  {publishedAt ? new Date(publishedAt).toLocaleDateString('es-AR') : 'Pendiente'}
-                </span>
-              </div>
+              {workflowResult?.stages.map((stage) => {
+                let color = '#94a3b8';
+                let icon = '○';
+                if (stage.status === 'completed' || stage.status === 'not_required') {
+                  color = '#16a34a';
+                  icon = '✓';
+                } else if (stage.status === 'in_progress') {
+                  color = '#d97706';
+                  icon = '⏳';
+                } else if (stage.status === 'blocked') {
+                  color = '#dc2626';
+                  icon = '🚫';
+                }
+
+                const dateText = stage.displayDate 
+                  ? new Date(stage.displayDate).toLocaleDateString('es-AR')
+                  : stage.status === 'not_required' ? 'No requerida' : 'Pendiente';
+
+                return (
+                  <div key={stage.key} style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
+                    <span style={{ color, fontWeight: 700 }}>{icon} {stage.label}</span>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem' }}>{dateText}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -949,21 +883,21 @@ export default function ContributionEditForm({
                 width: '12px',
                 height: '12px',
                 borderRadius: '50%',
-                backgroundColor: editorialEvaluation.trafficLight === 'green' ? '#16a34a' : editorialEvaluation.trafficLight === 'yellow' ? '#eab308' : editorialEvaluation.trafficLight === 'orange' ? '#f97316' : '#ef4444',
-                boxShadow: `0 0 8px ${editorialEvaluation.trafficLight === 'green' ? '#16a34a' : editorialEvaluation.trafficLight === 'yellow' ? '#eab308' : editorialEvaluation.trafficLight === 'orange' ? '#f97316' : '#ef4444'}`,
+                backgroundColor: workflowTrafficLight === 'green' ? '#16a34a' : workflowTrafficLight === 'yellow' ? '#eab308' : workflowTrafficLight === 'orange' ? '#f97316' : '#ef4444',
+                boxShadow: `0 0 8px ${workflowTrafficLight === 'green' ? '#16a34a' : workflowTrafficLight === 'yellow' ? '#eab308' : workflowTrafficLight === 'orange' ? '#f97316' : '#ef4444'}`,
                 display: 'inline-block'
               }} />
               <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#334155' }}>
-                {editorialEvaluation.trafficLight === 'green' && '🟢 Listo para publicar'}
-                {editorialEvaluation.trafficLight === 'yellow' && '🟡 Necesita revisión'}
-                {editorialEvaluation.trafficLight === 'orange' && '🟠 Incompleto'}
-                {editorialEvaluation.trafficLight === 'red' && '🔴 No publicable'}
+                {workflowResult?.overallStatus === 'completed' && '🟢 Listo para publicar'}
+                {workflowResult?.overallStatus === 'pending' && '🟡 Necesita revisión'}
+                {workflowResult?.overallStatus === 'in_progress' && '🟠 Incompleto'}
+                {workflowResult?.overallStatus === 'blocked' && '🔴 Bloqueado'}
               </span>
             </div>
           </div>
 
           <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem', color: '#475569', fontStyle: 'italic' }}>
-            {editorialEvaluation.summary}
+            {workflowResult?.summaryText}
           </p>
 
           <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: '0 0 1.25rem 0' }} />
@@ -971,81 +905,56 @@ export default function ContributionEditForm({
           {/* Stepper Interactivo */}
           <div className="stepper-container">
             <div className="stepper-line" />
-            
-            <button
-              type="button"
-              onClick={() => handleNavigation('original-consent', 'Stepper: Recepción')}
-              className={`stepper-stage ${activeStageKey === 'recepcion' ? 'active' : ''} ${stagePoints.recepcion.earned === stagePoints.recepcion.max ? 'completed' : 'warning'}`}
-            >
-              <div className="stepper-dot">
-                {stagePoints.recepcion.earned === stagePoints.recepcion.max ? '✓' : '1'}
-              </div>
-              <span className="stepper-label">Recepción</span>
-            </button>
+            {workflowResult?.stages.map((stage, idx) => {
+              const isActive = activeStageKey === stage.key;
+              const isCompleted = stage.status === 'completed' || stage.status === 'not_required';
+              const isBlocked = stage.status === 'blocked';
+              
+              let className = `stepper-stage ${isActive ? 'active' : ''} `;
+              if (isCompleted) {
+                className += 'completed';
+              } else if (isBlocked) {
+                className += 'blocked';
+              } else {
+                className += 'warning';
+              }
 
-            <button
-              type="button"
-              onClick={() => handleNavigation('editorial-description', 'Stepper: Descripción')}
-              className={`stepper-stage ${activeStageKey === 'descripcion' ? 'active' : ''} ${stagePoints.descripcion.earned === stagePoints.descripcion.max ? 'completed' : 'warning'}`}
-            >
-              <div className="stepper-dot">
-                {stagePoints.descripcion.earned === stagePoints.descripcion.max ? '✓' : '2'}
-              </div>
-              <span className="stepper-label">Descripción</span>
-            </button>
+              const targetId = stage.targetFieldId || 'editorial-progress-section';
 
-            <button
-              type="button"
-              onClick={() => handleNavigation('editorial-classification', 'Stepper: Clasificación')}
-              className={`stepper-stage ${activeStageKey === 'clasificacion' ? 'active' : ''} ${stagePoints.clasificacion.earned === stagePoints.clasificacion.max ? 'completed' : 'warning'}`}
-            >
-              <div className="stepper-dot">
-                {stagePoints.clasificacion.earned === stagePoints.clasificacion.max ? '✓' : '3'}
-              </div>
-              <span className="stepper-label">Clasificación</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleNavigation('historical-validation-status', 'Stepper: Validación')}
-              className={`stepper-stage ${activeStageKey === 'validacion' ? 'active' : ''} ${stagePoints.validacion.earned === stagePoints.validacion.max ? 'completed' : 'warning'}`}
-            >
-              <div className="stepper-dot">
-                {stagePoints.validacion.earned === stagePoints.validacion.max ? '✓' : '4'}
-              </div>
-              <span className="stepper-label">Validación</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleNavigation('publication-settings', 'Stepper: Publicación')}
-              className={`stepper-stage ${activeStageKey === 'publicacion' ? 'active' : ''} ${stagePoints.publicacion.earned === stagePoints.publicacion.max ? 'completed' : 'warning'}`}
-            >
-              <div className="stepper-dot">
-                {stagePoints.publicacion.earned === stagePoints.publicacion.max ? '✓' : '5'}
-              </div>
-              <span className="stepper-label">Publicación</span>
-            </button>
+              return (
+                <button
+                  key={stage.key}
+                  type="button"
+                  onClick={() => handleNavigation(targetId, `Stepper: ${stage.label}`)}
+                  className={className}
+                >
+                  <div className="stepper-dot">
+                    {isCompleted ? '✓' : isBlocked ? '✗' : String(idx + 1)}
+                  </div>
+                  <span className="stepper-label">{stage.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Índice de Calidad Editorial */}
           <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', margin: '1.5rem 0' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Índice de Calidad Editorial</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Progreso Editorial</span>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <span style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a' }}>{editorialEvaluation.qualityIndex}</span>
+                <span style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a' }}>{workflowResult?.completionPercentage || 0}%</span>
                 <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>
-                  ({currentProgressResult ? Math.min(100, currentProgressResult.progress + manualCheckedCount * 2) : 0}/100 pts)
+                  ({workflowResult?.completionPercentage || 0}/100 pts)
                 </span>
               </div>
             </div>
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e3a8a', backgroundColor: '#eff6ff', padding: '0.35rem 0.75rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-              💡 {editorialEvaluation.qualityText}
+              💡 {qualityRating.text} (Nivel {qualityRating.grade})
             </span>
           </div>
 
           {/* Wizard / Próximo Paso */}
-          {currentProgressResult && currentProgressResult.progress >= 90 ? (
+          {workflowResult && workflowResult.completionPercentage >= 90 ? (
             /* MODO REVISIÓN FINAL */
             <div style={{
               border: '1px dashed #f59e0b',
@@ -1058,7 +967,7 @@ export default function ContributionEditForm({
                 <span>🔎</span> Modo: Revisión Final Profesional
               </h5>
               <p style={{ margin: '0 0 1rem 0', fontSize: '0.8', color: '#78350f' }}>
-                El progreso básico automatizado es óptimo ({currentProgressResult.progress}%). Revise los siguientes puntos de criterio profesional humano antes de publicar:
+                El progreso básico automatizado es óptimo ({workflowResult.completionPercentage}%). Revise los siguientes puntos de criterio profesional humano antes de publicar:
               </p>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -1126,7 +1035,7 @@ export default function ContributionEditForm({
             </div>
           ) : (
             /* WIZARD: SIGUIENTE PASO */
-            editorialEvaluation.recommendedNextActionTarget && (
+            recommendedNextActionTarget && (
               <div style={{
                 border: '1px solid #bfdbfe',
                 borderRadius: '8px',
@@ -1138,14 +1047,14 @@ export default function ContributionEditForm({
                   👉 Próximo paso recomendado:
                 </span>
                 <strong style={{ fontSize: '0.9rem', color: '#1e3a8a', display: 'block' }}>
-                  {editorialEvaluation.recommendedNextAction}
+                  {recommendedNextAction}
                 </strong>
                 <p style={{ margin: '0.25rem 0 0.75rem 0', fontSize: '0.75rem', color: '#1e40af' }}>
-                  <strong>¿Por qué?</strong>: {editorialEvaluation.recommendedNextActionDescription}
+                  <strong>¿Por qué?</strong>: {recommendedNextActionDescription}
                 </p>
 
-                {(editorialEvaluation.recommendedNextActionTarget === 'consent' || 
-                  editorialEvaluation.recommendedNextActionTarget === 'attachments') && (
+                {(recommendedNextActionTarget === 'original-consent' || 
+                  recommendedNextActionTarget === 'original-attachments') && (
                   <div style={{ 
                     backgroundColor: '#fff2f2', 
                     borderLeft: '4px solid #ef4444', 
@@ -1164,7 +1073,7 @@ export default function ContributionEditForm({
 
                 <button
                   type="button"
-                  onClick={() => handleNavigation(editorialEvaluation.recommendedNextActionTarget!, `Asistente: ${editorialEvaluation.recommendedNextAction}`)}
+                  onClick={() => handleNavigation(recommendedNextActionTarget, `Asistente: ${recommendedNextAction}`)}
                   className="btn btn-primary btn-sm"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
                 >
@@ -1194,55 +1103,30 @@ export default function ContributionEditForm({
                 <tr>
                   <th>Etapa</th>
                   <th style={{ textAlign: 'center' }}>Estado</th>
-                  <th style={{ textAlign: 'right' }}>Puntaje</th>
+                  <th style={{ textAlign: 'right' }}>Progreso</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Recepción y Consentimiento</td>
-                  <td style={{ textAlign: 'center' }}>
-                    {stagePoints.recepcion.earned === stagePoints.recepcion.max ? '✅' : stagePoints.recepcion.earned > 0 ? '⚠️' : '⏳'}
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {stagePoints.recepcion.earned} / {stagePoints.recepcion.max}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Descripción y Archivos</td>
-                  <td style={{ textAlign: 'center' }}>
-                    {stagePoints.descripcion.earned === stagePoints.descripcion.max ? '✅' : stagePoints.descripcion.earned > 0 ? '⚠️' : '⏳'}
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {stagePoints.descripcion.earned} / {stagePoints.descripcion.max}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Clasificación e Indicadores</td>
-                  <td style={{ textAlign: 'center' }}>
-                    {stagePoints.clasificacion.earned === stagePoints.clasificacion.max ? '✅' : stagePoints.clasificacion.earned > 0 ? '⚠️' : '⏳'}
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {stagePoints.clasificacion.earned} / {stagePoints.clasificacion.max}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Revisión y Validación Histórica</td>
-                  <td style={{ textAlign: 'center' }}>
-                    {stagePoints.validacion.earned === stagePoints.validacion.max ? '✅' : stagePoints.validacion.earned > 0 ? '⚠️' : '⏳'}
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {stagePoints.validacion.earned} / {stagePoints.validacion.max}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Configuración de Publicación</td>
-                  <td style={{ textAlign: 'center' }}>
-                    {stagePoints.publicacion.earned === stagePoints.publicacion.max ? '✅' : stagePoints.publicacion.earned > 0 ? '⚠️' : '⏳'}
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {stagePoints.publicacion.earned} / {stagePoints.publicacion.max}
-                  </td>
-                </tr>
+                {workflowResult?.stages.map((stage) => {
+                  let statusChar = '⏳';
+                  if (stage.status === 'completed' || stage.status === 'not_required') {
+                    statusChar = '✅';
+                  } else if (stage.status === 'in_progress') {
+                    statusChar = '⚠️';
+                  } else if (stage.status === 'blocked') {
+                    statusChar = '🚫';
+                  }
+
+                  return (
+                    <tr key={stage.key}>
+                      <td>{stage.label}</td>
+                      <td style={{ textAlign: 'center' }}>{statusChar}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                        {stage.completionPercentage}%
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1256,47 +1140,115 @@ export default function ContributionEditForm({
             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)'
           }}>
             <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>
-              Controles Automatizados ({currentProgressResult?.completedItems.length || 0} de 8 resueltos)
+              Tareas Pendientes y Advertencias ({ (workflowResult?.criticalIssues.length || 0) + (workflowResult?.pendingTasks.length || 0) + (workflowResult?.warnings.length || 0) } pendientes)
             </h5>
             
-            {currentProgressResult && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+            {workflowResult && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
                 
-                {/* Tareas Completadas */}
-                {currentProgressResult.completedItems.map(item => (
-                  <div key={item.code} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
+                {/* Tareas Críticas (Bloqueantes) */}
+                {workflowResult.criticalIssues.map((task, idx) => (
+                  <button
+                    key={`crit-${task.field}-${idx}`}
+                    type="button"
+                    onClick={() => handleNavigation(task.targetFieldId, `Crítico: ${task.label}`)}
+                    className="checklist-btn"
+                    style={{ 
+                      color: '#dc2626', 
+                      fontWeight: 700, 
+                      textAlign: 'left', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '0.15rem', 
+                      padding: '0.5rem', 
+                      backgroundColor: '#fef2f2', 
+                      border: '1px solid #fee2e2', 
+                      borderRadius: '6px' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                      <span>🛑</span>
+                      <strong>{task.label} (CRÍTICO)</strong>
+                    </div>
+                    {task.reason && (
+                      <span style={{ fontSize: '0.75rem', color: '#991b1b', fontWeight: 'normal', paddingLeft: '1.2rem' }}>
+                        {task.reason}
+                      </span>
+                    )}
+                  </button>
+                ))}
+
+                {/* Tareas Importantes */}
+                {workflowResult.pendingTasks.map((task, idx) => (
+                  <button
+                    key={`pend-${task.field}-${idx}`}
+                    type="button"
+                    onClick={() => handleNavigation(task.targetFieldId, `Importante: ${task.label}`)}
+                    className="checklist-btn"
+                    style={{ 
+                      color: '#d97706', 
+                      fontWeight: 600, 
+                      textAlign: 'left', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '0.15rem', 
+                      padding: '0.5rem', 
+                      backgroundColor: '#fffbeb', 
+                      border: '1px solid #fef3c7', 
+                      borderRadius: '6px' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                      <span>⏳</span>
+                      <strong>{task.label}</strong>
+                    </div>
+                    {task.reason && (
+                      <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 'normal', paddingLeft: '1.2rem' }}>
+                        {task.reason}
+                      </span>
+                    )}
+                  </button>
+                ))}
+
+                {/* Advertencias / Tareas Opcionales */}
+                {workflowResult.warnings.map((task, idx) => (
+                  <button
+                    key={`warn-${task.field}-${idx}`}
+                    type="button"
+                    onClick={() => handleNavigation(task.targetFieldId, `Opcional: ${task.label}`)}
+                    className="checklist-btn"
+                    style={{ 
+                      color: '#64748b', 
+                      fontWeight: 500, 
+                      textAlign: 'left', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '0.15rem', 
+                      padding: '0.5rem', 
+                      backgroundColor: '#f8fafc', 
+                      border: '1px solid #e2e8f0', 
+                      borderRadius: '6px' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                      <span>⚠️</span>
+                      <strong>{task.label} (Opcional)</strong>
+                    </div>
+                    {task.reason && (
+                      <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 'normal', paddingLeft: '1.2rem' }}>
+                        {task.reason}
+                      </span>
+                    )}
+                  </button>
+                ))}
+
+                {/* Mensaje de completitud */}
+                {workflowResult.criticalIssues.length === 0 && workflowResult.pendingTasks.length === 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', color: '#16a34a', fontWeight: 600, padding: '0.5rem', backgroundColor: '#f0fdf4', border: '1px solid #dcfce7', borderRadius: '6px' }}>
                     <span>✔</span>
-                    <span>{item.label}</span>
+                    <span>¡Todos los controles archivísticos y de publicación obligatorios están resueltos!</span>
                   </div>
-                ))}
-
-                {/* Tareas Pendientes */}
-                {currentProgressResult.pendingItems.map(item => (
-                  <button
-                    key={item.code}
-                    type="button"
-                    onClick={() => item.target && handleNavigation(item.target, `Pendiente: ${item.label}`)}
-                    className="checklist-btn"
-                    style={{ color: '#d97706', fontWeight: 500 }}
-                  >
-                    <span>○</span>
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-
-                {/* Tareas Bloqueadas */}
-                {currentProgressResult.blockedItems.map(item => (
-                  <button
-                    key={item.code}
-                    type="button"
-                    onClick={() => item.target && handleNavigation(item.target, `Bloqueada: ${item.label}`)}
-                    className="checklist-btn"
-                    style={{ color: '#dc2626', fontWeight: 600 }}
-                  >
-                    <span>🛑</span>
-                    <span>{item.label}</span>
-                  </button>
-                ))}
+                )}
 
               </div>
             )}
@@ -1577,7 +1529,7 @@ export default function ContributionEditForm({
           </button>
         </h4>
 
-        {selectedStatusOpt?.code === 'publishable' && !editorialEvaluation.eligibleForPublication && (
+        {selectedStatusOpt?.code === 'publishable' && workflowResult?.publicationEligibility !== 'ready' && (
           <div style={{
             backgroundColor: '#fffbeb',
             border: '1px solid #fef3c7',
@@ -1745,10 +1697,10 @@ export default function ContributionEditForm({
           editorResponsibleUserId={editorResponsibleUserId}
           validatedByUserId={validatedByUserId}
           publishedByUserId={publishedByUserId}
-          qualityIndex={editorialEvaluation.qualityIndex}
-          qualityText={editorialEvaluation.qualityText}
-          historicalReliabilityStars={editorialEvaluation.historicalReliabilityStars}
-          historicalReliabilityLabel={editorialEvaluation.historicalReliabilityLabel}
+          qualityIndex={workflowResult?.completionPercentage || 0}
+          qualityText={qualityRating.text}
+          historicalReliabilityStars={historicalReliabilityStars}
+          historicalReliabilityLabel={historicalReliabilityLabel}
           selectedStatusName={selectedStatusOpt?.name || 'No publicado'}
           notes={notes}
           contributor={contributor}
@@ -1756,6 +1708,7 @@ export default function ContributionEditForm({
           consentSource={consentSource}
           historicalValidationStatusState={historicalValidationStatusState}
           historicalValidationStatus={historicalValidationStatus}
+          workflowResult={workflowResult}
         />,
         document.getElementById('print-portal-root')!
       )}

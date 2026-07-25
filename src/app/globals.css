@@ -1180,13 +1180,14 @@ p {
   /* El portal y sus hijos se muestran de manera natural y fluida */
   #print-portal-root {
     display: block !important;
+    position: static !important;
+    visibility: visible !important;
     width: 100%;
   }
 
   .print-only-show {
     display: block !important;
-    position: absolute;
-    inset: 0;
+    position: static !important;
     width: 100%;
     margin: 0;
   }
@@ -1210,8 +1211,10 @@ p {
 }
 
 /* Ocultar en pantalla exclusivamente el portal de impresión a nivel raíz */
-#print-portal-root {
-  display: none !important;
+@media screen {
+  #print-portal-root {
+    display: none !important;
+  }
 }
 
 /* Margen superior para evitar solapamiento con la cabecera fija */

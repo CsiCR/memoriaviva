@@ -1209,8 +1209,8 @@ p {
   }
 }
 
-/* Ocultar en pantalla el expediente imprimible */
-.print-only-show {
+/* Ocultar en pantalla exclusivamente el portal de impresión a nivel raíz */
+#print-portal-root {
   display: none !important;
 }
 

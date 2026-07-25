@@ -165,6 +165,18 @@ export default function ContributionEditForm({
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
+    const handleBeforePrint = () => {
+      const portal = document.getElementById('print-portal-root');
+      const show = document.querySelector('.print-only-show');
+      console.info("BeforePrint styles:", {
+        portalDisplay: portal ? getComputedStyle(portal).display : 'null',
+        showDisplay: show ? getComputedStyle(show).display : 'null',
+        portalVisibility: portal ? getComputedStyle(portal).visibility : 'null',
+        showVisibility: show ? getComputedStyle(show).visibility : 'null',
+      });
+    };
+    window.addEventListener('beforeprint', handleBeforePrint);
+    return () => window.removeEventListener('beforeprint', handleBeforePrint);
   }, []);
   const [notes, setNotes] = useState(initialNotes || '');
   const [consentVerified, setConsentVerified] = useState(initialConsentVerified);

@@ -1,8 +1,8 @@
 {
   "version": "3.2.1",
   "releaseName": "First Public Beta",
-  "buildDate": "2026-07-25T10:44:26.428Z",
-  "gitCommit": "bf3dd14",
+  "buildDate": "2026-07-25T17:59:43.770Z",
+  "gitCommit": "47c0bb1",
   "environment": "development",
   "schemaVersion": "1",
   "tests": 389,

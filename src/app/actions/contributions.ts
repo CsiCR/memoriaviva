@@ -16,11 +16,15 @@ export async function updateContributionStatus(
   }
 
   // 2. Verificar rol en profiles
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', session.user.id)
-    .single();
+    .maybeSingle();
+
+  if (profileError) {
+    console.error('[ERRORES EDITORIAL] Error al obtener el perfil del usuario:', profileError.message);
+  }
 
   if (!profile || !['admin', 'editor', 'validator', 'interviewer'].includes(profile.role)) {
     throw new Error('No tienes permisos suficientes.');
@@ -40,11 +44,15 @@ export async function updateContributionStatus(
   }
 
   // 1. Obtener datos actuales del aporte para ver si cambiaron los términos de cesión
-  const { data: currentContribution } = await supabase
+  const { data: currentContribution, error: contributionError } = await supabase
     .from('contributions')
     .select('contributor_id, authorization_level, credit_preference, consent_file_path')
     .eq('id', id)
-    .single();
+    .maybeSingle();
+
+  if (contributionError) {
+    console.error('[ERRORES EDITORIAL] Error al obtener la contribución actual:', contributionError.message);
+  }
 
   let newConsentFilePath = currentContribution?.consent_file_path || null;
 

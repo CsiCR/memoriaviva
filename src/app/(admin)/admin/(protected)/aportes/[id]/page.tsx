@@ -19,20 +19,24 @@ interface PageProps {
 }
 
 export default async function AdminContributionDetail({ params, searchParams }: PageProps) {
-  const { id } = await params;
-  const { from } = await searchParams;
-  const supabase = await createClient();
+  try {
+    const { id } = await params;
+    const { from } = await searchParams;
+    const supabase = await createClient();
 
   // Obtener rol del usuario autenticado
   const { data: { user } } = await supabase.auth.getUser();
   let userRole = 'editor';
   let editorName = 'Coordinador';
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role, full_name')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
+    if (profileError) {
+      console.error('[ERRORES EDITORIAL] Error al obtener el perfil del usuario actual:', profileError.message);
+    }
     if (profile) {
       userRole = profile.role;
       if (profile.full_name) {
@@ -64,11 +68,14 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   // Obtener la opción de estado de publicación actual si existe
   let publicationStatusOpt = null;
   if (contribution.publication_status_option_id) {
-    const { data: pubOpt } = await supabase
+    const { data: pubOpt, error: pubOptError } = await supabase
       .from('select_options')
       .select('*')
       .eq('id', contribution.publication_status_option_id)
-      .single();
+      .maybeSingle();
+    if (pubOptError) {
+      console.error('[ERRORES EDITORIAL] Error al obtener la opción del estado de publicación:', pubOptError.message);
+    }
     publicationStatusOpt = pubOpt;
   }
 
@@ -113,6 +120,14 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     authorization_level: contribution.authorization_level,
     credit_preference: contribution.credit_preference,
     consent_source: contribution.consent_source,
+    historical_validation_status: contribution.historical_validation_status,
+    historical_validation_notes: contribution.historical_validation_notes,
+    contributor: contribution.contributors ? {
+      full_name: contribution.contributors.full_name || 'Anónimo',
+      email: contribution.contributors.email || null,
+      phone: contribution.contributors.phone || null,
+      relation_to_city: contribution.contributors.relation_to_city || null
+    } : null,
     files: (contribution.contribution_files || []).map((f: any) => ({
       id: f.id,
       file_name: f.original_filename || '',
@@ -171,7 +186,14 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   // Generar historial de consentimientos ordenados por fecha y obtener sus Signed URLs si tienen archivo
   const consentHistory = await Promise.all(
     (contribution.consent_records || [])
-      .sort((a: any, b: any) => new Date(b.accepted_at).getTime() - new Date(a.accepted_at).getTime())
+      .slice()
+      .sort((a: any, b: any) => {
+        const timeA = a.accepted_at ? new Date(a.accepted_at).getTime() : 0;
+        const timeB = b.accepted_at ? new Date(b.accepted_at).getTime() : 0;
+        const validTimeA = isNaN(timeA) ? 0 : timeA;
+        const validTimeB = isNaN(timeB) ? 0 : timeB;
+        return validTimeB - validTimeA;
+      })
       .map(async (record: any) => {
         let signedUrl = null;
         if (record.consent_file_path) {
@@ -253,7 +275,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
     return 'Acción registrada.';
   }
 
-  const statusBadgeClass = `badge badge-${contribution.editorial_status.toLowerCase().replace(/á/g, 'a').replace(/ó/g, 'o').replace(/ /g, '-')}`;
+  const statusBadgeClass = `badge badge-${(contribution.editorial_status || 'Recibido').toLowerCase().replace(/á/g, 'a').replace(/ó/g, 'o').replace(/ /g, '-')}`;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -383,7 +405,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                   {contribution.exact_date 
                     ? formatDateToAR(contribution.exact_date)
                     : contribution.approximate_decade 
-                      ? `Aprox. década de ${contribution.approximate_decade.replace('s', '')}` 
+                      ? `Aprox. década de ${String(contribution.approximate_decade).replace('s', '')}` 
                       : 'Desconocido'
                   }
                 </strong>
@@ -450,9 +472,10 @@ export default async function AdminContributionDetail({ params, searchParams }: 
             {filesWithSignedUrls.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {filesWithSignedUrls.map((file: any) => {
-                  const isImage = file.file_type.startsWith('image/');
-                  const isAudio = file.file_type.startsWith('audio/');
-                  const isVideo = file.file_type.startsWith('video/');
+                  const fileType = file.file_type || '';
+                  const isImage = fileType.startsWith('image/');
+                  const isAudio = fileType.startsWith('audio/');
+                  const isVideo = fileType.startsWith('video/');
 
                   return (
                     <div key={file.id} style={{
@@ -660,9 +683,13 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Teléfono / WhatsApp</span>
-                  <a href={`https://wa.me/${contribution.contributors.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
-                    <Heart size={12} style={{ color: '#25D366' }} /> {contribution.contributors.phone}
-                  </a>
+                  {contribution.contributors.phone ? (
+                    <a href={`https://wa.me/${String(contribution.contributors.phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
+                      <Heart size={12} style={{ color: '#25D366' }} /> {contribution.contributors.phone}
+                    </a>
+                  ) : (
+                    <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No informado</span>
+                  )}
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Email</span>
@@ -1131,4 +1158,17 @@ export default async function AdminContributionDetail({ params, searchParams }: 
       </div>
     </div>
   );
+  } catch (error: any) {
+    console.error('[ERRORES EDITORIAL] Error crítico durante render de Server Component:', error);
+    return (
+      <div style={{ padding: '2rem', maxWidth: '800px', margin: '2rem auto', border: '1px solid #fca5a5', backgroundColor: '#fef2f2', borderRadius: '8px', color: '#991b1b', fontFamily: 'sans-serif' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>⚠️ Error en el Renderizado del Expediente</h2>
+        <p>Se produjo un error crítico al procesar o recuperar la información de este expediente.</p>
+        <p style={{ fontSize: '0.85rem', color: '#7f1d1d', marginTop: '1rem' }}>Detalle técnico: {error.message || 'Error desconocido'}</p>
+        <div style={{ marginTop: '1.5rem' }}>
+          <a href="/admin/aportes" style={{ textDecoration: 'underline', fontWeight: 'bold', color: '#991b1b' }}>Volver al listado de aportes</a>
+        </div>
+      </div>
+    );
+  }
 }

@@ -355,9 +355,17 @@ export default async function AdminContributionDetail({ params, searchParams }: 
           
           {/* Ficha 1: Metadatos Históricos */}
           <div className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <FileText size={20} style={{ color: 'var(--primary-blue)' }} /> Ficha Histórica del Material
             </h2>
+            <div style={{ backgroundColor: '#f8fafc', borderLeft: '4px solid #64748b', padding: '0.75rem 1rem', marginBottom: '1.5rem', borderRadius: '0 4px 4px 0' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Información original aportada
+              </span>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
+                Este contenido corresponde al aporte original y se conserva sin modificaciones.
+              </p>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
               <div>
@@ -427,9 +435,17 @@ export default async function AdminContributionDetail({ params, searchParams }: 
 
           {/* Ficha 2: Archivos Adjuntos (Signed URLs) */}
           <div id="attachments" className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <File size={20} style={{ color: 'var(--primary-blue)' }} /> Archivos Digitales Adjuntos ({filesWithSignedUrls.length})
             </h2>
+            <div style={{ backgroundColor: '#f8fafc', borderLeft: '4px solid #64748b', padding: '0.75rem 1rem', marginBottom: '1.5rem', borderRadius: '0 4px 4px 0' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Documentos y adjuntos originales
+              </span>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
+                Los archivos cargados por el aportante no pueden ser editados ni eliminados.
+              </p>
+            </div>
 
             {filesWithSignedUrls.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -614,9 +630,17 @@ export default async function AdminContributionDetail({ params, searchParams }: 
           
           {/* Ficha 3: Datos de Aportante */}
           <div className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <User size={20} style={{ color: 'var(--primary-blue)' }} /> Ficha del Aportante
             </h2>
+            <div style={{ backgroundColor: '#f8fafc', borderLeft: '4px solid #64748b', padding: '0.75rem 1rem', marginBottom: '1.5rem', borderRadius: '0 4px 4px 0' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Identificación de la fuente
+              </span>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
+                Los datos de contacto y procedencia local se conservan intactos.
+              </p>
+            </div>
 
             {contribution.contributors ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
@@ -677,9 +701,17 @@ export default async function AdminContributionDetail({ params, searchParams }: 
 
           {/* Ficha 4: Consentimiento Firmado */}
           <div id="consent" className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> Consentimiento Firmado
             </h2>
+            <div style={{ backgroundColor: '#f8fafc', borderLeft: '4px solid #64748b', padding: '0.75rem 1rem', marginBottom: '1.5rem', borderRadius: '0 4px 4px 0' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Instrumento legal de cesión
+              </span>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
+                El consentimiento legal de cesión se mantiene sin modificaciones para auditar la legitimidad del testimonio.
+              </p>
+            </div>
 
             <div style={{ marginBottom: '1rem' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Estado del Consentimiento</span>
@@ -1077,6 +1109,20 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               updatedAt={contribution.updated_at}
               publishedAt={contribution.published_at}
               editorName={editorName}
+              initialEditorialTitle={contribution.editorial_title}
+              initialEditorialDescription={contribution.editorial_description}
+              initialEditorialSummary={contribution.editorial_summary}
+              initialEditorialContext={contribution.editorial_context}
+              initialEditorialClassification={contribution.editorial_classification}
+              initialHistoricalValidationNotes={contribution.historical_validation_notes}
+              initialPublicationTitle={contribution.publication_title}
+              initialPublicationExcerpt={contribution.publication_excerpt}
+              initialPublicationLevel={contribution.publication_level}
+              initialPublicationCredits={contribution.publication_credits}
+              editorResponsibleUserId={contribution.editor_responsible_user_id}
+              validatedByUserId={contribution.validated_by_user_id}
+              publishedByUserId={contribution.published_by_user_id}
+              editorialUpdatedAt={contribution.editorial_updated_at}
             />
           </div>
 

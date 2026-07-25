@@ -81,6 +81,21 @@ interface ContributionEditFormProps {
   title?: string | null;
   historicalValidationStatus?: string | null;
   editorName?: string | null;
+  // Campos de la Capa Editorial y Publicación
+  initialEditorialTitle?: string | null;
+  initialEditorialDescription?: string | null;
+  initialEditorialSummary?: string | null;
+  initialEditorialContext?: string | null;
+  initialEditorialClassification?: string | null;
+  initialHistoricalValidationNotes?: string | null;
+  initialPublicationTitle?: string | null;
+  initialPublicationExcerpt?: string | null;
+  initialPublicationLevel?: string | null;
+  initialPublicationCredits?: string | null;
+  editorResponsibleUserId?: string | null;
+  validatedByUserId?: string | null;
+  publishedByUserId?: string | null;
+  editorialUpdatedAt?: string | null;
 }
 
 // Mapear nombres de iconos de base de datos a componentes Lucide
@@ -128,17 +143,31 @@ export default function ContributionEditForm({
   publishedAt,
   title,
   historicalValidationStatus,
-  editorName = 'Coordinador'
+  editorName = 'Coordinador',
+  initialEditorialTitle,
+  initialEditorialDescription,
+  initialEditorialSummary,
+  initialEditorialContext,
+  initialEditorialClassification,
+  initialHistoricalValidationNotes,
+  initialPublicationTitle,
+  initialPublicationExcerpt,
+  initialPublicationLevel,
+  initialPublicationCredits,
+  editorResponsibleUserId,
+  validatedByUserId,
+  publishedByUserId,
+  editorialUpdatedAt
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
   const [consentVerified, setConsentVerified] = useState(initialConsentVerified);
   
-  // Nivel y Créditos (Solo Lectura)
+  // Nivel y Créditos Originales (Solo Lectura)
   const [level] = useState(initialLevel);
   const [credits] = useState(initialCredits);
 
-  // Estados del Formulario (Nuevas Dimensiones)
+  // Estados del Formulario (Nuevas Dimensiones de Publicación)
   const [publicationStatusOptionId, setPublicationStatusOptionId] = useState(initialPublicationStatusOptionId || '');
   const [publicationNotes, setPublicationNotes] = useState(initialPublicationNotes || '');
   const [publicationScheduledAt, setPublicationScheduledAt] = useState(
@@ -146,6 +175,21 @@ export default function ContributionEditForm({
   );
   const [activeIndicatorOptionIds, setActiveIndicatorOptionIds] = useState<string[]>(initialActiveIndicatorOptionIds);
   const [indicatorNotes, setIndicatorNotes] = useState('');
+
+  // Nuevos Estados de la Capa Editorial
+  const [editorialTitle, setEditorialTitle] = useState(initialEditorialTitle || '');
+  const [editorialDescription, setEditorialDescription] = useState(initialEditorialDescription || '');
+  const [editorialSummary, setEditorialSummary] = useState(initialEditorialSummary || '');
+  const [editorialContext, setEditorialContext] = useState(initialEditorialContext || '');
+  const [editorialClassification, setEditorialClassification] = useState(initialEditorialClassification || '');
+  const [historicalValidationStatusState, setHistoricalValidationStatusState] = useState(historicalValidationStatus || 'not_evaluated');
+  const [historicalValidationNotes, setHistoricalValidationNotes] = useState(initialHistoricalValidationNotes || '');
+
+  // Nuevos Estados de Preparación de Publicación
+  const [publicationTitle, setPublicationTitle] = useState(initialPublicationTitle || '');
+  const [publicationExcerpt, setPublicationExcerpt] = useState(initialPublicationExcerpt || '');
+  const [publicationLevel, setPublicationLevel] = useState(initialPublicationLevel || '');
+  const [publicationCredits, setPublicationCredits] = useState(initialPublicationCredits || '');
 
   // Opciones dinámicas de base de datos
   const [dbOptions, setDbOptions] = useState<Record<string, SelectOption[]>>({
@@ -213,8 +257,8 @@ export default function ContributionEditForm({
     
     return {
       id,
-      title: title || null,
-      description: description || null,
+      title: editorialTitle || title || null,
+      description: editorialDescription || description || null,
       internal_notes: notes || null,
       content_type: mappedContentType,
       editorial_status: {
@@ -253,10 +297,22 @@ export default function ContributionEditForm({
           name: opt.name,
           code: opt.code,
           metadata: opt.metadata
-        }))
+        })),
+      editorial_title: editorialTitle || null,
+      editorial_description: editorialDescription || null,
+      editorial_summary: editorialSummary || null,
+      editorial_context: editorialContext || null,
+      editorial_classification: editorialClassification || null,
+      historical_validation_status: historicalValidationStatusState as any,
+      historical_validation_notes: historicalValidationNotes || null,
+      publication_title: publicationTitle || null,
+      publication_excerpt: publicationExcerpt || null,
+      publication_level: publicationLevel || null,
+      publication_credits: publicationCredits || null
     };
   }, [
     id,
+    title,
     description,
     contributionType,
     status,
@@ -271,7 +327,18 @@ export default function ContributionEditForm({
     consentSource,
     files,
     consentRecords,
-    activeIndicatorOptionIds
+    activeIndicatorOptionIds,
+    editorialTitle,
+    editorialDescription,
+    editorialSummary,
+    editorialContext,
+    editorialClassification,
+    historicalValidationStatusState,
+    historicalValidationNotes,
+    publicationTitle,
+    publicationExcerpt,
+    publicationLevel,
+    publicationCredits
   ]);
 
   const editorialEvaluation = useMemo(() => {
@@ -296,7 +363,18 @@ export default function ContributionEditForm({
       publicationStatusOptionId !== (initialPublicationStatusOptionId || '') ||
       publicationNotes !== (initialPublicationNotes || '') ||
       currentDateStr !== initialDateStr ||
-      currentIndsSorted !== initialIndsSorted
+      currentIndsSorted !== initialIndsSorted ||
+      editorialTitle !== (initialEditorialTitle || '') ||
+      editorialDescription !== (initialEditorialDescription || '') ||
+      editorialSummary !== (initialEditorialSummary || '') ||
+      editorialContext !== (initialEditorialContext || '') ||
+      editorialClassification !== (initialEditorialClassification || '') ||
+      historicalValidationStatusState !== (historicalValidationStatus || 'not_evaluated') ||
+      historicalValidationNotes !== (initialHistoricalValidationNotes || '') ||
+      publicationTitle !== (initialPublicationTitle || '') ||
+      publicationExcerpt !== (initialPublicationExcerpt || '') ||
+      publicationLevel !== (initialPublicationLevel || '') ||
+      publicationCredits !== (initialPublicationCredits || '')
     );
   }, [
     status, initialStatus,
@@ -305,7 +383,18 @@ export default function ContributionEditForm({
     publicationStatusOptionId, initialPublicationStatusOptionId,
     publicationNotes, initialPublicationNotes,
     publicationScheduledAt, initialPublicationScheduledAt,
-    activeIndicatorOptionIds, initialActiveIndicatorOptionIds
+    activeIndicatorOptionIds, initialActiveIndicatorOptionIds,
+    editorialTitle, initialEditorialTitle,
+    editorialDescription, initialEditorialDescription,
+    editorialSummary, initialEditorialSummary,
+    editorialContext, initialEditorialContext,
+    editorialClassification, initialEditorialClassification,
+    historicalValidationStatusState, historicalValidationStatus,
+    historicalValidationNotes, initialHistoricalValidationNotes,
+    publicationTitle, initialPublicationTitle,
+    publicationExcerpt, initialPublicationExcerpt,
+    publicationLevel, initialPublicationLevel,
+    publicationCredits, initialPublicationCredits
   ]);
 
   const savedProgressResult = useMemo(() => {
@@ -328,7 +417,17 @@ export default function ContributionEditForm({
         updated_at: updatedAt,
         published_at: publishedAt,
         editorial_status: initialStatus,
-        historical_validation_status: historicalValidationStatus
+        historical_validation_status: historicalValidationStatus,
+        editorial_title: initialEditorialTitle || null,
+        editorial_description: initialEditorialDescription || null,
+        editorial_summary: initialEditorialSummary || null,
+        editorial_context: initialEditorialContext || null,
+        editorial_classification: initialEditorialClassification || null,
+        historical_validation_notes: initialHistoricalValidationNotes || null,
+        publication_title: initialPublicationTitle || null,
+        publication_excerpt: initialPublicationExcerpt || null,
+        publication_level: initialPublicationLevel || null,
+        publication_credits: initialPublicationCredits || null
       };
       
       const savedPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === initialPublicationStatusOptionId);
@@ -350,7 +449,10 @@ export default function ContributionEditForm({
     id, description, initialNotes, contributionType, initialConsentVerified, level, credits, consentSource,
     files, contributor, historicalContext, createdAt, updatedAt, publishedAt,
     dbOptions, initialPublicationStatusOptionId, initialActiveIndicatorOptionIds, loadingOptions,
-    title, initialStatus, historicalValidationStatus
+    title, initialStatus, historicalValidationStatus,
+    initialEditorialTitle, initialEditorialDescription, initialEditorialSummary,
+    initialEditorialContext, initialEditorialClassification, initialHistoricalValidationNotes,
+    initialPublicationTitle, initialPublicationExcerpt, initialPublicationLevel, initialPublicationCredits
   ]);
 
   const currentProgressResult = useMemo(() => {
@@ -373,7 +475,17 @@ export default function ContributionEditForm({
         updated_at: updatedAt,
         published_at: publishedAt,
         editorial_status: status,
-        historical_validation_status: historicalValidationStatus
+        historical_validation_status: historicalValidationStatusState,
+        editorial_title: editorialTitle || null,
+        editorial_description: editorialDescription || null,
+        editorial_summary: editorialSummary || null,
+        editorial_context: editorialContext || null,
+        editorial_classification: editorialClassification || null,
+        historical_validation_notes: historicalValidationNotes || null,
+        publication_title: publicationTitle || null,
+        publication_excerpt: publicationExcerpt || null,
+        publication_level: publicationLevel || null,
+        publication_credits: publicationCredits || null
       };
       
       const currentPubStatusOpt = dbOptions.publication_status.find((o: SelectOption) => o.id === publicationStatusOptionId);
@@ -395,7 +507,10 @@ export default function ContributionEditForm({
     id, description, notes, contributionType, consentVerified, level, credits, consentSource,
     files, contributor, historicalContext, createdAt, updatedAt, publishedAt,
     dbOptions, publicationStatusOptionId, activeIndicatorOptionIds, loadingOptions,
-    title, status, historicalValidationStatus
+    title, status, historicalValidationStatusState,
+    editorialTitle, editorialDescription, editorialSummary,
+    editorialContext, editorialClassification, historicalValidationNotes,
+    publicationTitle, publicationExcerpt, publicationLevel, publicationCredits
   ]);
 
   // Checklist de Revisión Profesional (Manual)
@@ -548,6 +663,19 @@ export default function ContributionEditForm({
     formData.append('publication_scheduled_at', publicationScheduledAt ? new Date(publicationScheduledAt).toISOString() : '');
     formData.append('active_indicator_option_ids', JSON.stringify(activeIndicatorOptionIds));
     formData.append('indicator_notes', indicatorNotes);
+
+    // Nuevos campos de la Capa Editorial y Publicación
+    formData.append('editorial_title', editorialTitle);
+    formData.append('editorial_description', editorialDescription);
+    formData.append('editorial_summary', editorialSummary);
+    formData.append('editorial_context', editorialContext);
+    formData.append('editorial_classification', editorialClassification);
+    formData.append('historical_validation_status', historicalValidationStatusState);
+    formData.append('historical_validation_notes', historicalValidationNotes);
+    formData.append('publication_title', publicationTitle);
+    formData.append('publication_excerpt', publicationExcerpt);
+    formData.append('publication_level', publicationLevel);
+    formData.append('publication_credits', publicationCredits);
 
     try {
       await updateContributionStatus(id, formData);
@@ -747,7 +875,7 @@ export default function ContributionEditForm({
               className="btn btn-outline btn-sm"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
             >
-              🖨️ Imprimir Carátula del Expediente
+              🖨️ Imprimir Expediente
             </button>
           </div>
         </div>
@@ -966,6 +1094,25 @@ export default function ContributionEditForm({
                 <p style={{ margin: '0.25rem 0 0.75rem 0', fontSize: '0.75rem', color: '#1e40af' }}>
                   <strong>¿Por qué?</strong>: {editorialEvaluation.recommendedNextActionDescription}
                 </p>
+
+                {(editorialEvaluation.recommendedNextActionTarget === 'consent' || 
+                  editorialEvaluation.recommendedNextActionTarget === 'attachments') && (
+                  <div style={{ 
+                    backgroundColor: '#fff2f2', 
+                    borderLeft: '4px solid #ef4444', 
+                    padding: '0.6rem 0.85rem', 
+                    marginTop: '0.5rem', 
+                    marginBottom: '0.75rem', 
+                    borderRadius: '4px', 
+                    fontSize: '0.75rem', 
+                    color: '#991b1b', 
+                    fontWeight: 600,
+                    lineHeight: '1.25'
+                  }}>
+                    La información original es insuficiente. Complete la interpretación editorial o registre una observación; no modifique el aporte fuente.
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => handleNavigation(editorialEvaluation.recommendedNextActionTarget!)}
@@ -1111,32 +1258,170 @@ export default function ContributionEditForm({
       </div>
 
 
-      {/* BLOQUE A: Gestión Editorial */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
-        <h4 style={{ fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b' }}>
-          <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', width: '24px', height: '24px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>A</span>
-          Gestión Editorial Principal
+      {/* BLOQUE B: Trabajo Editorial */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '2rem' }}>
+        <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b' }}>
+          <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700 }}>B</span>
+          Trabajo Editorial (Interpretación del Archivo)
         </h4>
 
-        <div id="editorial-status" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
+        {/* Título Editorial */}
+        <div id="editorial-title" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Estado Editorial único</label>
+            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Título Editorial</label>
             <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
-              📍 Volver al Asistente
+              📍 Ver recomendación editorial
             </button>
-            <EditorialHelp helpKey="editorialStatus" initialSelectedValue={status} />
           </div>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="form-select"
+          <input
+            type="text"
+            value={editorialTitle}
+            onChange={(e) => setEditorialTitle(e.target.value)}
+            placeholder="Título normalizado y descriptivo para el catálogo del archivo..."
+            className="form-input"
             disabled={saving}
-            style={{ height: '40px', maxWidth: '400px' }}
-          >
-            {editorialStatuses.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+            style={{ height: '40px' }}
+          />
+        </div>
+
+        {/* Descripción Editorial */}
+        <div id="editorial-description" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Descripción Editorial</label>
+            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+              📍 Ver recomendación editorial
+            </button>
+          </div>
+          <textarea
+            value={editorialDescription}
+            onChange={(e) => setEditorialDescription(e.target.value)}
+            placeholder="Descripción formal y detallada del testimonio, personas y sucesos..."
+            className="form-textarea"
+            disabled={saving}
+            style={{ minHeight: '100px', fontSize: '0.9rem' }}
+          />
+        </div>
+
+        <div className="grid grid-2" style={{ gap: '1.5rem' }}>
+          {/* Clasificación Editorial */}
+          <div id="editorial-classification" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+              <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Clasificación de Aporte</label>
+              <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+                📍 Ver recomendación editorial
+              </button>
+            </div>
+            <select
+              value={editorialClassification}
+              onChange={(e) => setEditorialClassification(e.target.value)}
+              className="form-select"
+              disabled={saving}
+              style={{ height: '40px' }}
+            >
+              <option value="">-- Seleccionar clasificación --</option>
+              <option value="Testimonio escrito">Testimonio escrito</option>
+              <option value="Fotografía">Fotografía</option>
+              <option value="Documento">Documento</option>
+              <option value="Audio">Audio</option>
+              <option value="Video">Video</option>
+            </select>
+          </div>
+
+          {/* Estado Editorial */}
+          <div id="editorial-status" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+              <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Estado Editorial</label>
+              <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+                📍 Ver recomendación editorial
+              </button>
+              <EditorialHelp helpKey="editorialStatus" initialSelectedValue={status} />
+            </div>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="form-select"
+              disabled={saving}
+              style={{ height: '40px' }}
+            >
+              {editorialStatuses.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Resumen e Interpretación */}
+        <div id="editorial-summary" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Resumen / Síntesis Corta</label>
+            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+              📍 Ver recomendación editorial
+            </button>
+          </div>
+          <textarea
+            value={editorialSummary}
+            onChange={(e) => setEditorialSummary(e.target.value)}
+            placeholder="Resumen ejecutivo del testimonio para catálogos y búsquedas rápidas..."
+            className="form-textarea"
+            disabled={saving}
+            style={{ minHeight: '60px', fontSize: '0.9rem' }}
+          />
+        </div>
+
+        {/* Contexto Histórico Editorial */}
+        <div id="editorial-context" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Contexto Histórico Ampliado</label>
+            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+              📍 Ver recomendación editorial
+            </button>
+          </div>
+          <textarea
+            value={editorialContext}
+            onChange={(e) => setEditorialContext(e.target.value)}
+            placeholder="Vinculación del testimonio con hitos históricos locales, geografía, o procesos sociopolíticos de Pico Truncado..."
+            className="form-textarea"
+            disabled={saving}
+            style={{ minHeight: '80px', fontSize: '0.9rem' }}
+          />
+        </div>
+
+        {/* Validación Histórica */}
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1.25rem', backgroundColor: '#f8fafc' }}>
+          <h5 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 1rem 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span>🕵️</span> Validación Histórica del Relato
+          </h5>
+          <div className="grid grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
+            <div id="historical-validation-status" className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontWeight: 600, marginBottom: '0.35rem' }}>Estado de Validación</label>
+              <select
+                value={historicalValidationStatusState}
+                onChange={(e) => setHistoricalValidationStatusState(e.target.value)}
+                className="form-select"
+                disabled={saving}
+                style={{ height: '40px' }}
+              >
+                <option value="not_evaluated">No Evaluado</option>
+                <option value="pending">Pendiente de Corroboración</option>
+                <option value="validated">Validado Históricamente</option>
+                <option value="not_required">No Requerida (Folleto/Material Gráfico)</option>
+                <option value="rejected">Rechazado (Inconsistencias Graves)</option>
+              </select>
+            </div>
+
+            <div id="historical-validation-notes" className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontWeight: 600, marginBottom: '0.35rem' }}>Notas de Validación</label>
+              <input
+                type="text"
+                value={historicalValidationNotes}
+                onChange={(e) => setHistoricalValidationNotes(e.target.value)}
+                placeholder="Evidencia de archivos, cruce de fuentes o notas del validador..."
+                className="form-input"
+                disabled={saving}
+                style={{ height: '40px' }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Indicadores Editoriales Checkboxes */}
@@ -1214,11 +1499,12 @@ export default function ContributionEditForm({
           </div>
         )}
 
+        {/* Observaciones Editoriales Internas */}
         <div id="internal-notes" className="form-group" style={{ margin: 0, borderRadius: '4px', padding: '4px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Observaciones Editoriales Internas</label>
+            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Observaciones Editoriales Internas (Bitácora)</label>
             <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
-              📍 Volver al Asistente
+              📍 Ver recomendación editorial
             </button>
           </div>
           <textarea
@@ -1232,82 +1518,16 @@ export default function ContributionEditForm({
         </div>
       </div>
 
-      {/* BLOQUE B: Consentimiento (Solo Lectura) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h4 style={{ fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b' }}>
-            <span style={{ backgroundColor: '#f0fdf4', color: '#16a34a', width: '24px', height: '24px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>B</span>
-            Términos de Consentimiento y Cesión
-          </h4>
-          <span style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
-            🔒 Solo Lectura (Procedimiento Formal Requerido)
-          </span>
-        </div>
-
-        <div className="grid grid-2" style={{ gap: '1rem' }}>
-          <div className="form-group" style={{ margin: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
-              <label className="form-label" style={{ margin: 0 }}>Nivel de Autorización</label>
-              <EditorialHelp helpKey="authorizationLevel" initialSelectedValue={level} />
-            </div>
-            <select
-              value={level}
-              disabled={true}
-              className="form-select"
-              style={{ height: '40px', backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: '#475569' }}
-            >
-              <option value={level}>Nivel {level}</option>
-            </select>
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
-              <label className="form-label" style={{ margin: 0 }}>Preferencia de Créditos</label>
-              <EditorialHelp helpKey="creditPreference" initialSelectedValue={credits} />
-            </div>
-            <select
-              value={credits}
-              disabled={true}
-              className="form-select"
-              style={{ height: '40px', backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: '#475569' }}
-            >
-              <option value={credits}>{credits}</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="form-group" style={{ margin: 0 }}>
-          <label className="form-label">Soporte Legal de Respaldo</label>
-          {consentSource === 'web_form' ? (
-            <div style={{ padding: '0.6rem 0.75rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '0.8rem', color: '#166534', height: '40px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
-              <span>✓ Autorización Digital (Aceptada vía Formulario Web)</span>
-            </div>
-          ) : (
-            <div style={{ padding: '0.6rem 0.75rem', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '0.8rem', color: '#0369a1', height: '40px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
-              <span>📄 Archivo de Respaldo Físico o Convenio cargado en Ficha Legal</span>
-            </div>
-          )}
-          
-          <div style={{ marginTop: '0.5rem', padding: '0.75rem', backgroundColor: '#fafaf9', borderRadius: '6px', border: '1px solid #e7e5e4', fontSize: '0.75rem' }}>
-            <span style={{ fontWeight: 700, color: 'var(--neutral-grey)', display: 'block', marginBottom: '0.25rem' }}>
-              ¿Por qué existe este campo? · Consentimiento firmado
-            </span>
-            <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
-              El consentimiento firmado es el instrumento legal que faculta a Memoria Viva a conservar, procesar y difundir el material aportado. Protege los derechos del aportante y garantiza la legitimidad pública del archivo.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* BLOQUE C: Publicación */}
-      <div id="publication-settings" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderRadius: '4px', padding: '4px', position: 'relative' }}>
-        <h4 style={{ fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b', flexWrap: 'wrap' }}>
-          <span style={{ backgroundColor: '#fff7ed', color: '#ea580c', width: '24px', height: '24px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>C</span>
-          Configuración de Publicación
+      {/* BLOQUE C: Preparación para Publicación */}
+      <div id="publication-settings" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: '4px', padding: '4px', position: 'relative' }}>
+        <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b', flexWrap: 'wrap' }}>
+          <span style={{ backgroundColor: '#fff7ed', color: '#ea580c', width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700 }}>C</span>
+          Preparación para Publicación
           <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
-            📍 Volver al Asistente
+            📍 Ver recomendación editorial
           </button>
         </h4>
+
         {selectedStatusOpt?.code === 'publishable' && !editorialEvaluation.eligibleForPublication && (
           <div style={{
             backgroundColor: '#fffbeb',
@@ -1322,7 +1542,69 @@ export default function ContributionEditForm({
           </div>
         )}
 
-        <div className="grid grid-2" style={{ gap: '1rem' }}>
+        <div className="grid grid-2" style={{ gap: '1.5rem' }}>
+          {/* Título Público */}
+          <div id="publication-title" className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>Título Público en Portal</label>
+            <input
+              type="text"
+              value={publicationTitle}
+              onChange={(e) => setPublicationTitle(e.target.value)}
+              placeholder="Título atractivo y adecuado para la difusión web pública..."
+              className="form-input"
+              disabled={saving}
+              style={{ height: '40px' }}
+            />
+          </div>
+
+          {/* Créditos públicos */}
+          <div id="publication-credits" className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>Créditos de Publicación</label>
+            <input
+              type="text"
+              value={publicationCredits}
+              onChange={(e) => setPublicationCredits(e.target.value)}
+              placeholder="Ej: Familia González / Aportante Anónimo..."
+              className="form-input"
+              disabled={saving}
+              style={{ height: '40px' }}
+            />
+          </div>
+        </div>
+
+        {/* Extracto Público */}
+        <div id="publication-excerpt" className="form-group">
+          <label className="form-label" style={{ fontWeight: 600 }}>Extracto Público (Exhibición Web)</label>
+          <textarea
+            value={publicationExcerpt}
+            onChange={(e) => setPublicationExcerpt(e.target.value)}
+            placeholder="Breve introducción o copete para captar la atención del lector en el portal..."
+            className="form-textarea"
+            disabled={saving}
+            style={{ minHeight: '60px', fontSize: '0.9rem' }}
+          />
+        </div>
+
+        <div className="grid grid-3" style={{ gap: '1rem' }}>
+          {/* Nivel de Acceso */}
+          <div id="publication-level" className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Nivel de Acceso</label>
+            <select
+              value={publicationLevel}
+              onChange={(e) => setPublicationLevel(e.target.value)}
+              className="form-select"
+              disabled={saving}
+              style={{ height: '40px' }}
+            >
+              <option value="">-- Seleccionar nivel --</option>
+              <option value="A">Nivel A (Acceso Abierto)</option>
+              <option value="B">Nivel B (Fines de Investigación)</option>
+              <option value="C">Nivel C (Restringido Temporal)</option>
+              <option value="D">Nivel D (Confidencialidad Total)</option>
+            </select>
+          </div>
+
+          {/* Estado de Publicación */}
           <div className="form-group" style={{ margin: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
               <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Estado de Publicación</label>
@@ -1347,7 +1629,7 @@ export default function ContributionEditForm({
           {requiresDate && (
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label" style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
-                Fecha de Publicación Programada
+                Fecha Programada
               </label>
               <input
                 type="datetime-local"
@@ -1362,12 +1644,13 @@ export default function ContributionEditForm({
           )}
         </div>
 
+        {/* Notas de Publicación */}
         <div className="form-group">
           <label className="form-label" style={{ fontWeight: 600 }}>Notas de Publicación</label>
           <textarea
             value={publicationNotes}
             onChange={(e) => setPublicationNotes(e.target.value)}
-            placeholder="Escribe aclaraciones sobre la publicación, motivos de retiro o detalles de programación..."
+            placeholder="Aclaraciones sobre las condiciones de exhibición, autorizaciones especiales o detalles de programación..."
             className="form-textarea"
             disabled={saving}
             style={{ minHeight: '60px', fontSize: '0.9rem' }}
@@ -1393,6 +1676,194 @@ export default function ContributionEditForm({
       >
         <Save size={18} /> {saving ? 'Guardando cambios editoriales...' : 'Guardar Ficha Editorial Multidimensional'}
       </button>
+
+      {/* EXPEDIENTE IMPRIMIBLE A DOS PÁGINAS A4 */}
+      <div className="print-only-show" style={{ fontFamily: 'Courier New, Courier, monospace', color: '#000', backgroundColor: '#fff', fontSize: '10pt', display: 'none' }}>
+        
+        {/* PÁGINA 1: FICHA ARCHIVÍSTICA */}
+        <div style={{
+          height: '297mm',
+          width: '210mm',
+          padding: '20mm',
+          boxSizing: 'border-box',
+          position: 'relative',
+          border: '2px solid #000',
+          pageBreakAfter: 'always',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            {/* Encabezado */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
+              <div>
+                <strong style={{ fontSize: '1.1rem' }}>MEMORIA VIVA - PICO TRUNCADO</strong>
+                <div style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}>Archivo Histórico Comunitario</div>
+              </div>
+              <div style={{ textAlign: 'right', fontSize: '0.9rem' }}>
+                <strong>EXPEDIENTE: MV-{createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear()}-{id.substring(0, 6).toUpperCase()}</strong>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', margin: '30px 0' }}>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', textDecoration: 'underline', textTransform: 'uppercase', margin: 0 }}>FICHA ARCHIVÍSTICA DE INGRESO</h2>
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', width: '35%', fontWeight: 'bold' }}>CÓDIGO DE EXPEDIENTE:</td>
+                  <td style={{ padding: '8px 0' }}>MV-{createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear()}-{id.substring(0, 6).toUpperCase()}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>TÍTULO DEL APORTE:</td>
+                  <td style={{ padding: '8px 0' }}>{editorialTitle || title || 'SIN TÍTULO'}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>NOMBRE DEL APORTANTE:</td>
+                  <td style={{ padding: '8px 0' }}>{(contributor as any)?.full_name || 'Anónimo'}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>TIPO DE APORTE (ORIGINAL):</td>
+                  <td style={{ padding: '8px 0' }}>{contributionType || '—'}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>CLASIFICACIÓN EDITORIAL:</td>
+                  <td style={{ padding: '8px 0' }}>{editorialClassification || 'Sin clasificar'}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>FECHA DE RECEPCIÓN:</td>
+                  <td style={{ padding: '8px 0' }}>{createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>ESTADO EDITORIAL ACTUAL:</td>
+                  <td style={{ padding: '8px 0' }}>{status}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>NIVEL DE ACCESO:</td>
+                  <td style={{ padding: '8px 0' }}>Nivel {publicationLevel || level || 'A'}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>RESPONSABLE EDITORIAL:</td>
+                  <td style={{ padding: '8px 0' }}>{editorName || '—'} (ID: {editorResponsibleUserId || '—'})</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>ÍNDICE DE CALIDAD:</td>
+                  <td style={{ padding: '8px 0' }}>{editorialEvaluation.qualityIndex} ({editorialEvaluation.qualityText})</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>CONFIABILIDAD HISTÓRICA:</td>
+                  <td style={{ padding: '8px 0' }}>
+                    {'★'.repeat(editorialEvaluation.historicalReliabilityStars)}
+                    {'☆'.repeat(5 - editorialEvaluation.historicalReliabilityStars)} ({editorialEvaluation.historicalReliabilityLabel})
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>ESTADO DE PUBLICACIÓN:</td>
+                  <td style={{ padding: '8px 0' }}>{selectedStatusOpt?.name || 'No publicado'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ borderTop: '2px solid #000', paddingTop: '10px', textAlign: 'center', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
+            <span>Página 1 de 2</span>
+            <span>Archivo Histórico Comunitario Pico Truncado &middot; Memoria Viva</span>
+          </div>
+        </div>
+
+        {/* PÁGINA 2: LÍNEA DE TIEMPO, BITÁCORA Y FIRMAS */}
+        <div style={{
+          height: '297mm',
+          width: '210mm',
+          padding: '20mm',
+          boxSizing: 'border-box',
+          position: 'relative',
+          border: '2px solid #000',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            {/* Encabezado repetido */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
+              <div>
+                <strong style={{ fontSize: '1.1rem' }}>MEMORIA VIVA - PICO TRUNCADO</strong>
+                <div style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}>Archivo Histórico Comunitario</div>
+              </div>
+              <div style={{ textAlign: 'right', fontSize: '0.9rem' }}>
+                <strong>EXPEDIENTE: MV-{createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear()}-{id.substring(0, 6).toUpperCase()}</strong>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', margin: '20px 0' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 'bold', textDecoration: 'underline', textTransform: 'uppercase', margin: 0 }}>LÍNEA DE TIEMPO Y BITÁCORA</h2>
+            </div>
+
+            {/* Línea de tiempo de hitos */}
+            <div style={{ marginTop: '20px' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #000', paddingBottom: '4px' }}>I. HITOS DEL PROCESO ARCHIVÍSTICO</h3>
+              <ul style={{ listStyleType: 'none', paddingLeft: 0, fontSize: '0.85rem' }}>
+                <li style={{ marginBottom: '8px' }}>
+                  [ {createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'} ] RECEPCIÓN: Ingreso y registro inicial del aporte original.
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  [ {consentRecords?.[0]?.accepted_at ? new Date(consentRecords[0].accepted_at).toLocaleDateString('es-AR') : 'PENDIENTE'} ] CONSENTIMIENTO: Aprobación legal de cesión ({consentSource}).
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  [ {editorialUpdatedAt ? new Date(editorialUpdatedAt).toLocaleDateString('es-AR') : (updatedAt ? new Date(updatedAt).toLocaleDateString('es-AR') : 'PENDIENTE')} ] TRABAJO EDITORIAL: Normalización y completitud de datos descriptivos.
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  [ {historicalValidationStatus === 'validated' ? 'COMPLETADO' : historicalValidationStatus === 'not_required' ? 'NO REQUERIDA' : 'PENDIENTE'} ] VALIDACIÓN HISTÓRICA: Corroboración contextual.
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  [ {publishedAt ? new Date(publishedAt).toLocaleDateString('es-AR') : 'PENDIENTE'} ] PUBLICACIÓN EN PORTAL: Activación de la ficha pública.
+                </li>
+              </ul>
+            </div>
+
+            {/* Bitácora y Observaciones */}
+            <div style={{ marginTop: '30px' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #000', paddingBottom: '4px' }}>II. OBSERVACIONES Y NOTAS INTERNAS</h3>
+              <div style={{ border: '1px solid #000', padding: '15px', minHeight: '120px', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
+                {notes || 'No existen observaciones editoriales registradas para este expediente.'}
+              </div>
+            </div>
+
+            {/* Identidad de intervinientes */}
+            <div style={{ marginTop: '30px' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #000', paddingBottom: '4px' }}>III. RESPONSABLES Y FIRMAS DE CONTROL</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginTop: '10px' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '6px 0', fontWeight: 'bold', width: '40%' }}>EDITOR RESPONSABLE:</td>
+                    <td style={{ padding: '6px 0' }}>{editorName || '—'} (ID: {editorResponsibleUserId || '—'})</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '6px 0', fontWeight: 'bold' }}>VALIDADOR HISTÓRICO:</td>
+                    <td style={{ padding: '6px 0' }}>{historicalValidationStatusState === 'validated' ? (editorName || '—') : 'Pendiente'} (ID: {validatedByUserId || '—'})</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '6px 0', fontWeight: 'bold' }}>AUTORIZADO PARA PUBLICACIÓN:</td>
+                    <td style={{ padding: '6px 0' }}>{selectedStatusOpt?.code === 'published' ? (editorName || '—') : 'Pendiente'} (ID: {publishedByUserId || '—'})</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.8rem', marginTop: '30px' }}>
+            <div>Fecha de Impresión: {new Date().toLocaleString('es-AR')}</div>
+            <div style={{ width: '180px', borderTop: '1px solid #000', textAlign: 'center', paddingTop: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>Firma Autorizada</div>
+          </div>
+
+          <div style={{ borderTop: '2px solid #000', paddingTop: '10px', textAlign: 'center', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
+            <span>Página 2 de 2</span>
+            <span>Archivo Histórico Comunitario Pico Truncado &middot; Memoria Viva</span>
+          </div>
+        </div>
+
+      </div>
     </form>
   );
 }

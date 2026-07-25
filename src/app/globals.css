@@ -1224,5 +1224,37 @@ p {
 
   .print-only-show {
     display: block !important;
+    width: 210mm !important;
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
+  
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}
+
+/* Ocultar en pantalla el expediente imprimible */
+.print-only-show {
+  display: none !important;
+}
+
+/* Margen superior para evitar solapamiento con la cabecera fija */
+#editorial-assistant-section,
+#editorial-title,
+#editorial-description,
+#editorial-classification,
+#editorial-status,
+#editorial-summary,
+#editorial-context,
+#historical-validation-status,
+#historical-validation-notes,
+#publication-settings,
+#internal-notes,
+#attachments,
+#consent {
+  scroll-margin-top: 100px !important;
 }

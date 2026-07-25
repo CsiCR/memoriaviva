@@ -79,6 +79,19 @@ export async function updateContributionStatus(
   const activeIndicatorOptionIdsRaw = formData.get('active_indicator_option_ids') as string;
   const indicatorNotes = formData.get('indicator_notes') as string;
 
+  // Nuevos campos de la Capa Editorial y Publicación
+  const editorialTitle = formData.get('editorial_title') as string;
+  const editorialDescription = formData.get('editorial_description') as string;
+  const editorialSummary = formData.get('editorial_summary') as string;
+  const editorialContext = formData.get('editorial_context') as string;
+  const editorialClassification = formData.get('editorial_classification') as string;
+  const historicalValidationStatus = formData.get('historical_validation_status') as string;
+  const historicalValidationNotes = formData.get('historical_validation_notes') as string;
+  const publicationTitle = formData.get('publication_title') as string;
+  const publicationExcerpt = formData.get('publication_excerpt') as string;
+  const publicationLevel = formData.get('publication_level') as string;
+  const publicationCredits = formData.get('publication_credits') as string;
+
   let activeIndicatorOptionIds: string[] = [];
   if (activeIndicatorOptionIdsRaw) {
     try {
@@ -97,7 +110,18 @@ export async function updateContributionStatus(
     p_publication_scheduled_at: publicationScheduledAt || null,
     p_internal_notes: internalNotes || null,
     p_active_indicator_option_ids: activeIndicatorOptionIds,
-    p_indicator_notes: indicatorNotes || null
+    p_indicator_notes: indicatorNotes || null,
+    p_editorial_title: editorialTitle || null,
+    p_editorial_description: editorialDescription || null,
+    p_editorial_summary: editorialSummary || null,
+    p_editorial_context: editorialContext || null,
+    p_editorial_classification: editorialClassification || null,
+    p_historical_validation_status: historicalValidationStatus || null,
+    p_historical_validation_notes: historicalValidationNotes || null,
+    p_publication_title: publicationTitle || null,
+    p_publication_excerpt: publicationExcerpt || null,
+    p_publication_level: publicationLevel || null,
+    p_publication_credits: publicationCredits || null
   });
 
   if (rpcError) {

@@ -97,8 +97,8 @@ export function mapContributionToProgressInput(
 
   return {
     contributionId: contribution.id || "",
-    title: contribution.title || null,
-    description: contribution.description || null,
+    title: contribution.editorial_title || contribution.title || null,
+    description: contribution.editorial_description || contribution.description || null,
     contentType,
     contributor: contribution.contributors ? {
       id: contribution.contributors.id || null,

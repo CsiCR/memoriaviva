@@ -41,6 +41,21 @@ export interface ContributionInput {
     | "not_required"
     | null;
 
+  editorial_title?: string | null;
+  editorial_description?: string | null;
+  editorial_summary?: string | null;
+  editorial_context?: string | null;
+  editorial_classification?: string | null;
+  historical_validation_notes?: string | null;
+  publication_title?: string | null;
+  publication_excerpt?: string | null;
+  publication_level?: string | null;
+  publication_credits?: string | null;
+  editor_responsible_user_id?: string | null;
+  validated_by_user_id?: string | null;
+  published_by_user_id?: string | null;
+  editorial_updated_at?: string | null;
+
   contributor?: {
     full_name: string;
     email?: string | null;

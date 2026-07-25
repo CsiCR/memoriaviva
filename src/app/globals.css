@@ -917,6 +917,312 @@ p {
 }
 
 /* Hover para el enlace secundario del CTA con contraste óptimo */
+/* Hover para el enlace secundario del CTA con contraste óptimo */
 .museum-cta-link:hover {
   color: var(--primary-blue-light) !important;
+}
+
+/* --- ASISTENTE EDITORIAL: INTERACTIVIDAD Y RESALTADO --- */
+
+@keyframes highlight-fade {
+  0% {
+    outline: 3px solid var(--primary-blue);
+    outline-offset: 2px;
+    background-color: var(--primary-blue-light) !important;
+    box-shadow: 0 0 15px rgba(21, 136, 230, 0.5);
+  }
+  70% {
+    outline: 3px solid var(--primary-blue);
+    outline-offset: 2px;
+    background-color: var(--primary-blue-light) !important;
+    box-shadow: 0 0 15px rgba(21, 136, 230, 0.5);
+  }
+  100% {
+    outline: 3px solid transparent;
+    outline-offset: 2px;
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.field-highlight {
+  animation: highlight-fade 3s ease-out forwards;
+}
+
+.recommended-field-badge {
+  position: absolute;
+  top: -22px;
+  right: 8px;
+  background-color: var(--primary-blue);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+  animation: fade-out 3s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fade-out {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Estilo para los botones de retorno al Asistente */
+.return-assistant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary-blue);
+  background-color: var(--primary-blue-light);
+  border: 1px solid rgba(21, 136, 230, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+  text-decoration: none;
+}
+.return-assistant-btn:hover {
+  background-color: var(--primary-blue);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Estilos de la carátula "Archivo Histórico Moderno" */
+.dossier-card {
+  background-color: #faf9f5;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+  color: #2d3748;
+  position: relative;
+  font-family: var(--font-body);
+}
+
+.dossier-header-stamp {
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  color: #94a3b8;
+  border: 2px solid #cbd5e1;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  display: inline-block;
+}
+
+.dossier-stamp-approved {
+  color: #16a34a;
+  border-color: #16a34a;
+  transform: rotate(-3deg);
+}
+
+.dossier-stamp-pending {
+  color: #d97706;
+  border-color: #d97706;
+  transform: rotate(-3deg);
+}
+
+.dossier-stamp-incomplete {
+  color: #dc2626;
+  border-color: #dc2626;
+  transform: rotate(3deg);
+}
+
+.dossier-label {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.dossier-value {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Stepper Interactivo */
+.stepper-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  margin: 1.5rem 0;
+  width: 100%;
+}
+
+.stepper-line {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #e2e8f0;
+  z-index: 1;
+}
+
+.stepper-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+}
+
+.stepper-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  border: 2px solid #cbd5e1;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.stepper-stage.active .stepper-dot {
+  background-color: var(--primary-blue-light);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+  box-shadow: 0 0 8px rgba(21, 136, 230, 0.3);
+}
+
+.stepper-stage.completed .stepper-dot {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  color: white;
+}
+
+.stepper-stage.warning .stepper-dot {
+  background-color: #fef3c7;
+  border-color: #d97706;
+  color: #d97706;
+}
+
+.stepper-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.stepper-stage.active .stepper-label {
+  color: var(--primary-blue);
+}
+
+.stepper-stage.completed .stepper-label {
+  color: #16a34a;
+}
+
+/* Checklist e Índice por Dimensión */
+.dimension-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.dimension-table th, .dimension-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+.dimension-table th {
+  text-align: left;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.checklist-btn {
+  background: none;
+  border: none;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  text-align: left;
+  color: inherit;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+.checklist-btn:hover {
+  background-color: #f1f5f9;
+}
+
+/* --- REGISTRO DE IMPRESIÓN DEL EXPEDIENTE --- */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    font-size: 11pt !important;
+  }
+  
+  /* Ocultar elementos no imprimibles */
+  header, footer, nav, aside, 
+  .btn, button, input, select, textarea,
+  .return-assistant-btn, .checklist-btn,
+  .admin-grid-layout > div:nth-child(1) form button[type="submit"],
+  form > button[type="submit"],
+  .form-select, .form-input, .form-textarea,
+  .alert, .alert-success, .alert-danger,
+  a[href^="https://wa.me"],
+  .dossier-card button {
+    display: none !important;
+  }
+  
+  /* Forzar visualización de expediente y bitácora únicamente */
+  div[id="editorial-assistant-section"] {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .dossier-card {
+    border: 3px double black !important;
+    background: white !important;
+    padding: 2.5rem !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+  }
+
+  .dossier-header-stamp {
+    border: 3px solid black !important;
+    color: black !important;
+    font-size: 10pt !important;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  .print-only-show {
+    display: block !important;
+  }
 }

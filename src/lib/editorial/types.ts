@@ -98,6 +98,13 @@ export interface EditorialEvaluation {
   recommendedEditorialStatus: string | null;
   recommendedPublicationStatus: string | null;
   recommendedNextAction: string;
+  recommendedNextActionTarget?: string;
+  recommendedNextActionDescription?: string;
+  qualityIndex: string;
+  qualityText: string;
+  trafficLight: "green" | "yellow" | "orange" | "red";
+  historicalReliabilityStars: number;
+  historicalReliabilityLabel: string;
   summary: string;
   details: string[];
 }

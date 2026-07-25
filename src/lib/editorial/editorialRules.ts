@@ -6,7 +6,11 @@ import {
   PUBLIC_AUTHORIZATION_CODES,
   PUBLICATION_ELIGIBLE_EDITORIAL_CODES,
   ACTION_PRIORITY,
-  isUsableEditorialFile
+  isUsableEditorialFile,
+  getEditorialTarget,
+  getQualityRating,
+  getTrafficLight,
+  calculateHistoricalReliability
 } from './editorialConstants';
 import { editorialMessages } from './editorialMessages';
 import { calculateEditorialScore } from './editorialScore';
@@ -191,9 +195,10 @@ export function runEditorialRules(input: ContributionInput): EditorialEvaluation
   } else if (currentEditorialCode === "incomplete" && filesList.length > 0) {
     recommendedEditorialStatus = "in_review";
   }
-
-  // E8 — Siguiente acción recomendada por prioridad
+  // E8 — Siguiente acción recomendada por prioridad y su target
   let recommendedNextAction = editorialMessages.action_none;
+  let recommendedNextActionTarget: string | undefined = undefined;
+  let recommendedNextActionDescription: string | undefined = undefined;
   let highestPriority = Infinity;
 
   for (const issue of issues) {
@@ -221,8 +226,42 @@ export function runEditorialRules(input: ContributionInput): EditorialEvaluation
       } else if (sourceKey === "publication_status") {
         recommendedNextAction = editorialMessages.action_evaluate_publication;
       }
+
+      recommendedNextActionTarget = getEditorialTarget(sourceKey);
+      recommendedNextActionDescription = issue.message;
     }
   }
+
+  // Si no hay problemas detectados por el motor, pero hay una recomendación secundaria
+  if (recommendedNextAction === editorialMessages.action_none) {
+    if (recommendedPublicationStatus === "publishable") {
+      recommendedNextAction = editorialMessages.action_evaluate_publication;
+      recommendedNextActionTarget = getEditorialTarget("publication_status");
+      recommendedNextActionDescription = "El aporte cumple con todos los requisitos y está listo para configurar su publicación.";
+    } else if (recommendedEditorialStatus) {
+      recommendedNextAction = editorialMessages.action_advance_editorial;
+      recommendedNextActionTarget = getEditorialTarget("editorial_status");
+      recommendedNextActionDescription = "Se recomienda avanzar el estado editorial del aporte.";
+    }
+  }
+
+  // Cálculos de calidad editorial
+  const score = calculateEditorialScore(input);
+  const quality = getQualityRating(score);
+  const hasBlocks = issues.some(issue => issue.severity === "blocking" || issue.severity === "critical");
+  const trafficLight = getTrafficLight(eligibleForPublication, score, hasBlocks);
+
+  // Calculation of historical reliability using previously defined usableFilesCount
+  const descriptionLength = (input.description || "").trim().length;
+  const hasContributor = !!(input.contributor && (input.contributor.full_name || input.contributor.email || input.contributor.phone));
+  const validationStatus = input.historical_validation_status;
+
+  const reliability = calculateHistoricalReliability({
+    hasFiles: usableFilesCount > 0,
+    validationStatus,
+    descriptionLength,
+    hasContributorInfo: hasContributor
+  });
 
   // Resumen del estado
   let summary = editorialMessages.summary_eligible;
@@ -235,7 +274,7 @@ export function runEditorialRules(input: ContributionInput): EditorialEvaluation
 
   // Detalles informativos
   const details: string[] = [];
-  details.push(`Puntaje de calidad alcanzado: ${calculateEditorialScore(input)}/100.`);
+  details.push(`Puntaje de calidad alcanzado: ${score}/100.`);
   if (eligibleForPublication) {
     details.push("El material cuenta con consentimiento y validación completa.");
   } else {
@@ -244,7 +283,7 @@ export function runEditorialRules(input: ContributionInput): EditorialEvaluation
 
   return {
     eligibleForPublication,
-    editorialProgress: calculateEditorialScore(input),
+    editorialProgress: score,
     blockingIndicators,
     warnings,
     missingRequirements,
@@ -252,6 +291,13 @@ export function runEditorialRules(input: ContributionInput): EditorialEvaluation
     recommendedEditorialStatus,
     recommendedPublicationStatus,
     recommendedNextAction,
+    recommendedNextActionTarget,
+    recommendedNextActionDescription,
+    qualityIndex: quality.grade,
+    qualityText: quality.text,
+    trafficLight,
+    historicalReliabilityStars: reliability.stars,
+    historicalReliabilityLabel: reliability.label,
     summary,
     details
   };

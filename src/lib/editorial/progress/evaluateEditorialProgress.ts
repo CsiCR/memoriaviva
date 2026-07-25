@@ -16,6 +16,7 @@ import {
   detectConflicts 
 } from './progressRules';
 import { getRecommendation } from './progressMessages';
+import { getEditorialTarget } from '../editorialConstants';
 
 export function evaluateEditorialProgress(
   input: EditorialProgressInput
@@ -138,7 +139,13 @@ export function evaluateEditorialProgress(
 
   // Resolver mappers de recomendación y ordenar
   const recommendations: EditorialProgressRecommendation[] = recommendationCodes
-    .map(getRecommendation)
+    .map(code => {
+      const rec = getRecommendation(code);
+      return {
+        ...rec,
+        target: getEditorialTarget(code)
+      };
+    })
     .sort((a, b) => b.priority - a.priority);
 
   const nextAction = recommendations.length > 0 ? recommendations[0] : null;

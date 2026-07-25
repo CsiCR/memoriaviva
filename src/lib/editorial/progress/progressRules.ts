@@ -3,6 +3,7 @@
 
 import { EditorialProgressInput, EditorialProgressItem, EditorialProgressDetails } from './progressTypes';
 import { DIMENSION_WEIGHTS } from './progressConstants';
+import { getEditorialTarget } from '../editorialConstants';
 
 export function buildProgressItems(
   input: EditorialProgressInput,
@@ -18,6 +19,7 @@ export function buildProgressItems(
 
   // Helper function to sort item into correct list
   const addItem = (item: EditorialProgressItem) => {
+    item.target = getEditorialTarget(item.code);
     if (item.status === "completed" || item.status === "not_required") {
       completed.push(item);
     } else if (item.status === "blocked") {

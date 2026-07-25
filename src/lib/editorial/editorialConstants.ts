@@ -107,3 +107,127 @@ export function mapContributionTypeToContentType(type: string | null | undefined
   }
   return 'mixed';
 }
+
+export const EDITORIAL_ACTION_TARGETS: Record<string, string> = {
+  // exact target IDs
+  "editorial-description": "editorial-description",
+  "editorial-status": "editorial-status",
+  "classification": "classification",
+  "internal-notes": "internal-notes",
+  "historical-validation": "historical-validation",
+  "consent": "consent",
+  "attachments": "attachments",
+  "publication-settings": "publication-settings",
+
+  // rule codes / names
+  description_required: "editorial-description",
+  eligible_status_required: "editorial-status",
+  classification_required: "classification",
+  internal_notes_required: "internal-notes",
+  historical_validation_required: "historical-validation",
+  consent_required: "consent",
+  attachments_review_required: "attachments",
+  publication_ready_required: "publication-settings",
+
+  // progress item codes
+  BASIC_INFO: "classification",
+  DESCRIPTION: "editorial-description",
+  CONSENT: "consent",
+  FILES: "attachments",
+  EDITORIAL_PROCESSING: "editorial-status",
+  EDITORIAL_REVIEW: "internal-notes",
+  HISTORICAL_VAL: "historical-validation",
+  INDICATORS: "editorial-status",
+
+  // progress recommendation codes
+  ADD_CONSENT: "consent",
+  RESOLVE_BLOCKING_INDICATOR: "editorial-status",
+  ADD_REQUIRED_FILE: "attachments",
+  COMPLETE_DESCRIPTION: "editorial-description",
+  START_EDITORIAL_PROCESSING: "editorial-status",
+  START_EDITORIAL_REVIEW: "editorial-status",
+  ADD_REVIEW_NOTES: "internal-notes",
+  REQUEST_HISTORICAL_VALIDATION: "historical-validation",
+  MARK_READY_FOR_PUBLICATION: "publication-settings",
+  PUBLISH_CONTRIBUTION: "publication-settings",
+
+  // issue sources
+  authorization: "consent",
+  files: "attachments",
+  editorial_status: "editorial-status",
+  indicator: "editorial-status",
+  publication_status: "publication-settings",
+  critical: "editorial-status"
+};
+
+export function getEditorialTarget(key: string | null | undefined): string | undefined {
+  if (!key) return undefined;
+  return EDITORIAL_ACTION_TARGETS[key] || 
+         EDITORIAL_ACTION_TARGETS[key.toUpperCase()] || 
+         EDITORIAL_ACTION_TARGETS[key.toLowerCase()];
+}
+
+export function getQualityRating(score: number): { grade: string; text: string } {
+  if (score >= 98) return { grade: "A+", text: "Excelente. Listo para publicar." };
+  if (score >= 90) return { grade: "A", text: "Listo para revisión final." };
+  if (score >= 80) return { grade: "B", text: "Buen avance. Faltan aspectos menores." };
+  if (score >= 70) return { grade: "C", text: "Progreso regular. Requiere revisión estructural." };
+  if (score >= 60) return { grade: "D", text: "Necesita atención urgente." };
+  return { grade: "F", text: "Estado inicial o incompleto." };
+}
+
+export function getTrafficLight(
+  eligibleForPublication: boolean,
+  score: number,
+  hasBlockingIssues: boolean
+): "green" | "yellow" | "orange" | "red" {
+  if (eligibleForPublication && score >= 90) {
+    return "green";
+  }
+  if (hasBlockingIssues || score < 40) {
+    return "red";
+  }
+  if (score >= 70) {
+    return "yellow";
+  }
+  return "orange";
+}
+
+export function calculateHistoricalReliability(input: {
+  hasFiles: boolean;
+  validationStatus: string | null | undefined;
+  descriptionLength: number;
+  hasContributorInfo: boolean;
+}): { stars: number; label: "Baja" | "Media" | "Alta" } {
+  let stars = 1; // Base rating is 1 star
+
+  if (input.hasFiles) {
+    stars += 1;
+  }
+
+  const vStatus = (input.validationStatus || "").trim().toLowerCase();
+  if (vStatus === "validated" || vStatus === "not_required") {
+    stars += 2;
+  } else if (vStatus === "pending") {
+    stars += 1;
+  }
+
+  if (input.descriptionLength >= 40) {
+    stars += 1;
+  }
+
+  if (input.hasContributorInfo) {
+    stars += 1;
+  }
+
+  stars = Math.max(1, Math.min(5, stars));
+
+  let label: "Baja" | "Media" | "Alta" = "Baja";
+  if (stars >= 4) {
+    label = "Alta";
+  } else if (stars >= 2) {
+    label = "Media";
+  }
+
+  return { stars, label };
+}

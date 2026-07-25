@@ -80,6 +80,7 @@ interface ContributionEditFormProps {
   publishedAt?: string | null;
   title?: string | null;
   historicalValidationStatus?: string | null;
+  editorName?: string | null;
 }
 
 // Mapear nombres de iconos de base de datos a componentes Lucide
@@ -126,7 +127,8 @@ export default function ContributionEditForm({
   updatedAt,
   publishedAt,
   title,
-  historicalValidationStatus
+  historicalValidationStatus,
+  editorName = 'Coordinador'
 }: ContributionEditFormProps) {
   const [status, setStatus] = useState(initialStatus);
   const [notes, setNotes] = useState(initialNotes || '');
@@ -396,6 +398,120 @@ export default function ContributionEditForm({
     title, status, historicalValidationStatus
   ]);
 
+  // Checklist de Revisión Profesional (Manual)
+  const [reviewProfessionalChecklist, setReviewProfessionalChecklist] = useState({
+    names: false,
+    spelling: false,
+    attachmentsQuality: false,
+    publicationLevel: false,
+    sensitiveData: false
+  });
+  
+  // Conteo manual
+  const manualCheckedCount = Object.values(reviewProfessionalChecklist).filter(Boolean).length;
+
+  const handleNavigation = (targetId: string) => {
+    if (!targetId) return;
+    const element = document.getElementById(targetId);
+    if (!element) {
+      console.warn(`Element with id "${targetId}" not found.`);
+      return;
+    }
+
+    // 1. Abrir contenedores colapsados
+    let parent = element.parentElement;
+    while (parent) {
+      if (parent.tagName === 'DETAILS') {
+        (parent as HTMLDetailsElement).open = true;
+      }
+      if (parent.classList.contains('collapsed')) {
+        parent.classList.remove('collapsed');
+      }
+      if (parent.getAttribute('aria-expanded') === 'false') {
+        parent.setAttribute('aria-expanded', 'true');
+      }
+      parent = parent.parentElement;
+    }
+
+    // 2. Scroll suave y centrado
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // 3. Resaltar campo
+    element.classList.remove('field-highlight');
+    const existingBadge = element.querySelector('.recommended-field-badge');
+    if (existingBadge) {
+      existingBadge.remove();
+    }
+
+    // Forzar reflow
+    void element.offsetWidth;
+    element.classList.add('field-highlight');
+
+    // Agregar etiqueta flotante temporal
+    const badge = document.createElement('span');
+    badge.className = 'recommended-field-badge';
+    badge.innerText = '✔ Ahora estás editando este requisito editorial.';
+    
+    const originalPosition = element.style.position;
+    if (!originalPosition || originalPosition === 'static') {
+      element.style.position = 'relative';
+    }
+    element.appendChild(badge);
+
+    // 4. Focus si es editable
+    const input = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT'
+      ? element
+      : element.querySelector('input, textarea, select');
+
+    if (input && !(input as HTMLInputElement).disabled) {
+      setTimeout(() => {
+        (input as HTMLElement).focus();
+      }, 400);
+    }
+
+    // Limpiar clases y badge a los 3 segundos
+    setTimeout(() => {
+      element.classList.remove('field-highlight');
+      badge.remove();
+      if (!originalPosition || originalPosition === 'static') {
+        element.style.position = originalPosition;
+      }
+    }, 3000);
+  };
+
+  // Atajos de Teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl + Shift + M: ir al Asistente Editorial
+      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'M') {
+        e.preventDefault();
+        handleNavigation('editorial-assistant-section');
+      }
+      // Ctrl + Shift + P: ir al Progreso Editorial
+      else if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'P') {
+        e.preventDefault();
+        handleNavigation('editorial-progress-section');
+      }
+      // Alt + ArrowRight (Alt + →): Siguiente acción recomendada
+      else if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (editorialEvaluation.recommendedNextActionTarget) {
+          handleNavigation(editorialEvaluation.recommendedNextActionTarget);
+        }
+      }
+      // Alt + ArrowLeft (Alt + ←): Volver al Asistente Editorial
+      else if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleNavigation('editorial-assistant-section');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editorialEvaluation.recommendedNextActionTarget]);
+
   const handleIndicatorCheckboxChange = (indicatorId: string, checked: boolean) => {
     if (checked) {
       if (!activeIndicatorOptionIds.includes(indicatorId)) {
@@ -456,8 +572,50 @@ export default function ContributionEditForm({
     );
   }
 
+  const stagePoints = {
+    recepcion: {
+      earned: (currentProgressResult?.details?.basicIdentificationScore || 0) + (currentProgressResult?.details?.consentScore || 0),
+      max: 30,
+      label: "Recepción y Consentimiento",
+      id: "consent"
+    },
+    descripcion: {
+      earned: (currentProgressResult?.details?.editorialDescriptionScore || 0) + (currentProgressResult?.details?.filesScore || 0),
+      max: 25,
+      label: "Descripción y Archivos",
+      id: "editorial-description"
+    },
+    clasificacion: {
+      earned: (currentProgressResult?.details?.editorialProcessingScore || 0) + (currentProgressResult?.details?.indicatorsScore || 0),
+      max: 15,
+      label: "Clasificación e Indicadores",
+      id: "editorial-status"
+    },
+    validacion: {
+      earned: (currentProgressResult?.details?.editorialReviewScore || 0) + (currentProgressResult?.details?.historicalValidationScore || 0),
+      max: 25,
+      label: "Revisión y Validación Histórica",
+      id: "historical-validation"
+    },
+    publicacion: {
+      earned: currentProgressResult?.details?.publicationScore || 0,
+      max: 5,
+      label: "Configuración de Publicación",
+      id: "publication-settings"
+    }
+  };
+
+  const getActiveStage = () => {
+    if (stagePoints.recepcion.earned < stagePoints.recepcion.max) return "recepcion";
+    if (stagePoints.descripcion.earned < stagePoints.descripcion.max) return "descripcion";
+    if (stagePoints.clasificacion.earned < stagePoints.clasificacion.max) return "clasificacion";
+    if (stagePoints.validacion.earned < stagePoints.validacion.max) return "validacion";
+    return "publicacion";
+  };
+  const activeStageKey = getActiveStage();
+
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <form id="editorial-progress-section" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
       {/* Alertas de Resultado */}
       {success && (
@@ -474,321 +632,483 @@ export default function ContributionEditForm({
         </div>
       )}
 
-      {/* PANEL: Motor Editorial */}
-      <div style={{
-        border: '1px solid #cbd5e1',
-        borderRadius: '8px',
-        backgroundColor: '#f8fafc',
-        padding: '1.5rem',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span>🧠</span> Motor Editorial 
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#dbeafe', color: '#1e40af', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-              Reglas v{EDITORIAL_ENGINE_VERSION.version.substring(0, 3)}
-            </span>
-          </h4>
-          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Diagnóstico en tiempo real</span>
-        </div>
+      {/* SECCIÓN DEL ASISTENTE EDITORIAL Y EXPEDIENTE */}
+      <div id="editorial-assistant-section" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
-        <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
-          {/* Puede publicarse */}
-          <div>
-            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Puede publicarse</span>
-            <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              {editorialEvaluation.eligibleForPublication ? (
-                <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.2rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <CheckCircle2 size={20} /> SÍ
-                </span>
-              ) : (
-                <span style={{ color: '#ef4444', fontWeight: 700, fontSize: '1.2rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <XCircle size={20} /> NO
-                </span>
+        {/* CARÁTULA DEL EXPEDIENTE EDITORIAL (Archivo Histórico Moderno) */}
+        <div className="dossier-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div>
+              <span className="dossier-label">Archivo Histórico Comunitario</span>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0.25rem 0', color: '#1e293b', fontFamily: 'Courier New, Courier, monospace' }}>
+                EXPEDIENTE MV-{createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear()}-{id.substring(0, 6).toUpperCase()}
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                Fondo: <strong>Memoria Viva</strong> &middot; Serie: <strong>Testimonios ({contributionType || 'Mixto'})</strong>
+              </p>
+            </div>
+            <div>
+              {/* Sello de Estado */}
+              {editorialEvaluation.trafficLight === 'green' && (
+                <span className="dossier-header-stamp dossier-stamp-approved">Aprobado</span>
+              )}
+              {editorialEvaluation.trafficLight === 'yellow' && (
+                <span className="dossier-header-stamp dossier-stamp-pending">Revisión</span>
+              )}
+              {editorialEvaluation.trafficLight === 'orange' && (
+                <span className="dossier-header-stamp dossier-stamp-pending">Incompleto</span>
+              )}
+              {editorialEvaluation.trafficLight === 'red' && (
+                <span className="dossier-header-stamp dossier-stamp-incomplete">No Publicable</span>
               )}
             </div>
           </div>
 
-          {/* Progreso Editorial */}
-          <div>
-            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Progreso Editorial</span>
-            <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', maxWidth: '120px' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${editorialEvaluation.editorialProgress}%`,
-                  backgroundColor: editorialEvaluation.editorialProgress >= 80 ? '#16a34a' : editorialEvaluation.editorialProgress >= 50 ? '#f59e0b' : '#ef4444',
-                  borderRadius: '4px',
-                  transition: 'width 0.3s ease'
-                }} />
-              </div>
-              <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1e293b' }}>
-                {editorialEvaluation.editorialProgress}%
-              </span>
+          <hr style={{ border: 0, borderTop: '2px dashed #cbd5e1', margin: '0 0 1.5rem 0' }} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div>
+              <span className="dossier-label">Título del Testimonio</span>
+              <div className="dossier-value" style={{ fontSize: '1rem' }}>{title || 'MV-TESTIMONIO-SIN-TITULO'}</div>
             </div>
+            <div>
+              <span className="dossier-label">Ingreso y Custodia</span>
+              <div className="dossier-value">
+                {createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'} &middot; {editorName}
+              </div>
+            </div>
+            <div>
+              <span className="dossier-label">Nivel de Acceso Legal</span>
+              <div className="dossier-value">
+                Nivel {level || 'A'} ({credits || 'Público'})
+              </div>
+            </div>
+            <div>
+              <span className="dossier-label">Confiabilidad Histórica</span>
+              <div style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
+                <span style={{ fontSize: '1rem', letterSpacing: '0.05em' }}>
+                  {'★'.repeat(editorialEvaluation.historicalReliabilityStars)}
+                  {'☆'.repeat(5 - editorialEvaluation.historicalReliabilityStars)}
+                </span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginLeft: '0.25rem' }}>
+                  ({editorialEvaluation.historicalReliabilityLabel})
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Línea de tiempo archivística */}
+          <div style={{ margin: '1.5rem 0' }}>
+            <span className="dossier-label" style={{ display: 'block', marginBottom: '0.5rem' }}>Línea de Tiempo del Expediente</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
+                <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Recepción</span>
+                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>{createdAt ? new Date(createdAt).toLocaleDateString('es-AR') : '—'}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
+                <span style={{ color: consentVerified ? '#16a34a' : '#d97706', fontWeight: 700 }}>
+                  {consentVerified ? '✓ Consentimiento' : '⏳ Consentimiento'}
+                </span>
+                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                  {consentRecords?.[0]?.accepted_at ? new Date(consentRecords[0].accepted_at).toLocaleDateString('es-AR') : 'Pendiente'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
+                <span style={{ color: (description && description.length >= 40) ? '#16a34a' : '#d97706', fontWeight: 700 }}>
+                  {(description && description.length >= 40) ? '✓ Descripción' : '⏳ Descripción'}
+                </span>
+                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                  {updatedAt ? new Date(updatedAt).toLocaleDateString('es-AR') : 'Pendiente'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
+                <span style={{ color: (historicalValidationStatus === 'validated' || historicalValidationStatus === 'not_required') ? '#16a34a' : '#d97706', fontWeight: 700 }}>
+                  {(historicalValidationStatus === 'validated' || historicalValidationStatus === 'not_required') ? '✓ Validación' : '⏳ Validación'}
+                </span>
+                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                  {historicalValidationStatus === 'validated' ? 'Completado' : historicalValidationStatus === 'not_required' ? 'No requerida' : 'Pendiente'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
+                <span style={{ color: (status === 'Publicado' || publishedAt) ? '#16a34a' : '#94a3b8', fontWeight: 700 }}>
+                  {(status === 'Publicado' || publishedAt) ? '✓ Publicación' : '○ Publicación'}
+                </span>
+                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                  {publishedAt ? new Date(publishedAt).toLocaleDateString('es-AR') : 'Pendiente'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="btn btn-outline btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+            >
+              🖨️ Imprimir Carátula del Expediente
+            </button>
           </div>
         </div>
 
-        {editorialEvaluation.missingRequirements.length > 0 && (
-          <>
-            <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.35rem' }}>Pendientes</span>
-              <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {editorialEvaluation.missingRequirements.map((req, idx) => (
-                  <li key={idx} style={{ fontSize: '0.85rem', color: '#b91c1c', fontWeight: 500 }}>
-                    {req}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </>
-        )}
-
-        {editorialEvaluation.warnings.length > 0 && (
-          <>
-            <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.35rem' }}>Advertencias</span>
-              <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {editorialEvaluation.warnings.map((warn, idx) => {
-                  const isCritical = warn.toLowerCase().includes("publicado") || warn.toLowerCase().includes("crítica");
-                  return (
-                    <li key={idx} style={{ fontSize: '0.85rem', color: isCritical ? '#b91c1c' : '#d97706', fontWeight: isCritical ? 600 : 500 }}>
-                      {warn}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </>
-        )}
-
-        <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
-
-        {/* Siguiente Acción */}
-        <div>
-          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.15rem' }}>Siguiente Acción Sugerida</span>
-          <span style={{
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            color: '#1e3a8a',
-            backgroundColor: '#eff6ff',
-            padding: '0.35rem 0.6rem',
-            borderRadius: '4px',
-            border: '1px solid #bfdbfe',
-            display: 'inline-block'
-          }}>
-            👉 {editorialEvaluation.recommendedNextAction}
-          </span>
-        </div>
-
-        <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: 0 }} />
-
-        {/* Resumen */}
-        <div>
-          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Resumen</span>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: '#334155', lineHeight: 1.4, fontWeight: 500 }}>
-            {editorialEvaluation.summary}
-          </p>
-        </div>
-      </div>
-
-      {/* PANEL: Progreso Editorial */}
-      {currentProgressResult && (
+        {/* 🤖 ASISTENTE EDITORIAL */}
         <div style={{
           border: '1px solid #cbd5e1',
           borderRadius: '8px',
-          backgroundColor: '#fafaf9',
+          backgroundColor: '#ffffff',
           padding: '1.5rem',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#1c1917', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span>📈</span> Progreso Editorial
-              <span style={{ fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#f3e8ff', color: '#6b21a8', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-                Reglas v{EDITORIAL_PROGRESS_VERSION.version.substring(0, 3)}
-              </span>
-              {isDirty && (
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid #fde68a' }}>
-                  ⚠️ Vista previa (cambios no guardados)
-                </span>
-              )}
+          {/* Encabezado con Semáforo Editorial */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <h4 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>🤖</span> Asistente Editorial 
             </h4>
-            <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 500 }}>Medición de avance</span>
-          </div>
-
-          <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
-
-          {/* Porcentaje y Barra de progreso */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1c1917' }}>
-                {currentProgressResult.progress}%
-              </span>
-              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600 }}>
-                {currentProgressResult.completedWeight} / {currentProgressResult.totalWeight} pts
-              </span>
-            </div>
             
-            <div 
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={currentProgressResult.progress}
-              style={{ width: '100%', height: '10px', backgroundColor: '#e7e5e4', borderRadius: '5px', overflow: 'hidden' }}
-            >
-              <div style={{
-                height: '100%',
-                width: `${currentProgressResult.progress}%`,
-                backgroundColor: currentProgressResult.progress >= 90 ? '#16a34a' : currentProgressResult.progress >= 50 ? '#f59e0b' : '#dc2626',
-                borderRadius: '5px',
-                transition: 'width 0.3s ease'
+            {/* Semáforo Editorial */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f8fafc', padding: '0.4rem 0.85rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+              <span style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                backgroundColor: editorialEvaluation.trafficLight === 'green' ? '#16a34a' : editorialEvaluation.trafficLight === 'yellow' ? '#eab308' : editorialEvaluation.trafficLight === 'orange' ? '#f97316' : '#ef4444',
+                boxShadow: `0 0 8px ${editorialEvaluation.trafficLight === 'green' ? '#16a34a' : editorialEvaluation.trafficLight === 'yellow' ? '#eab308' : editorialEvaluation.trafficLight === 'orange' ? '#f97316' : '#ef4444'}`,
+                display: 'inline-block'
               }} />
-            </div>
-          </div>
-
-          {/* Etapa actual e hito */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>Estado Actual</span>
-              <strong style={{ color: '#292524', fontSize: '0.9rem' }}>{currentProgressResult.currentStage.label}</strong>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>Próximo Hito</span>
-              <strong style={{ color: '#292524', fontSize: '0.9rem' }}>{currentProgressResult.nextMilestone || 'Ninguno (Publicado)'}</strong>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>Pasos Restantes</span>
-              <strong style={{ color: '#292524', fontSize: '0.9rem' }}>{currentProgressResult.remainingSteps}</strong>
-            </div>
-          </div>
-
-          <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
-
-          {/* Tareas detalladas */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
-                Tareas Completadas / No Requeridas ({currentProgressResult.completedItems.length})
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#334155' }}>
+                {editorialEvaluation.trafficLight === 'green' && '🟢 Listo para publicar'}
+                {editorialEvaluation.trafficLight === 'yellow' && '🟡 Necesita revisión'}
+                {editorialEvaluation.trafficLight === 'orange' && '🟠 Incompleto'}
+                {editorialEvaluation.trafficLight === 'red' && '🔴 No publicable'}
               </span>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {currentProgressResult.completedItems.map(item => (
-                  <li key={item.code} style={{ fontSize: '0.8rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
-                    <span>✓</span> {item.label} <span style={{ fontSize: '0.7rem', color: '#78716c' }}>({item.earnedWeight} pts)</span>
-                  </li>
-                ))}
-              </ul>
             </div>
-
-            {currentProgressResult.blockedItems.length > 0 && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#b91c1c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
-                  Bloqueado / Cuello de Botella ({currentProgressResult.blockedItems.length})
-                </span>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  {currentProgressResult.blockedItems.map(item => (
-                    <li key={item.code} style={{ fontSize: '0.8rem', color: '#dc2626', display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontWeight: 600 }}>
-                      <span style={{ marginTop: '1px' }}>⚠️</span> 
-                      <div>
-                        {item.label}
-                        {item.reason && <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 400, marginTop: '1px' }}>{item.reason}</div>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {currentProgressResult.pendingItems.length > 0 && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
-                  Pendiente ({currentProgressResult.pendingItems.length})
-                </span>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  {currentProgressResult.pendingItems.map(item => (
-                    <li key={item.code} style={{ fontSize: '0.8rem', color: '#d97706', display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontWeight: 500 }}>
-                      <span style={{ marginTop: '1px' }}>○</span>
-                      <div>
-                        {item.label}
-                        {item.reason && <div style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 400, marginTop: '1px' }}>{item.reason}</div>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
 
-          {currentProgressResult.conflicts.length > 0 && (
-            <>
-              <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
-              <div style={{ backgroundColor: '#fff1f2', border: '1px solid #ffe4e6', borderRadius: '4px', padding: '0.5rem 0.75rem' }}>
-                <span style={{ fontSize: '0.75rem', color: '#be123c', fontWeight: 700, display: 'block', marginBottom: '0.15rem' }}>
-                  ⚠️ Conflictos Detectados ({currentProgressResult.conflicts.length})
-                </span>
-                {currentProgressResult.conflicts.map(conf => (
-                  <span key={conf} style={{ fontSize: '0.75rem', color: '#be123c', fontWeight: 600, display: 'block' }}>
-                    &bull; {conf === "CONFLICT_HISTORICAL_VALIDATION" 
-                      ? "Contradicción entre el estado de validación histórica y los indicadores activos." 
-                      : conf}
-                  </span>
-                ))}
+          <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem', color: '#475569', fontStyle: 'italic' }}>
+            {editorialEvaluation.summary}
+          </p>
+
+          <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: '0 0 1.25rem 0' }} />
+
+          {/* Stepper Interactivo */}
+          <div className="stepper-container">
+            <div className="stepper-line" />
+            
+            <button
+              type="button"
+              onClick={() => handleNavigation('classification')}
+              className={`stepper-stage ${activeStageKey === 'recepcion' ? 'active' : ''} ${stagePoints.recepcion.earned === stagePoints.recepcion.max ? 'completed' : 'warning'}`}
+            >
+              <div className="stepper-dot">
+                {stagePoints.recepcion.earned === stagePoints.recepcion.max ? '✓' : '1'}
               </div>
-            </>
-          )}
+              <span className="stepper-label">Recepción</span>
+            </button>
 
-          {currentProgressResult.hasPostPublicationInconsistencies && (
-            <>
-              <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
-              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '4px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.75rem', fontWeight: 600 }}>
-                🚨 Aporte publicado con inconsistencias o bloqueos activos post-publicación.
+            <button
+              type="button"
+              onClick={() => handleNavigation('editorial-description')}
+              className={`stepper-stage ${activeStageKey === 'descripcion' ? 'active' : ''} ${stagePoints.descripcion.earned === stagePoints.descripcion.max ? 'completed' : 'warning'}`}
+            >
+              <div className="stepper-dot">
+                {stagePoints.descripcion.earned === stagePoints.descripcion.max ? '✓' : '2'}
               </div>
-            </>
-          )}
+              <span className="stepper-label">Descripción</span>
+            </button>
 
-          <hr style={{ border: 0, borderTop: '1px solid #e7e5e4', margin: 0 }} />
-
-          {/* Siguiente Acción y Resumen */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {currentProgressResult.nextAction && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>Próxima Acción Recomendada</span>
-                <span style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  color: currentProgressResult.nextAction.severity === "blocking" ? '#991b1b' : '#1e3a8a',
-                  backgroundColor: currentProgressResult.nextAction.severity === "blocking" ? '#fef2f2' : '#eff6ff',
-                  padding: '0.35rem 0.6rem',
-                  borderRadius: '4px',
-                  border: currentProgressResult.nextAction.severity === "blocking" ? '1px solid #fecaca' : '1px solid #bfdbfe',
-                  display: 'inline-block'
-                }}>
-                  👉 {currentProgressResult.nextAction.title}
-                </span>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#57534e' }}>
-                  {currentProgressResult.nextAction.description}
-                </p>
+            <button
+              type="button"
+              onClick={() => handleNavigation('editorial-status')}
+              className={`stepper-stage ${activeStageKey === 'clasificacion' ? 'active' : ''} ${stagePoints.clasificacion.earned === stagePoints.clasificacion.max ? 'completed' : 'warning'}`}
+            >
+              <div className="stepper-dot">
+                {stagePoints.clasificacion.earned === stagePoints.clasificacion.max ? '✓' : '3'}
               </div>
-            )}
+              <span className="stepper-label">Clasificación</span>
+            </button>
 
+            <button
+              type="button"
+              onClick={() => handleNavigation('historical-validation')}
+              className={`stepper-stage ${activeStageKey === 'validacion' ? 'active' : ''} ${stagePoints.validacion.earned === stagePoints.validacion.max ? 'completed' : 'warning'}`}
+            >
+              <div className="stepper-dot">
+                {stagePoints.validacion.earned === stagePoints.validacion.max ? '✓' : '4'}
+              </div>
+              <span className="stepper-label">Validación</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavigation('publication-settings')}
+              className={`stepper-stage ${activeStageKey === 'publicacion' ? 'active' : ''} ${stagePoints.publicacion.earned === stagePoints.publicacion.max ? 'completed' : 'warning'}`}
+            >
+              <div className="stepper-dot">
+                {stagePoints.publicacion.earned === stagePoints.publicacion.max ? '✓' : '5'}
+              </div>
+              <span className="stepper-label">Publicación</span>
+            </button>
+          </div>
+
+          {/* Índice de Calidad Editorial */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', margin: '1.5rem 0' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>Resumen Narrativo</span>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#292524', lineHeight: 1.4, fontWeight: 500 }}>
-                {currentProgressResult.summary}
-              </p>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Índice de Calidad Editorial</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <span style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a' }}>{editorialEvaluation.qualityIndex}</span>
+                <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 600 }}>
+                  ({currentProgressResult ? Math.min(100, currentProgressResult.progress + manualCheckedCount * 2) : 0}/100 pts)
+                </span>
+              </div>
             </div>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e3a8a', backgroundColor: '#eff6ff', padding: '0.35rem 0.75rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+              💡 {editorialEvaluation.qualityText}
+            </span>
           </div>
+
+          {/* Wizard / Próximo Paso */}
+          {currentProgressResult && currentProgressResult.progress >= 90 ? (
+            /* MODO REVISIÓN FINAL */
+            <div style={{
+              border: '1px dashed #f59e0b',
+              borderRadius: '8px',
+              backgroundColor: '#fffbeb',
+              padding: '1.25rem',
+              marginTop: '1rem'
+            }}>
+              <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 700, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span>🔎</span> Modo: Revisión Final Profesional
+              </h5>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.8', color: '#78350f' }}>
+                El progreso básico automatizado es óptimo ({currentProgressResult.progress}%). Revise los siguientes puntos de criterio profesional humano antes de publicar:
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#451a03', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reviewProfessionalChecklist.names}
+                    onChange={(e) => setReviewProfessionalChecklist(prev => ({ ...prev, names: e.target.checked }))}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                  <span>Consistencia de nombres propios mencionados.</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#451a03', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reviewProfessionalChecklist.spelling}
+                    onChange={(e) => setReviewProfessionalChecklist(prev => ({ ...prev, spelling: e.target.checked }))}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                  <span>Ortografía, puntuación y redacción general de la ficha.</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#451a03', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reviewProfessionalChecklist.attachmentsQuality}
+                    onChange={(e) => setReviewProfessionalChecklist(prev => ({ ...prev, attachmentsQuality: e.target.checked }))}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                  <span>Calidad de los archivos adjuntos y procesamiento de metadatos.</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#451a03', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reviewProfessionalChecklist.publicationLevel}
+                    onChange={(e) => setReviewProfessionalChecklist(prev => ({ ...prev, publicationLevel: e.target.checked }))}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                  <span>Nivel de publicación y visibilidad adecuados.</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#451a03', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reviewProfessionalChecklist.sensitiveData}
+                    onChange={(e) => setReviewProfessionalChecklist(prev => ({ ...prev, sensitiveData: e.target.checked }))}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                  <span>Verificación de datos sensibles o confidencialidad del aportante.</span>
+                </label>
+              </div>
+
+              {Object.values(reviewProfessionalChecklist).every(Boolean) ? (
+                <div style={{ marginTop: '1rem', padding: '0.5rem', backgroundColor: '#dcfce7', borderRadius: '4px', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span>🎉</span> ¡Revisión profesional finalizada con éxito!
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('publication-settings')}
+                  className="btn btn-primary btn-sm"
+                  style={{ marginTop: '1rem', fontSize: '0.8rem' }}
+                >
+                  Continuar a Configuración de Publicación
+                </button>
+              )}
+            </div>
+          ) : (
+            /* WIZARD: SIGUIENTE PASO */
+            editorialEvaluation.recommendedNextActionTarget && (
+              <div style={{
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                backgroundColor: '#eff6ff',
+                padding: '1rem',
+                marginTop: '1rem'
+              }}>
+                <span style={{ fontSize: '0.75rem', color: '#1e3a8a', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>
+                  👉 Próximo paso recomendado:
+                </span>
+                <strong style={{ fontSize: '0.9rem', color: '#1e3a8a', display: 'block' }}>
+                  {editorialEvaluation.recommendedNextAction}
+                </strong>
+                <p style={{ margin: '0.25rem 0 0.75rem 0', fontSize: '0.75rem', color: '#1e40af' }}>
+                  <strong>¿Por qué?</strong>: {editorialEvaluation.recommendedNextActionDescription}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation(editorialEvaluation.recommendedNextActionTarget!)}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
+                >
+                  Ir al campo
+                </button>
+              </div>
+            )
+          )}
         </div>
-      )}
+
+        {/* DETALLE DE PROGRESO Y CHECKLISTS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+          
+          {/* TABLA DE PROGRESO POR DIMENSIONES */}
+          <div style={{
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            backgroundColor: '#ffffff',
+            padding: '1.25rem',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)'
+          }}>
+            <h5 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>
+              Avance Desglosado por Dimensión
+            </h5>
+            <table className="dimension-table">
+              <thead>
+                <tr>
+                  <th>Etapa</th>
+                  <th style={{ textAlign: 'center' }}>Estado</th>
+                  <th style={{ textAlign: 'right' }}>Puntaje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Recepción y Consentimiento</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {stagePoints.recepcion.earned === stagePoints.recepcion.max ? '✅' : stagePoints.recepcion.earned > 0 ? '⚠️' : '⏳'}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {stagePoints.recepcion.earned} / {stagePoints.recepcion.max}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Descripción y Archivos</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {stagePoints.descripcion.earned === stagePoints.descripcion.max ? '✅' : stagePoints.descripcion.earned > 0 ? '⚠️' : '⏳'}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {stagePoints.descripcion.earned} / {stagePoints.descripcion.max}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Clasificación e Indicadores</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {stagePoints.clasificacion.earned === stagePoints.clasificacion.max ? '✅' : stagePoints.clasificacion.earned > 0 ? '⚠️' : '⏳'}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {stagePoints.clasificacion.earned} / {stagePoints.clasificacion.max}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Revisión y Validación Histórica</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {stagePoints.validacion.earned === stagePoints.validacion.max ? '✅' : stagePoints.validacion.earned > 0 ? '⚠️' : '⏳'}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {stagePoints.validacion.earned} / {stagePoints.validacion.max}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Configuración de Publicación</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {stagePoints.publicacion.earned === stagePoints.publicacion.max ? '✅' : stagePoints.publicacion.earned > 0 ? '⚠️' : '⏳'}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {stagePoints.publicacion.earned} / {stagePoints.publicacion.max}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* CHECKLIST DE TAREAS AUTOMATIZADAS */}
+          <div style={{
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            backgroundColor: '#ffffff',
+            padding: '1.25rem',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)'
+          }}>
+            <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>
+              Controles Automatizados ({currentProgressResult?.completedItems.length || 0} de 8 resueltos)
+            </h5>
+            
+            {currentProgressResult && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                
+                {/* Tareas Completadas */}
+                {currentProgressResult.completedItems.map(item => (
+                  <div key={item.code} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
+                    <span>✔</span>
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+
+                {/* Tareas Pendientes */}
+                {currentProgressResult.pendingItems.map(item => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => item.target && handleNavigation(item.target)}
+                    className="checklist-btn"
+                    style={{ color: '#d97706', fontWeight: 500 }}
+                  >
+                    <span>○</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+
+                {/* Tareas Bloqueadas */}
+                {currentProgressResult.blockedItems.map(item => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => item.target && handleNavigation(item.target)}
+                    className="checklist-btn"
+                    style={{ color: '#dc2626', fontWeight: 600 }}
+                  >
+                    <span>🛑</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+
+              </div>
+            )}
+          </div>
+
+        </div>
+
+      </div>
 
 
       {/* BLOQUE A: Gestión Editorial */}
@@ -798,9 +1118,12 @@ export default function ContributionEditForm({
           Gestión Editorial Principal
         </h4>
 
-        <div className="form-group">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+        <div id="editorial-status" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Estado Editorial único</label>
+            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+              📍 Volver al Asistente
+            </button>
             <EditorialHelp helpKey="editorialStatus" initialSelectedValue={status} />
           </div>
           <select
@@ -891,8 +1214,13 @@ export default function ContributionEditForm({
           </div>
         )}
 
-        <div className="form-group" style={{ margin: 0 }}>
-          <label className="form-label" style={{ fontWeight: 600 }}>Observaciones Editoriales Internas</label>
+        <div id="internal-notes" className="form-group" style={{ margin: 0, borderRadius: '4px', padding: '4px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+            <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Observaciones Editoriales Internas</label>
+            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+              📍 Volver al Asistente
+            </button>
+          </div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -972,10 +1300,13 @@ export default function ContributionEditForm({
       </div>
 
       {/* BLOQUE C: Publicación */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <h4 style={{ fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b' }}>
+      <div id="publication-settings" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderRadius: '4px', padding: '4px', position: 'relative' }}>
+        <h4 style={{ fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b', flexWrap: 'wrap' }}>
           <span style={{ backgroundColor: '#fff7ed', color: '#ea580c', width: '24px', height: '24px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>C</span>
           Configuración de Publicación
+          <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+            📍 Volver al Asistente
+          </button>
         </h4>
         {selectedStatusOpt?.code === 'publishable' && !editorialEvaluation.eligibleForPublication && (
           <div style={{

@@ -26,14 +26,18 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   // Obtener rol del usuario autenticado
   const { data: { user } } = await supabase.auth.getUser();
   let userRole = 'editor';
+  let editorName = 'Coordinador';
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, full_name')
       .eq('id', user.id)
       .single();
     if (profile) {
       userRole = profile.role;
+      if (profile.full_name) {
+        editorName = profile.full_name;
+      }
     }
   }
 
@@ -252,7 +256,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
   const statusBadgeClass = `badge badge-${contribution.editorial_status.toLowerCase().replace(/á/g, 'a').replace(/ó/g, 'o').replace(/ /g, '-')}`;
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div id="editorial-assistant-section" style={{ maxWidth: '1100px', margin: '0 auto' }}>
       
       {/* Botón Volver */}
       <div style={{ marginBottom: '1.5rem' }}>
@@ -360,7 +364,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Código de Catálogo (Signatura)</span>
                 <strong style={{ fontSize: '1rem', color: 'var(--primary-blue)' }}>{contribution.catalog_code || 'MV-GEN-PENDIENTE'}</strong>
               </div>
-              <div>
+              <div id="classification" style={{ borderRadius: '4px', padding: '4px' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Tipo de Aporte</span>
                 <strong style={{ fontSize: '0.95rem' }}>{contribution.contribution_type}</strong>
               </div>
@@ -397,12 +401,12 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               </div>
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div id="editorial-description" style={{ marginBottom: '1.5rem', borderRadius: '4px', padding: '4px' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Breve descripción</span>
               <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{contribution.description}</p>
             </div>
 
-            <div style={{ backgroundColor: '#fafaf6', border: '1px solid var(--border-warm)', borderRadius: '8px', padding: '1.25rem' }}>
+            <div id="historical-validation" style={{ backgroundColor: '#fafaf6', border: '1px solid var(--border-warm)', borderRadius: '8px', padding: '1.25rem' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
                 Historia / Contexto Aportado:
               </span>
@@ -422,7 +426,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
           </div>
 
           {/* Ficha 2: Archivos Adjuntos (Signed URLs) */}
-          <div className="card" style={{ padding: '2rem' }}>
+          <div id="attachments" className="card" style={{ padding: '2rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <File size={20} style={{ color: 'var(--primary-blue)' }} /> Archivos Digitales Adjuntos ({filesWithSignedUrls.length})
             </h2>
@@ -672,7 +676,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
           </div>
 
           {/* Ficha 4: Consentimiento Firmado */}
-          <div className="card" style={{ padding: '2rem' }}>
+          <div id="consent" className="card" style={{ padding: '2rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border-warm)', paddingBottom: '0.5rem' }}>
               <Shield size={20} style={{ color: 'var(--primary-blue)' }} /> Consentimiento Firmado
             </h2>
@@ -1072,6 +1076,7 @@ export default async function AdminContributionDetail({ params, searchParams }: 
               createdAt={contribution.created_at}
               updatedAt={contribution.updated_at}
               publishedAt={contribution.published_at}
+              editorName={editorName}
             />
           </div>
 

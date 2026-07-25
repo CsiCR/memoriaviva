@@ -83,6 +83,7 @@ export interface EditorialProgressItem {
   weight: number;
   earnedWeight: number;
   reason?: string;
+  target?: string;
 }
 
 export interface EditorialProgressRecommendation {
@@ -91,6 +92,7 @@ export interface EditorialProgressRecommendation {
   severity: "info" | "warning" | "blocking";
   title: string;
   description: string;
+  target?: string;
 }
 
 export interface EditorialProgressDetails {

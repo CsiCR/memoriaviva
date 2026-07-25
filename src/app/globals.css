@@ -1177,31 +1177,35 @@ p {
     display: none !important;
   }
 
+  /* Resetear márgenes y paddings a nivel raíz */
+  html, body, #print-portal-root, .print-only-show {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   /* El portal y sus hijos se muestran de manera natural y fluida */
   #print-portal-root {
     display: block !important;
     position: static !important;
     visibility: visible !important;
-    width: 100%;
+    width: 100% !important;
   }
 
   .print-only-show {
     display: block !important;
     position: static !important;
-    width: 100%;
-    margin: 0;
+    width: 100% !important;
   }
 
   .print-page {
-    page-break-after: always !important;
-    break-after: page !important;
     height: 297mm !important;
     width: 210mm !important;
-    margin: 0 auto !important;
+    margin: 0 !important;
+    padding: 15mm !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
     background: white !important;
     color: black !important;
-    border: 2px solid #000 !important;
   }
   
   @page {

@@ -1172,63 +1172,33 @@ p {
 
 /* --- REGISTRO DE IMPRESIÓN DEL EXPEDIENTE --- */
 @media print {
-  body {
-    background-color: white !important;
-    color: black !important;
-    font-size: 11pt !important;
-  }
-  
-  /* Ocultar elementos no imprimibles */
-  header, footer, nav, aside, 
-  .btn, button, input, select, textarea,
-  .return-assistant-btn, .checklist-btn,
-  .admin-grid-layout > div:nth-child(1) form button[type="submit"],
-  form > button[type="submit"],
-  .form-select, .form-input, .form-textarea,
-  .alert, .alert-success, .alert-danger,
-  a[href^="https://wa.me"],
-  .dossier-card button {
-    display: none !important;
-  }
-  
-  /* Forzar visualización de expediente y bitácora únicamente */
-  div[id="editorial-assistant-section"] {
-    display: block !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
+  body * {
+    visibility: hidden !important;
   }
 
-  .dossier-card {
-    border: 3px double black !important;
-    background: white !important;
-    padding: 2.5rem !important;
-    box-shadow: none !important;
-    page-break-after: always !important;
-  }
-
-  .dossier-header-stamp {
-    border: 3px solid black !important;
-    color: black !important;
-    font-size: 10pt !important;
-  }
-
-  .card {
-    border: none !important;
-    box-shadow: none !important;
-    background: white !important;
-    padding: 0 !important;
+  .print-only-show,
+  .print-only-show * {
+    visibility: visible !important;
   }
 
   .print-only-show {
     display: block !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+  }
+
+  .print-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    height: 297mm !important;
     width: 210mm !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
     background: white !important;
     color: black !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    border: 2px solid #000 !important;
   }
   
   @page {

@@ -527,11 +527,15 @@ export default function ContributionEditForm({
 
   const handleNavigation = (targetId: string) => {
     if (!targetId) return;
-    const element = document.getElementById(targetId);
-    if (!element) {
-      console.warn(`Element with id "${targetId}" not found.`);
+
+    // Verificación defensiva
+    const matches = document.querySelectorAll(`#${CSS.escape(targetId)}`);
+    if (matches.length !== 1) {
+      console.error(`Target inválido o duplicado: ${targetId}`, matches.length);
       return;
     }
+
+    const element = matches[0] as HTMLElement;
 
     // 1. Abrir contenedores colapsados
     let parent = element.parentElement;
@@ -563,9 +567,15 @@ export default function ContributionEditForm({
     element.classList.add('field-highlight');
 
     // Agregar etiqueta flotante temporal
+    const isReadOnly = targetId.startsWith('original-');
     const badge = document.createElement('span');
     badge.className = 'recommended-field-badge';
-    badge.innerText = '✔ Ahora estás editando este requisito editorial.';
+    if (isReadOnly) {
+      badge.innerText = 'ℹ Evidencia del aporte original (Solo Lectura).';
+      badge.style.backgroundColor = '#64748b'; // slate grey
+    } else {
+      badge.innerText = '✔ Ahora estás editando este requisito editorial.';
+    }
     
     const originalPosition = element.style.position;
     if (!originalPosition || originalPosition === 'static') {
@@ -573,15 +583,17 @@ export default function ContributionEditForm({
     }
     element.appendChild(badge);
 
-    // 4. Focus si es editable
-    const input = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT'
-      ? element
-      : element.querySelector('input, textarea, select');
+    // 4. Focus si es editable y no está inhabilitado
+    if (!isReadOnly) {
+      const input = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT'
+        ? element
+        : element.querySelector('input:not([readonly]):not([disabled]), textarea:not([readonly]):not([disabled]), select:not([disabled])');
 
-    if (input && !(input as HTMLInputElement).disabled) {
-      setTimeout(() => {
-        (input as HTMLElement).focus();
-      }, 400);
+      if (input && !(input as HTMLInputElement).disabled && !(input as HTMLInputElement).readOnly) {
+        setTimeout(() => {
+          (input as HTMLElement).focus();
+        }, 400);
+      }
     }
 
     // Limpiar clases y badge a los 3 segundos
@@ -761,7 +773,7 @@ export default function ContributionEditForm({
       )}
 
       {/* SECCIÓN DEL ASISTENTE EDITORIAL Y EXPEDIENTE */}
-      <div id="editorial-assistant-section" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
         {/* CARÁTULA DEL EXPEDIENTE EDITORIAL (Archivo Histórico Moderno) */}
         <div className="dossier-card">
@@ -1681,7 +1693,7 @@ export default function ContributionEditForm({
       <div className="print-only-show" style={{ fontFamily: 'Courier New, Courier, monospace', color: '#000', backgroundColor: '#fff', fontSize: '10pt', display: 'none' }}>
         
         {/* PÁGINA 1: FICHA ARCHIVÍSTICA */}
-        <div style={{
+        <div className="print-page" style={{
           height: '297mm',
           width: '210mm',
           padding: '20mm',
@@ -1773,7 +1785,7 @@ export default function ContributionEditForm({
         </div>
 
         {/* PÁGINA 2: LÍNEA DE TIEMPO, BITÁCORA Y FIRMAS */}
-        <div style={{
+        <div className="print-page" style={{
           height: '297mm',
           width: '210mm',
           padding: '20mm',

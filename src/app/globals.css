@@ -1172,13 +1172,15 @@ p {
 
 /* --- REGISTRO DE IMPRESIÓN DEL EXPEDIENTE --- */
 @media print {
-  body * {
-    visibility: hidden !important;
+  /* Ocultar absolutamente todo en el cuerpo del documento excepto el portal de impresión */
+  body > :not(#print-portal-root) {
+    display: none !important;
   }
 
-  .print-only-show,
-  .print-only-show * {
-    visibility: visible !important;
+  /* El portal y sus hijos se muestran de manera natural y fluida */
+  #print-portal-root {
+    display: block !important;
+    width: 100%;
   }
 
   .print-only-show {

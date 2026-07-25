@@ -900,7 +900,14 @@ export default function ContributionEditForm({
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={(e) => {
+                e.preventDefault();
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    window.print();
+                  });
+                });
+              }}
               className="btn btn-outline btn-sm"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
             >
@@ -910,12 +917,13 @@ export default function ContributionEditForm({
         </div>
 
         {/* 🤖 ASISTENTE EDITORIAL */}
-        <div style={{
+        <div id="editorial-assistant-section" style={{
           border: '1px solid #cbd5e1',
           borderRadius: '8px',
           backgroundColor: '#ffffff',
           padding: '1.5rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+          scrollMarginTop: '100px'
         }}>
           {/* Encabezado con Semáforo Editorial */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
@@ -1298,7 +1306,7 @@ export default function ContributionEditForm({
         <div id="editorial-title" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Título Editorial</label>
-            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+            <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
               📍 Ver recomendación editorial
             </button>
           </div>
@@ -1317,7 +1325,7 @@ export default function ContributionEditForm({
         <div id="editorial-description" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Descripción Editorial</label>
-            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+            <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
               📍 Ver recomendación editorial
             </button>
           </div>
@@ -1336,7 +1344,7 @@ export default function ContributionEditForm({
           <div id="editorial-classification" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative', margin: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
               <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Clasificación de Aporte</label>
-              <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+              <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
                 📍 Ver recomendación editorial
               </button>
             </div>
@@ -1360,7 +1368,7 @@ export default function ContributionEditForm({
           <div id="editorial-status" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative', margin: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
               <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Estado Editorial</label>
-              <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+              <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
                 📍 Ver recomendación editorial
               </button>
               <EditorialHelp helpKey="editorialStatus" initialSelectedValue={status} />
@@ -1383,7 +1391,7 @@ export default function ContributionEditForm({
         <div id="editorial-summary" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Resumen / Síntesis Corta</label>
-            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+            <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
               📍 Ver recomendación editorial
             </button>
           </div>
@@ -1401,7 +1409,7 @@ export default function ContributionEditForm({
         <div id="editorial-context" className="form-group" style={{ borderRadius: '4px', padding: '4px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Contexto Histórico Ampliado</label>
-            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+            <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
               📍 Ver recomendación editorial
             </button>
           </div>
@@ -1532,7 +1540,7 @@ export default function ContributionEditForm({
         <div id="internal-notes" className="form-group" style={{ margin: 0, borderRadius: '4px', padding: '4px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Observaciones Editoriales Internas (Bitácora)</label>
-            <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+            <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
               📍 Ver recomendación editorial
             </button>
           </div>
@@ -1552,7 +1560,7 @@ export default function ContributionEditForm({
         <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b', flexWrap: 'wrap' }}>
           <span style={{ backgroundColor: '#fff7ed', color: '#ea580c', width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700 }}>C</span>
           Preparación para Publicación
-          <button type="button" onClick={() => handleNavigation('editorial-assistant-section')} className="return-assistant-btn">
+          <button type="button" onClick={(e) => { e.preventDefault(); handleNavigation('editorial-assistant-section', 'Retorno al Asistente'); }} className="return-assistant-btn">
             📍 Ver recomendación editorial
           </button>
         </h4>

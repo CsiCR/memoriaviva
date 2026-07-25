@@ -257,8 +257,6 @@ export default async function AdminContributionDetail({ params, searchParams }: 
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-      {/* Portales de impresión (hermano a nivel de raíz para evitar display: none de contenedores) */}
-      <div id="print-portal-root"></div>
       
       {/* Botón Volver */}
       <div style={{ marginBottom: '1.5rem' }}>

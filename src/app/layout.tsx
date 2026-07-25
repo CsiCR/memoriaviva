@@ -44,6 +44,8 @@ export default function RootLayout({
     <html lang="es" className={`${montserrat.variable} ${openSans.variable} ${playfairDisplay.variable}`}>
       <body>
         {children}
+        {/* Portal de impresión a nivel de raíz del body para evitar display: none de cualquier layout intermedio */}
+        <div id="print-portal-root"></div>
       </body>
     </html>
   );

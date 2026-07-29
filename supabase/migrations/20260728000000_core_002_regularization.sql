@@ -1,6 +1,6 @@
 -- Migración: Regularización de create_contribution_with_files y Saneamiento CORE-002
 -- ID: 20260728000000
--- Tipo: No destructiva (solo saneamiento de firmas y resolución de bugs)
+-- Tipo: Migración transaccional con eliminación controlada de una sobrecarga obsoleta
 
 BEGIN;
 
@@ -13,7 +13,7 @@ DROP FUNCTION IF EXISTS public.create_contribution_with_files(
   p_user_id UUID
 );
 
--- 2. Redefinir la versión de 6 parámetros de create_contribution_with_files corregida
+-- 2. Redefinir la versión de 6 parámetros de create_contribution_with_files regularizada
 CREATE OR REPLACE FUNCTION public.create_contribution_with_files(
   p_contributor JSONB,
   p_contribution JSONB,
@@ -33,6 +33,7 @@ DECLARE
   v_upload_session RECORD;
   v_file_id UUID;
   v_upload_source TEXT;
+  v_role TEXT;
   v_result JSONB;
   v_mime TEXT;
   v_ext TEXT;
@@ -113,7 +114,7 @@ BEGIN
     COALESCE(NULLIF(BTRIM(p_contribution->>'consent_source'), ''), 'web_form'),
     NULLIF(BTRIM(p_contribution->>'consent_reference'), ''),
     NULLIF(BTRIM(p_contribution->>'consent_file_path'), ''),
-    FALSE,
+    COALESCE((p_contribution->>'consent_verified')::BOOLEAN, FALSE), -- Semántica de Producción
     'Recibido'
   ) RETURNING id INTO v_contribution_id;
 
@@ -151,11 +152,28 @@ BEGIN
         RAISE EXCEPTION 'La ruta de almacenamiento no coincide con la registrada en la sesión';
       END IF;
 
-      -- Insertar fila en public.contribution_files usando los nombres de columnas reales de producción
+      -- Validación de expiración
+      IF v_upload_session.expires_at < NOW() THEN
+        RAISE EXCEPTION 'La sesión de carga para % ha expirado', v_file_item->>'original_filename';
+      END IF;
+
+      -- Validación que impide reutilizar sesión ya vinculada
+      IF v_upload_session.linked_contribution_id IS NOT NULL THEN
+        RAISE EXCEPTION 'El archivo % ya se encuentra vinculado a otra contribución', v_file_item->>'original_filename';
+      END IF;
+
+      -- Control estricto de file_role
+      IF p_user_id IS NULL THEN
+        v_role := 'original';
+      ELSE
+        v_role := COALESCE(v_file_item->>'file_role', 'original');
+      END IF;
+
+      -- Insertar fila en public.contribution_files preservando columnas de producción (incluyendo checksum_sha256)
       INSERT INTO public.contribution_files (
         contribution_id, file_name, file_path, file_type, file_size,
         storage_bucket, upload_id, upload_status, confirmed_at,
-        stored_filename, uploaded_by, upload_source, file_role, processing_status
+        checksum_sha256, stored_filename, uploaded_by, upload_source, file_role, processing_status
       ) VALUES (
         v_contribution_id,
         COALESCE(v_file_item->>'original_filename', v_upload_session.storage_path),
@@ -166,22 +184,25 @@ BEGIN
         v_upload_session.id,
         'linked',
         NOW(),
+        v_upload_session.checksum_sha256,
         v_upload_session.file_uuid::TEXT || '.' || split_part(v_upload_session.storage_path, '.', 2),
         p_user_id,
         v_upload_source,
-        COALESCE(v_file_item->>'file_role', 'original'),
+        v_role,
         'pending'
       ) RETURNING id INTO v_file_id;
 
+      -- Actualizar upload_sessions marcando confirmed_at = NOW()
       UPDATE public.upload_sessions
-      SET linked_contribution_id = v_contribution_id,
-          status = 'linked',
+      SET status = 'linked',
+          linked_contribution_id = v_contribution_id,
+          confirmed_at = NOW(),
           updated_at = NOW()
       WHERE id = v_upload_session.id;
     END LOOP;
   END IF;
 
-  -- 6. Procesar archivos excedidos (oversized) insertando solo en columnas existentes en producción
+  -- 6. Procesar archivos excedidos (oversized) insertando solo en columnas existentes en producción (removiendo bugs de columnas contact_phone/contact_email)
   IF p_oversized_files IS NOT NULL AND jsonb_array_length(p_oversized_files) > 0 THEN
     FOR v_file_item IN SELECT * FROM jsonb_array_elements(p_oversized_files) LOOP
       INSERT INTO public.oversized_file_notices (
@@ -195,10 +216,9 @@ BEGIN
     END LOOP;
   END IF;
 
-  -- 7. Crear notificación en admin_notifications
+  -- 7. Crear notificación en admin_notifications (preservando is_resolved = FALSE)
   v_notification_msg := 'Nuevo aporte recibido: "' || (p_contribution->>'title') || '" por ' || (p_contributor->>'full_name');
   IF p_oversized_files IS NOT NULL AND jsonb_array_length(p_oversized_files) > 0 THEN
-    -- Si hay archivos grandes, la notificación refleja estado pendiente (is_resolved = FALSE)
     INSERT INTO public.admin_notifications (
       type, title, message, contribution_id, is_read, is_resolved, metadata
     ) VALUES (
@@ -214,7 +234,6 @@ BEGIN
       )
     );
   ELSE
-    -- Si no hay archivos grandes, se registra como pendiente (is_resolved = FALSE) para revisión y catalogación
     INSERT INTO public.admin_notifications (
       type, title, message, contribution_id, is_read, is_resolved, metadata
     ) VALUES (
@@ -223,7 +242,7 @@ BEGIN
       v_notification_msg,
       v_contribution_id,
       FALSE,
-      FALSE, -- preserved!
+      FALSE,
       jsonb_build_object(
         'contact_phone', p_contributor->>'phone',
         'contact_email', p_contributor->>'email'

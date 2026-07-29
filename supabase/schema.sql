@@ -423,6 +423,7 @@ DECLARE
   v_upload_session RECORD;
   v_file_id UUID;
   v_upload_source TEXT;
+  v_role TEXT;
   v_result JSONB;
   v_mime TEXT;
   v_ext TEXT;
@@ -503,7 +504,7 @@ BEGIN
     COALESCE(NULLIF(BTRIM(p_contribution->>'consent_source'), ''), 'web_form'),
     NULLIF(BTRIM(p_contribution->>'consent_reference'), ''),
     NULLIF(BTRIM(p_contribution->>'consent_file_path'), ''),
-    FALSE,
+    COALESCE((p_contribution->>'consent_verified')::BOOLEAN, FALSE), -- Semántica de Producción
     'Recibido'
   ) RETURNING id INTO v_contribution_id;
 
@@ -541,11 +542,28 @@ BEGIN
         RAISE EXCEPTION 'La ruta de almacenamiento no coincide con la registrada en la sesión';
       END IF;
 
-      -- Insertar fila en public.contribution_files usando los nombres de columnas reales
+      -- Validación de expiración
+      IF v_upload_session.expires_at < NOW() THEN
+        RAISE EXCEPTION 'La sesión de carga para % ha expirado', v_file_item->>'original_filename';
+      END IF;
+
+      -- Validación que impide reutilizar sesión ya vinculada
+      IF v_upload_session.linked_contribution_id IS NOT NULL THEN
+        RAISE EXCEPTION 'El archivo % ya se encuentra vinculado a otra contribución', v_file_item->>'original_filename';
+      END IF;
+
+      -- Control estricto de file_role
+      IF p_user_id IS NULL THEN
+        v_role := 'original';
+      ELSE
+        v_role := COALESCE(v_file_item->>'file_role', 'original');
+      END IF;
+
+      -- Insertar fila en public.contribution_files
       INSERT INTO public.contribution_files (
         contribution_id, file_name, file_path, file_type, file_size,
         storage_bucket, upload_id, upload_status, confirmed_at,
-        stored_filename, uploaded_by, upload_source, file_role, processing_status
+        checksum_sha256, stored_filename, uploaded_by, upload_source, file_role, processing_status
       ) VALUES (
         v_contribution_id,
         COALESCE(v_file_item->>'original_filename', v_upload_session.storage_path),
@@ -556,16 +574,19 @@ BEGIN
         v_upload_session.id,
         'linked',
         NOW(),
+        v_upload_session.checksum_sha256,
         v_upload_session.file_uuid::TEXT || '.' || split_part(v_upload_session.storage_path, '.', 2),
         p_user_id,
         v_upload_source,
-        COALESCE(v_file_item->>'file_role', 'original'),
+        v_role,
         'pending'
       ) RETURNING id INTO v_file_id;
 
+      -- Actualizar upload_sessions marcando confirmed_at = NOW()
       UPDATE public.upload_sessions
-      SET linked_contribution_id = v_contribution_id,
-          status = 'linked',
+      SET status = 'linked',
+          linked_contribution_id = v_contribution_id,
+          confirmed_at = NOW(),
           updated_at = NOW()
       WHERE id = v_upload_session.id;
     END LOOP;
@@ -611,7 +632,7 @@ BEGIN
       v_notification_msg,
       v_contribution_id,
       FALSE,
-      TRUE,
+      FALSE,
       jsonb_build_object(
         'contact_phone', p_contributor->>'phone',
         'contact_email', p_contributor->>'email'

@@ -2,7 +2,7 @@
 // Archivo: src/app/(public)/contributions/[slug]/page.tsx
 
 import { cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Metadata } from "next";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createUrlResolutionContainer } from "@/lib/public/url/server";
@@ -48,6 +48,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const { result, siteUrl } = await getPublicContributionPageData(slug);
 
+  if (result.kind === "redirect" && result.destinationPath) {
+    permanentRedirect(result.destinationPath);
+  }
+
   if (result.kind !== "canonical") {
     return generatePublicNotFoundMetadata();
   }
@@ -69,6 +73,10 @@ export default async function ContributionPage({ params }: PageProps) {
 
   // Registrar observabilidad de latencia
   console.log(`[OBSERVABILITY] requestId=${requestId} requestedSlug=${slug} kind=${result.kind} pageResolutionDurationMs=${pageResolutionDurationMs}ms`);
+
+  if (result.kind === "redirect" && result.destinationPath) {
+    permanentRedirect(result.destinationPath);
+  }
 
   if (result.kind !== "canonical") {
     notFound();

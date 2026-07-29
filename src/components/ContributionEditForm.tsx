@@ -24,7 +24,8 @@ import {
   Calendar, 
   Eye, 
   EyeOff,
-  Info
+  Info,
+  AlertTriangle
 } from 'lucide-react';
 import EditorialHelp from './EditorialHelp';
 import { 
@@ -222,6 +223,10 @@ export default function ContributionEditForm({
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [publicationRejectedAlert, setPublicationRejectedAlert] = useState<{
+    missingRequirements: string[];
+    retainedStatus: { id: string; code: string; name: string };
+  } | null>(null);
 
   const editorialStatuses = [
     'Recibido', 'Datos incompletos', 'En revisión', 'En transcripción', 'Transcripto',
@@ -697,12 +702,24 @@ export default function ContributionEditForm({
     formData.append('publication_credits', publicationCredits);
 
     try {
-      await updateContributionStatus(id, formData);
-      setSuccess(true);
-      setIndicatorNotes(''); // Limpiar notas temporales de indicadores
-      
-      // Limpiar mensaje de éxito tras 4 segundos
-      setTimeout(() => setSuccess(false), 4000);
+      const res = await updateContributionStatus(id, formData);
+      if (res && !res.success && res.publicationRejected) {
+        setSuccess(true); // Se guardaron los cambios editoriales
+        setPublicationRejectedAlert({
+          missingRequirements: res.missingRequirements,
+          retainedStatus: res.retainedPublicationStatus
+        });
+        if (res.retainedPublicationStatus?.id) {
+          setPublicationStatusOptionId(res.retainedPublicationStatus.id);
+        }
+      } else {
+        setSuccess(true);
+        setPublicationRejectedAlert(null);
+        setIndicatorNotes(''); // Limpiar notas temporales de indicadores
+        
+        // Limpiar mensaje de éxito tras 4 segundos
+        setTimeout(() => setSuccess(false), 4000);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Error al guardar los cambios editoriales.');
@@ -732,10 +749,30 @@ export default function ContributionEditForm({
     <form id="editorial-progress-section" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
       {/* Alertas de Resultado */}
-      {success && (
+      {success && !publicationRejectedAlert && (
         <div className="alert alert-success" style={{ padding: '0.6rem 0.85rem', fontSize: '0.85rem', margin: 0 }}>
           <CheckCircle size={16} />
           <span>¡Dimensiones editoriales y de publicación guardadas exitosamente en la base de datos!</span>
+        </div>
+      )}
+
+      {publicationRejectedAlert && (
+        <div className="alert alert-warning" style={{ padding: '0.85rem 1rem', fontSize: '0.9rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', backgroundColor: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '6px', color: '#b45309' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+            <AlertTriangle size={18} />
+            <span>Los cambios editoriales fueron guardados, pero el aporte no pudo ser publicado</span>
+          </div>
+          <div style={{ fontSize: '0.85rem' }}>
+            Para poder activar la publicación web pública, el aporte debe cumplir con todos los requisitos de elegibilidad. Requisitos faltantes:
+            <ul style={{ margin: '0.35rem 0 0 1.25rem', padding: 0 }}>
+              {publicationRejectedAlert.missingRequirements.map((req, idx) => (
+                <li key={idx} style={{ listStyleType: 'disc' }}>{req}</li>
+              ))}
+            </ul>
+          </div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 500, marginTop: '0.25rem' }}>
+            Se retuvo el estado de publicación anterior: <strong>{publicationRejectedAlert.retainedStatus.name}</strong>.
+          </div>
         </div>
       )}
 

@@ -142,9 +142,10 @@ export function toPublicContribution(
   const cRaw = contribution as unknown as Record<string, unknown>;
   const id = contribution.id || "00000000-0000-0000-0000-000000000000";
   const title = contribution.title || "Aporte sin título";
+  const publicTitle = contribution.publication_title || contribution.editorial_title || title;
   const catalogCode = typeof cRaw.catalog_code === "string" ? cRaw.catalog_code : null;
   const updatedAt = typeof cRaw.updated_at === "string" ? cRaw.updated_at : new Date().toISOString();
-  const slug = `${slugify(title)}-${slugify(catalogCode || id)}`;
+  const slug = `${slugify(publicTitle)}-${slugify(catalogCode || id)}`;
 
   const exactDate = typeof cRaw.exact_date === "string" ? cRaw.exact_date : null;
   const approximateDecade = typeof cRaw.approximate_decade === "string" ? cRaw.approximate_decade : null;
@@ -152,6 +153,9 @@ export function toPublicContribution(
   const mentionedPeopleStr = typeof cRaw.mentioned_people === "string" ? cRaw.mentioned_people : null;
   const relatedInstitutionStr = typeof cRaw.related_institution === "string" ? cRaw.related_institution : null;
   const historicalContextStr = typeof cRaw.historical_context === "string" ? cRaw.historical_context : null;
+
+  const publicDescription = contribution.publication_excerpt || contribution.editorial_summary || contribution.editorial_description || contribution.description || null;
+  const publicHistoricalContext = contribution.editorial_context || historicalContextStr;
 
   const files = contribution.files || [];
   const publicMediaList = files
@@ -174,18 +178,18 @@ export function toPublicContribution(
   const publicPayload: PublicContribution = {
     id: id,
     slug: slug,
-    title: title,
+    title: publicTitle,
     contentType: mapEditorialTypeToPublicContentType(contribution.content_type),
-    description: contribution.description || null,
+    description: publicDescription,
     historicalDate: toPublicHistoricalDate(exactDate, approximateDecade),
     relatedPlace: toPublicPlaceReference(relatedPlaceStr),
     mentionedPeople: toPublicPersonReferences(mentionedPeopleStr),
     mentionedInstitutions: toPublicInstitutionReferences(relatedInstitutionStr),
-    historicalContext: historicalContextStr,
+    historicalContext: publicHistoricalContext,
     catalogCode: catalogCode,
     publishedAt: contribution.publication_scheduled_at || updatedAt,
     updatedAt: updatedAt,
-    credits: toPublicCredits(contribution, overrides?.customDisplayName),
+    credits: toPublicCredits(contribution, overrides?.customDisplayName || contribution.publication_credits || undefined),
     media: publicMediaList,
     references: toPublicReferences(contribution, overrides?.approvedExternalUrl),
   };

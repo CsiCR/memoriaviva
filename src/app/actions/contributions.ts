@@ -2,6 +2,10 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { mapStatusToCode } from '@/lib/editorial/editorialConstants';
+import { evaluateContribution } from '@/lib/editorial/evaluateContribution';
+import { SupabasePublicIdentityRepository } from '@/lib/public/slugs/repository';
+import { PublicIdentityService } from '@/lib/public/slugs/service';
 
 export async function updateContributionStatus(
   id: string,
@@ -46,7 +50,7 @@ export async function updateContributionStatus(
   // 1. Obtener datos actuales del aporte para ver si cambiaron los términos de cesión
   const { data: currentContribution, error: contributionError } = await supabase
     .from('contributions')
-    .select('contributor_id, authorization_level, credit_preference, consent_file_path')
+    .select('contributor_id, authorization_level, credit_preference, consent_file_path, publication_status_option_id, title, description, consent_verified, consent_source, published_at')
     .eq('id', id)
     .maybeSingle();
 
@@ -109,12 +113,79 @@ export async function updateContributionStatus(
     }
   }
 
+  // A. Obtener todas las opciones de estado de publicación para resolver códigos e IDs
+  const { data: pubStatuses, error: pubStatusesError } = await supabase
+    .from('select_options')
+    .select('id, code, name')
+    .eq('category', 'publication_status');
+
+  if (pubStatusesError) {
+    console.error('[ERRORES EDITORIAL] Error al obtener estados de publicación:', pubStatusesError.message);
+  }
+
+  const selectedPubStatus = pubStatuses?.find(opt => opt.id === publicationStatusOptionId);
+  const selectedPubCode = selectedPubStatus?.code || 'not_evaluated';
+
+  // B. Obtener archivos y metadata de indicadores del aporte para la evaluación server-side
+  const { data: dbFiles } = await supabase
+    .from('contribution_files')
+    .select('id, file_name, file_size, file_role, processing_status')
+    .eq('contribution_id', id);
+
+  let activeIndicators: any[] = [];
+  if (activeIndicatorOptionIds.length > 0) {
+    const { data: dbOpts } = await supabase
+      .from('select_options')
+      .select('id, category, value, name, code, metadata')
+      .in('id', activeIndicatorOptionIds);
+    activeIndicators = dbOpts || [];
+  }
+
+  // C. Construir ContributionInput en memoria representando el estado final pretendido
+  const targetContributionInput = {
+    id,
+    title: editorialTitle || currentContribution?.title || 'Aporte',
+    description: editorialDescription || currentContribution?.description,
+    consent_verified: consentVerified,
+    authorization_level: authorizationLevel || currentContribution?.authorization_level,
+    credit_preference: creditPreference || currentContribution?.credit_preference,
+    consent_source: currentContribution?.consent_source,
+    editorial_status: { code: mapStatusToCode(editorialStatus), name: editorialStatus },
+    publication_status: { id: publicationStatusOptionId, code: selectedPubCode, name: selectedPubStatus?.name || null },
+    files: dbFiles || [],
+    active_indicators: activeIndicators
+  };
+
+  // D. Evaluar reglas de elegibilidad E1-E8
+  const evaluation = evaluateContribution(targetContributionInput);
+
+  let isPublicationRejected = false;
+  let finalPublicationStatusOptionId = publicationStatusOptionId;
+
+  if (selectedPubCode === 'published' && !evaluation.eligibleForPublication) {
+    isPublicationRejected = true;
+    // Revertir al estado de publicación previo
+    const notEvaluatedId = pubStatuses?.find(opt => opt.code === 'not_evaluated')?.id || null;
+    finalPublicationStatusOptionId = currentContribution?.publication_status_option_id || notEvaluatedId;
+  }
+
+  // Si es elegible e intentan publicar (o ya estaba publicado y se está guardando de nuevo):
+  const isPublishing = selectedPubCode === 'published' && evaluation.eligibleForPublication;
+
+  // Para la RPC, si vamos a publicar, le pasamos primero el estado anterior (o not_evaluated) para no publicar en la RPC inicial,
+  // y luego lo publicaremos en la base de datos en el Paso 3 del orquestador.
+  let rpcPublicationStatusOptionId = finalPublicationStatusOptionId;
+  if (isPublishing) {
+    const notEvaluatedId = pubStatuses?.find(opt => opt.code === 'not_evaluated')?.id || null;
+    rpcPublicationStatusOptionId = currentContribution?.publication_status_option_id || notEvaluatedId;
+  }
+
   // 3. Ejecutar actualización transaccional mediante la RPC (signature con 19 parámetros)
-  console.info('[EXPEDIENTE][LOAD_PUBLICATION] Iniciando actualización transaccional de aporte', { contributionId: id });
+  console.info('[EXPEDIENTE][LOAD_PUBLICATION] Iniciando actualización transaccional de aporte', { contributionId: id, rpcPublicationStatusOptionId });
   let { error: rpcError } = await supabase.rpc('update_editorial_dimensions', {
     p_contribution_id: id,
     p_editorial_status: editorialStatus,
-    p_publication_status_option_id: publicationStatusOptionId || null,
+    p_publication_status_option_id: rpcPublicationStatusOptionId || null,
     p_publication_notes: publicationNotes || null,
     p_publication_scheduled_at: publicationScheduledAt || null,
     p_internal_notes: internalNotes || null,
@@ -139,7 +210,7 @@ export async function updateContributionStatus(
     const fallbackRes = await supabase.rpc('update_editorial_dimensions', {
       p_contribution_id: id,
       p_editorial_status: editorialStatus,
-      p_publication_status_option_id: publicationStatusOptionId || null,
+      p_publication_status_option_id: rpcPublicationStatusOptionId || null,
       p_publication_notes: publicationNotes || null,
       p_publication_scheduled_at: publicationScheduledAt || null,
       p_internal_notes: internalNotes || null,
@@ -162,6 +233,71 @@ export async function updateContributionStatus(
   }
 
   console.info('[EXPEDIENTE][SAVE_CONTRIBUTION_SUCCESS]', { contributionId: id });
+
+  // Instanciamos el servicio de identidades públicas
+  const identityRepo = new SupabasePublicIdentityRepository(supabase);
+  const identityService = new PublicIdentityService(identityRepo);
+
+  // Sincronizar estado de identidad pública y slugs en portal público
+  if (isPublishing) {
+    const slugTitle = publicationTitle || editorialTitle || currentContribution?.title || 'Aporte';
+    try {
+      const identity = await identityService.findByEntity('contribution', id);
+      if (!identity) {
+        // Registrar nueva identidad en estado published
+        await identityService.registerIdentity(id, 'contribution', slugTitle, 'published', {
+          userId: session.user.id,
+          source: 'editor',
+          note: 'Publicación inicial de aporte'
+        });
+      } else {
+        // Actualizar estado e idempotencia de slug basándose en el título
+        await identityService.updateStatus(id, 'contribution', 'published');
+        await identityService.updateTitle(id, 'contribution', slugTitle, {
+          userId: session.user.id,
+          source: 'editor',
+          note: `Título de publicación cambiado a ${slugTitle}`
+        });
+      }
+
+      // Paso 3: Activar Publicación en base de datos
+      const { error: finalUpdateError } = await supabase
+        .from('contributions')
+        .update({
+          publication_status_option_id: publicationStatusOptionId,
+          published_at: currentContribution?.published_at || new Date().toISOString(),
+          published_by_user_id: session.user.id
+        })
+        .eq('id', id);
+
+      if (finalUpdateError) {
+        console.error('[ERRORES EDITORIAL] Error al activar publicación en base de datos:', finalUpdateError.message);
+        throw finalUpdateError;
+      }
+    } catch (error: any) {
+      console.error('[ERRORES EDITORIAL] Fallo en la orquestación de publicación:', error.message);
+      // Compensación: revertir el estado de la identidad pública a 'unpublished'
+      try {
+        const identity = await identityService.findByEntity('contribution', id);
+        if (identity) {
+          await identityService.updateStatus(id, 'contribution', 'unpublished');
+        }
+      } catch (compensateError: any) {
+        console.error('[ERRORES EDITORIAL] Fallo crítico al ejecutar compensación:', compensateError.message);
+      }
+      throw new Error(`Error en la sincronización de la identidad pública: ${error.message}`);
+    }
+  } else if (selectedPubCode !== 'published') {
+    // Si no está publicado, nos aseguramos de que el estado de la identidad en public_identities sea 'unpublished'
+    try {
+      const identity = await identityService.findByEntity('contribution', id);
+      if (identity) {
+        await identityService.updateStatus(id, 'contribution', 'unpublished');
+      }
+    } catch (err: any) {
+      console.error('[ERRORES EDITORIAL] Error al despublicar identidad:', err.message);
+    }
+  }
 
   // 4. Si se subió un nuevo archivo de consentimiento, procesarlo
   const fileUploaded = consentFile && consentFile.size > 0;
@@ -217,5 +353,39 @@ export async function updateContributionStatus(
   revalidatePath('/admin/aportes');
   revalidatePath('/admin');
 
+  // Revalidar rutas públicas
+  revalidatePath('/contributions');
+  try {
+    const identity = await identityService.findByEntity('contribution', id);
+    if (identity) {
+      const canonicalSlug = await identityRepo.getCanonicalSlug(identity.id);
+      if (canonicalSlug) {
+        revalidatePath(`/contributions/${canonicalSlug}`);
+      }
+    }
+  } catch (revalidateErr) {
+    console.error('[ERRORES EDITORIAL] Error al revalidar ruta pública:', revalidateErr);
+  }
+
+  if (isPublicationRejected) {
+    const retainedOption = pubStatuses?.find(opt => opt.id === finalPublicationStatusOptionId) || {
+      id: finalPublicationStatusOptionId,
+      code: 'not_evaluated',
+      name: 'No evaluado'
+    };
+    return {
+      success: false,
+      editorialSaved: true,
+      publicationRejected: true,
+      missingRequirements: evaluation.missingRequirements,
+      retainedPublicationStatus: {
+        id: retainedOption.id,
+        code: retainedOption.code || 'not_evaluated',
+        name: retainedOption.name
+      }
+    };
+  }
+
   return { success: true };
 }
+

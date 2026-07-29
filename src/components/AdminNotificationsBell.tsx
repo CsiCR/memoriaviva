@@ -284,7 +284,7 @@ export default function AdminNotificationsBell() {
                         <span style={{ fontWeight: 650, color: notif.is_resolved ? '#64748b' : '#0f172a' }}>
                           {notif.title}
                         </span>
-                        {!notif.is_resolved && (
+                        {!notif.is_resolved && notif.type === 'oversized_files' && (
                           <span style={{
                             fontSize: '0.7rem',
                             fontWeight: 'bold',

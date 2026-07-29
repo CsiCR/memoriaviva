@@ -279,7 +279,8 @@ async function main() {
     p_contribution: { title: 'Aporte A', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '' },
     p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
     p_files: [],
-    p_user_id: null
+    p_user_id: null,
+    p_oversized_files: []
   });
   if (resA.error) {
     console.error('     [FALLO] Error en Caso A:', resA.error.message);
@@ -299,7 +300,8 @@ async function main() {
     p_contribution: { title: 'Aporte B', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '   ' },
     p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
     p_files: [],
-    p_user_id: null
+    p_user_id: null,
+    p_oversized_files: []
   });
   if (resB.error) {
     console.error('     [FALLO] Error en Caso B:', resB.error.message);
@@ -319,7 +321,8 @@ async function main() {
     p_contribution: { title: 'Aporte C', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: null },
     p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
     p_files: [],
-    p_user_id: null
+    p_user_id: null,
+    p_oversized_files: []
   });
   if (resC.error) {
     console.error('     [FALLO] Error en Caso C:', resC.error.message);
@@ -339,7 +342,8 @@ async function main() {
     p_contribution: { title: 'Aporte D', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '1960s' },
     p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
     p_files: [],
-    p_user_id: null
+    p_user_id: null,
+    p_oversized_files: []
   });
   if (resD.error) {
     console.error('     [FALLO] Error en Caso D:', resD.error.message);
@@ -359,7 +363,8 @@ async function main() {
     p_contribution: { title: 'Aporte E', contribution_type: 'Fotografía', description: 'Desc', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '1965' },
     p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
     p_files: [],
-    p_user_id: null
+    p_user_id: null,
+    p_oversized_files: []
   });
   if (resE.error && resE.error.message.includes('contributions_approximate_decade_check')) {
     console.log('     [ÉXITO] Falló correctamente por restricción CHECK:', resE.error.message);
@@ -375,7 +380,8 @@ async function main() {
     p_contribution: { title: 'Aporte Audio Test', contribution_type: 'Audio', description: 'Test de audio sin década', related_place: 'Pico', authorization_level: 'A', credit_preference: 'Nombre completo', approximate_decade: '' },
     p_consent: { owns_or_has_permission: true, accepts_cataloging: true },
     p_files: [],
-    p_user_id: null
+    p_user_id: null,
+    p_oversized_files: []
   });
   if (resF.error) {
     console.error('     [FALLO] Error en Caso F:', resF.error.message);

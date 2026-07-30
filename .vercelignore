@@ -1,0 +1,13 @@
+/dist/
+node_modules/
+.next/
+scratch/
+/supabase/
+.git
+.pnpm-store/
+.yarn/
+coverage/
+out/
+build/
+.env*
+*.log

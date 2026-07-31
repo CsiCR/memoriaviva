@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { mapStatusToCode } from '@/lib/editorial/editorialConstants';
 import { evaluateContribution } from '@/lib/editorial/evaluateContribution';
@@ -13,17 +14,23 @@ export async function updateContributionStatus(
 ) {
   const supabase = await createClient();
 
-  // 1. Verificar autenticación
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    throw new Error('No autorizado.');
+  // 1. Verificar autenticación de forma segura consultando al servidor Auth de Supabase
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    console.error('[ERRORES EDITORIAL] Error de autenticación del usuario:', authError?.message);
+    return {
+      success: false,
+      editorialSaved: false,
+      errorCode: 'SESSION_EXPIRED',
+      message: 'Tu sesión venció. Volvé a iniciar sesión.'
+    };
   }
 
-  // 2. Verificar rol en profiles
+  // 2. Verificar rol en profiles utilizando el cliente cookies-based del editor
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .maybeSingle();
 
   if (profileError) {
@@ -31,7 +38,12 @@ export async function updateContributionStatus(
   }
 
   if (!profile || !['admin', 'editor', 'validator', 'interviewer'].includes(profile.role)) {
-    throw new Error('No tienes permisos suficientes.');
+    return {
+      success: false,
+      editorialSaved: false,
+      errorCode: 'FORBIDDEN',
+      message: 'No tenés permisos para realizar esta operación.'
+    };
   }
 
   const editorialStatus = formData.get('editorial_status') as string;
@@ -234,8 +246,10 @@ export async function updateContributionStatus(
 
   console.info('[EXPEDIENTE][SAVE_CONTRIBUTION_SUCCESS]', { contributionId: id });
 
-  // Instanciamos el servicio de identidades públicas
-  const identityRepo = new SupabasePublicIdentityRepository(supabase);
+  // Instanciamos el cliente administrativo servidor con clave service_role, capaz de omitir RLS,
+  // únicamente después de haber verificado y garantizado el rol editorial del usuario.
+  const adminSupabase = createAdminClient();
+  const identityRepo = new SupabasePublicIdentityRepository(adminSupabase);
   const identityService = new PublicIdentityService(identityRepo);
 
   // Sincronizar estado de identidad pública y slugs en portal público
@@ -246,7 +260,7 @@ export async function updateContributionStatus(
       if (!identity) {
         // Registrar nueva identidad en estado published
         await identityService.registerIdentity(id, 'contribution', slugTitle, 'published', {
-          userId: session.user.id,
+          userId: user.id,
           source: 'editor',
           note: 'Publicación inicial de aporte'
         });
@@ -254,7 +268,7 @@ export async function updateContributionStatus(
         // Actualizar estado e idempotencia de slug basándose en el título
         await identityService.updateStatus(id, 'contribution', 'published');
         await identityService.updateTitle(id, 'contribution', slugTitle, {
-          userId: session.user.id,
+          userId: user.id,
           source: 'editor',
           note: `Título de publicación cambiado a ${slugTitle}`
         });
@@ -266,7 +280,7 @@ export async function updateContributionStatus(
         .update({
           publication_status_option_id: publicationStatusOptionId,
           published_at: currentContribution?.published_at || new Date().toISOString(),
-          published_by_user_id: session.user.id
+          published_by_user_id: user.id
         })
         .eq('id', id);
 
@@ -276,7 +290,7 @@ export async function updateContributionStatus(
       }
     } catch (error: any) {
       console.error('[ERRORES EDITORIAL] Fallo en la orquestación de publicación:', error.message);
-      // Compensación: revertir el estado de la identidad pública a 'unpublished'
+      // Compensación: revertir el estado de la identidad pública a 'unpublished' usando el cliente administrativo
       try {
         const identity = await identityService.findByEntity('contribution', id);
         if (identity) {
@@ -285,17 +299,33 @@ export async function updateContributionStatus(
       } catch (compensateError: any) {
         console.error('[ERRORES EDITORIAL] Fallo crítico al ejecutar compensación:', compensateError.message);
       }
-      throw new Error(`Error en la sincronización de la identidad pública: ${error.message}`);
+      
+      // Retornar respuesta estructurada informando que los datos editoriales fueron guardados
+      // pero la publicación en el portal público falló
+      return {
+        success: false,
+        editorialSaved: true,
+        publicationSucceeded: false,
+        errorCode: "PUBLIC_IDENTITY_SYNC_FAILED",
+        message: 'Los cambios editoriales fueron guardados, pero no pudo completarse la sincronización con el portal público.'
+      };
     }
   } else if (selectedPubCode !== 'published') {
-    // Si no está publicado, nos aseguramos de que el estado de la identidad en public_identities sea 'unpublished'
+    // Si no está publicado, nos aseguramos de que el estado de la identidad sea 'unpublished' usando el cliente administrativo
     try {
       const identity = await identityService.findByEntity('contribution', id);
       if (identity) {
         await identityService.updateStatus(id, 'contribution', 'unpublished');
       }
     } catch (err: any) {
-      console.error('[ERRORES EDITORIAL] Error al despublicar identidad:', err.message);
+      console.error('[ERRORES EDITORIAL] Fallo en la despublicación de identidad pública:', err.message);
+      return {
+        success: false,
+        editorialSaved: true,
+        publicationSucceeded: false,
+        errorCode: "PUBLIC_IDENTITY_SYNC_FAILED",
+        message: 'Los cambios editoriales fueron guardados, pero ocurrió una falla al despublicar la identidad en el portal.'
+      };
     }
   }
 

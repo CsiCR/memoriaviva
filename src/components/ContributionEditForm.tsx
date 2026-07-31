@@ -703,14 +703,21 @@ export default function ContributionEditForm({
 
     try {
       const res = await updateContributionStatus(id, formData);
-      if (res && !res.success && res.publicationRejected) {
-        setSuccess(true); // Se guardaron los cambios editoriales
-        setPublicationRejectedAlert({
-          missingRequirements: res.missingRequirements,
-          retainedStatus: res.retainedPublicationStatus
-        });
-        if (res.retainedPublicationStatus?.id) {
-          setPublicationStatusOptionId(res.retainedPublicationStatus.id);
+      if (res && !res.success) {
+        if (res.publicationRejected) {
+          setSuccess(true); // Se guardaron los cambios editoriales
+          setPublicationRejectedAlert({
+            missingRequirements: res.missingRequirements,
+            retainedStatus: res.retainedPublicationStatus
+          });
+          if (res.retainedPublicationStatus?.id) {
+            setPublicationStatusOptionId(res.retainedPublicationStatus.id);
+          }
+        } else {
+          // Error estructurado (ej. sesión expirada, permisos o fallo de sincronización)
+          setError(res.message || 'Error al guardar los cambios editoriales.');
+          setSuccess(false);
+          setPublicationRejectedAlert(null);
         }
       } else {
         setSuccess(true);

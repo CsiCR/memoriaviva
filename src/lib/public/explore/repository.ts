@@ -372,6 +372,13 @@ export class SupabaseExploreRepository implements ExploreRepository {
         content_type: contentType,
         files: mappedFiles,
         contributor: rowObj.contributor as any,
+        editorial_title: rowObj.editorial_title as string | null,
+        editorial_description: rowObj.editorial_description as string | null,
+        editorial_summary: rowObj.editorial_summary as string | null,
+        editorial_context: rowObj.editorial_context as string | null,
+        publication_title: rowObj.publication_title as string | null,
+        publication_excerpt: rowObj.publication_excerpt as string | null,
+        publication_credits: rowObj.publication_credits as string | null,
         publication_status: { id: rowObj.publication_status_option_id as string | null, code: "published", name: "Publicado" },
         editorial_status: { id: "", code: "approved_archive", name: "Aprobado para archivo" },
       } as unknown as ContributionInput;

@@ -57,6 +57,13 @@ interface DbContributionRow {
     relation_to_city: string | null;
     neighborhood_or_institution: string | null;
   } | null;
+  editorial_title?: string | null;
+  editorial_description?: string | null;
+  editorial_summary?: string | null;
+  editorial_context?: string | null;
+  publication_title?: string | null;
+  publication_excerpt?: string | null;
+  publication_credits?: string | null;
 }
 
 export class InMemoryPublicApiRepository implements PublicApiRepository {
@@ -380,6 +387,13 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
         updated_at: item.updated_at,
         contributor: item.contributor,
         files,
+        editorial_title: item.editorial_title,
+        editorial_description: item.editorial_description,
+        editorial_summary: item.editorial_summary,
+        editorial_context: item.editorial_context,
+        publication_title: item.publication_title,
+        publication_excerpt: item.publication_excerpt,
+        publication_credits: item.publication_credits,
         publication_status: {
           id: item.publication_status_option_id || "",
           code: "published",
@@ -492,6 +506,13 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
       updated_at: item.updated_at,
       contributor: item.contributor,
       files,
+      editorial_title: item.editorial_title,
+      editorial_description: item.editorial_description,
+      editorial_summary: item.editorial_summary,
+      editorial_context: item.editorial_context,
+      publication_title: item.publication_title,
+      publication_excerpt: item.publication_excerpt,
+      publication_credits: item.publication_credits,
       publication_status: {
         id: item.publication_status_option_id || "",
         code: "published",

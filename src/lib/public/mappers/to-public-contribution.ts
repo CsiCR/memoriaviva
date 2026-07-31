@@ -123,6 +123,16 @@ export function mapEditorialTypeToPublicContentType(
 }
 
 /**
+ * Normaliza y limpia una cadena. Si está ausente, vacía o contiene solo espacios
+ * en blanco, retorna undefined para favorecer los operadores lógicos || en cascadas.
+ */
+export function cleanString(val: unknown): string | undefined {
+  if (typeof val !== "string") return undefined;
+  const trimmed = val.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
  * Transforma un aporte del sistema editorial a un contrato público Whitelist.
  * 
  * Este mapper garantiza de forma absoluta que ningún dato privado (email, teléfono,
@@ -141,8 +151,8 @@ export function toPublicContribution(
   // 2. Mapeo explícito (Whitelist, sin spread operators sobre entidades editoriales)
   const cRaw = contribution as unknown as Record<string, unknown>;
   const id = contribution.id || "00000000-0000-0000-0000-000000000000";
-  const title = contribution.title || "Aporte sin título";
-  const publicTitle = contribution.publication_title || contribution.editorial_title || title;
+  const title = cleanString(contribution.title) || "Aporte sin título";
+  const publicTitle = cleanString(contribution.publication_title) || cleanString(contribution.editorial_title) || title;
   const catalogCode = typeof cRaw.catalog_code === "string" ? cRaw.catalog_code : null;
   const updatedAt = typeof cRaw.updated_at === "string" ? cRaw.updated_at : new Date().toISOString();
   const slug = `${slugify(publicTitle)}-${slugify(catalogCode || id)}`;
@@ -154,8 +164,8 @@ export function toPublicContribution(
   const relatedInstitutionStr = typeof cRaw.related_institution === "string" ? cRaw.related_institution : null;
   const historicalContextStr = typeof cRaw.historical_context === "string" ? cRaw.historical_context : null;
 
-  const publicDescription = contribution.publication_excerpt || contribution.editorial_summary || contribution.editorial_description || contribution.description || null;
-  const publicHistoricalContext = contribution.editorial_context || historicalContextStr;
+  const publicDescription = cleanString(contribution.publication_excerpt) || cleanString(contribution.editorial_summary) || cleanString(contribution.editorial_description) || cleanString(contribution.description) || null;
+  const publicHistoricalContext = cleanString(contribution.editorial_context) || cleanString(historicalContextStr) || null;
 
   const files = contribution.files || [];
   const publicMediaList = files

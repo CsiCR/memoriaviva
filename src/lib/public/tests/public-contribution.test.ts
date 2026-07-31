@@ -133,4 +133,182 @@ export function runContributionTests(assert: (cond: boolean, msg: string) => voi
   const pubRevokedMedia = toPublicContribution(contributionWithRevokedFiles);
   assert(pubRevokedMedia.media.length === 1, "Excluye el archivo fallido y el documento legal, conserva el válido.");
   assert(pubRevokedMedia.media[0].id === "77777777-7777-4777-8777-777777777777", "Conserva el archivo apto.");
+
+  // =========================================================================
+  // PRUEBAS DE INC-004: CASCADAS DE PUBLICACIÓN, SANITIZACIÓN Y PRIVACIDAD
+  // =========================================================================
+  
+  // A. Prueba de Cascadas de Título
+  // A.1: publication_title -> editorial_title -> title
+  const cTitleCascade1 = {
+    ...cleanContribution,
+    title: "Título Original",
+    editorial_title: "Título Editorial",
+    publication_title: "Título de Publicación",
+  };
+  const pubTitle1 = toPublicContribution(cTitleCascade1);
+  assert(pubTitle1.title === "Título de Publicación", "Cascada Título: Se prefiere publication_title.");
+
+  // A.2: editorial_title -> title
+  const cTitleCascade2 = {
+    ...cleanContribution,
+    title: "Título Original",
+    editorial_title: "Título Editorial",
+    publication_title: null,
+  };
+  const pubTitle2 = toPublicContribution(cTitleCascade2);
+  assert(pubTitle2.title === "Título Editorial", "Cascada Título: Se prefiere editorial_title si publication_title es null o vacío.");
+
+  // A.3: fallback to title
+  const cTitleCascade3 = {
+    ...cleanContribution,
+    title: "Título Original",
+    editorial_title: null,
+    publication_title: null,
+  };
+  const pubTitle3 = toPublicContribution(cTitleCascade3);
+  assert(pubTitle3.title === "Título Original", "Cascada Título: Cae a title si los editoriales son null o vacíos.");
+
+  // B. Prueba de Cascadas de Descripción
+  // B.1: publication_excerpt -> editorial_summary -> editorial_description -> description
+  const cDescCascade1 = {
+    ...cleanContribution,
+    description: "Original Desc",
+    editorial_description: "Editorial Desc",
+    editorial_summary: "Editorial Summary",
+    publication_excerpt: "Publication Excerpt",
+  };
+  const pubDesc1 = toPublicContribution(cDescCascade1);
+  assert(pubDesc1.description === "Publication Excerpt", "Cascada Descripción: Se prefiere publication_excerpt.");
+
+  // B.2: editorial_summary -> editorial_description -> description
+  const cDescCascade2 = {
+    ...cleanContribution,
+    description: "Original Desc",
+    editorial_description: "Editorial Desc",
+    editorial_summary: "Editorial Summary",
+    publication_excerpt: null,
+  };
+  const pubDesc2 = toPublicContribution(cDescCascade2);
+  assert(pubDesc2.description === "Editorial Summary", "Cascada Descripción: Se prefiere editorial_summary si excerpt es null o vacío.");
+
+  // B.3: editorial_description -> description
+  const cDescCascade3 = {
+    ...cleanContribution,
+    description: "Original Desc",
+    editorial_description: "Editorial Desc",
+    editorial_summary: null,
+    publication_excerpt: null,
+  };
+  const pubDesc3 = toPublicContribution(cDescCascade3);
+  assert(pubDesc3.description === "Editorial Desc", "Cascada Descripción: Se prefiere editorial_description.");
+
+  // B.4: fallback to description
+  const cDescCascade4 = {
+    ...cleanContribution,
+    description: "Original Desc",
+    editorial_description: null,
+    editorial_summary: null,
+    publication_excerpt: null,
+  };
+  const pubDesc4 = toPublicContribution(cDescCascade4);
+  assert(pubDesc4.description === "Original Desc", "Cascada Descripción: Cae a description.");
+
+  // C. Prueba de Cascadas de Contexto Histórico
+  // C.1: editorial_context -> historical_context
+  const cCtxCascade1 = {
+    ...cleanContribution,
+    historical_context: "Original Context",
+    editorial_context: "Editorial Context",
+  };
+  const pubCtx1 = toPublicContribution(cCtxCascade1);
+  assert(pubCtx1.historicalContext === "Editorial Context", "Cascada Contexto: Se prefiere editorial_context.");
+
+  // C.2: fallback to historical_context
+  const cCtxCascade2 = {
+    ...cleanContribution,
+    historical_context: "Original Context",
+    editorial_context: null,
+  };
+  const pubCtx2 = toPublicContribution(cCtxCascade2);
+  assert(pubCtx2.historicalContext === "Original Context", "Cascada Contexto: Cae a historical_context.");
+
+  // D. Prueba de Créditos
+  const cCredits = {
+    ...cleanContribution,
+    publication_credits: "Créditos Editoriales Especiales",
+  };
+  const pubCredits = toPublicContribution(cCredits);
+  assert(pubCredits.credits.displayName === "Créditos Editoriales Especiales", "Créditos: Se prefiere publication_credits.");
+
+  // E. Normalización de null, undefined, cadena vacía y espacios en blanco
+  const cNormalizations = {
+    ...cleanContribution,
+    title: "Título Válido",
+    publication_title: "   ", // Espacios en blanco
+    editorial_title: "", // Cadena vacía
+    description: "Descripción Válida",
+    publication_excerpt: "   ",
+    editorial_summary: "",
+    editorial_description: null, // Null
+  };
+  const pubNorm = toPublicContribution(cNormalizations);
+  assert(pubNorm.title === "Título Válido", "Normalización: espacios en blanco y vacíos en títulos resuelven a fallbacks.");
+  assert(pubNorm.description === "Descripción Válida", "Normalización: espacios en blanco, vacíos y nulls en descripción resuelven a fallbacks.");
+
+  // F. Ausencia de datos privados
+  const privateFields = [
+    "internal_notes",
+    "publication_notes",
+    "historical_validation_notes",
+    "historical_validation_status",
+    "editorial_classification",
+    "publication_level",
+    "contributor_id",
+  ];
+  checkForbiddenKeysRecursive(pubTitle1, privateFields, assert);
+
+  // G. Simulación e integridad de los flujos de Detalle (API Public) y Catálogo (Explore)
+  // Verificar que la estructura de ContributionInput que producen los repositorios sea completamente apta
+  // y resuelva a un DTO público válido y saneado en ambas vías de datos.
+  const mockRepoItem: any = {
+    id: "a1a1a1a1-a1a1-41a1-81a1-a1a1a1a1a1a1",
+    title: "Original",
+    description: "Original Desc",
+    content_type: "textual",
+    exact_date: "1980-01-01",
+    approximate_decade: "1980s",
+    related_place: "Lugar",
+    mentioned_people: "Persona",
+    related_institution: "Institución",
+    historical_context: "Original Ctx",
+    authorization_level: "A",
+    credit_preference: "Nombre completo",
+    consent_verified: true,
+    consent_source: "web_form",
+    catalog_code: "MV-FOT-2026-0004",
+    publication_scheduled_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    contributor: { id: "c1", full_name: "Aportante" },
+    files: [],
+    editorial_title: "Ed Title",
+    editorial_description: "Ed Desc",
+    editorial_summary: "Ed Sum",
+    editorial_context: "Ed Ctx",
+    publication_title: "Pub Title",
+    publication_excerpt: "Pub Excerpt",
+    publication_credits: "Pub Credits",
+    publication_status: { id: "p1", code: "published", name: "Publicado" },
+    editorial_status: { id: "e1", code: "approved_archive", name: "Aprobado para archivo" },
+  };
+
+  const pubDetail = toPublicContribution(mockRepoItem);
+  assert(pubDetail.title === "Pub Title", "Detalle Público/Catálogo: Posee y usa título editorial de publicación.");
+  assert(pubDetail.description === "Pub Excerpt", "Detalle Público/Catálogo: Posee y usa extracto de publicación.");
+  assert(pubDetail.historicalContext === "Ed Ctx", "Detalle Público/Catálogo: Posee y usa contexto editorial.");
+  assert(pubDetail.credits.displayName === "Pub Credits", "Detalle Público/Catálogo: Posee y usa créditos de publicación.");
+
+  const parseDetail = publicContributionSchema.safeParse(pubDetail);
+  assert(parseDetail.success === true, "Detalle Público/Catálogo: Mapea a un DTO público Zod válido.");
 }

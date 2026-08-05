@@ -7,6 +7,7 @@ import { PublicContribution } from "../types/contribution";
 import { ContributionInput } from "../../editorial/types";
 import { fetchPublishedOptionId, buildBasePublishedQuery, SORTING_STRATEGIES } from "./queries";
 import { toPublicContribution } from "../mappers/to-public-contribution";
+import { buildContributionCanonicalSlug } from "../slugs/canonical-slug";
 
 export interface ExploreRepository {
   listContributions(query: ExploreQueryParams): Promise<{ items: PublicContribution[]; total: number }>;
@@ -135,7 +136,15 @@ export class InMemoryExploreRepository implements ExploreRepository {
     // 4. Paginación
     const startIndex = (query.page - 1) * query.pageSize;
     const slice = filtered.slice(startIndex, startIndex + query.pageSize);
-    const items = slice.map((item) => toPublicContribution(item));
+    const items = slice.map((item) => {
+      const cRaw = item as unknown as Record<string, unknown>;
+      const slug = buildContributionCanonicalSlug({
+        publicTitle: item.publication_title || item.editorial_title || item.title || "Aporte sin título",
+        catalogCode: (cRaw.catalog_code as string | null) || null,
+        contributionId: item.id || "",
+      });
+      return toPublicContribution(item, slug);
+    });
 
     return { items, total };
   }
@@ -153,7 +162,15 @@ export class InMemoryExploreRepository implements ExploreRepository {
       return isPublished && cRaw.featured === true;
     });
 
-    return filtered.slice(0, limit).map((item) => toPublicContribution(item));
+    return filtered.slice(0, limit).map((item) => {
+      const cRaw = item as unknown as Record<string, unknown>;
+      const slug = buildContributionCanonicalSlug({
+        publicTitle: item.publication_title || item.editorial_title || item.title || "Aporte sin título",
+        catalogCode: (cRaw.catalog_code as string | null) || null,
+        contributionId: item.id || "",
+      });
+      return toPublicContribution(item, slug);
+    });
   }
 
   async getAvailableFilters(): Promise<AvailableFilters> {
@@ -286,13 +303,59 @@ export class InMemoryStatisticsRepository implements StatisticsRepository {
 }
 
 export class SupabaseExploreRepository implements ExploreRepository {
-  constructor(private supabase: SupabaseClient) {}
+  constructor(
+    private supabase: SupabaseClient,
+    private adminSupabase?: SupabaseClient
+  ) {}
 
   async listContributions(
     query: ExploreQueryParams
   ): Promise<{ items: PublicContribution[]; total: number }> {
+    // Paso 0: El cliente administrativo es obligatorio en rutas públicas navegables
+    // que consultan tablas con RLS restrictivo (public_slugs / public_identities).
+    if (!this.adminSupabase) {
+      throw new Error("Canonical slug resolver is unavailable");
+    }
+
+    // Paso 1: Resolver slugs canónicos desde la base de datos usando el cliente admin.
+    // Esto determina el universo exacto de aportes navegables antes de paginar.
+    const { data: slugRecords, error: slugErr } = await this.adminSupabase
+      .from("public_slugs")
+      .select(`
+        slug,
+        public_identities!fk_identity_type!inner(entity_uuid, status)
+      `)
+      .eq("entity_type", "contribution")
+      .eq("kind", "canonical")
+      .eq("public_identities.status", "published");
+
+    if (slugErr) {
+      // Fallo de consulta administrativa: error de red, permisos, o configuración.
+      // No enmascarar como catálogo vacío para que sea diagnosticable.
+      throw new Error(`Canonical slug lookup failed: ${slugErr.message}`);
+    }
+
+    // Construir mapa entity_uuid → slug canónico
+    const slugMap = new Map<string, string>();
+    if (slugRecords) {
+      for (const r of slugRecords) {
+        const identity = r.public_identities as unknown as { entity_uuid: string; status: string } | null;
+        if (identity?.entity_uuid && r.slug) {
+          slugMap.set(identity.entity_uuid, r.slug);
+        }
+      }
+    }
+
+    const validIds = Array.from(slugMap.keys());
+    if (validIds.length === 0) {
+      // Ausencia real de slugs canónicos en la base de datos: catálogo genuinamente vacío.
+      return { items: [], total: 0 };
+    }
+
     const publishedOptId = await fetchPublishedOptionId(this.supabase);
-    let qb = buildBasePublishedQuery(this.supabase, publishedOptId);
+    // Paso 2: Construir query de aportes publicados filtrados por los IDs válidos
+    // *antes* de aplicar paginación, garantizando que la página y el total sean consistentes.
+    let qb = buildBasePublishedQuery(this.supabase, publishedOptId).in("id", validIds);
 
     // Búsqueda por q
     if (query.q) {
@@ -324,7 +387,7 @@ export class SupabaseExploreRepository implements ExploreRepository {
     const sortStrategy = SORTING_STRATEGIES[query.sort] || SORTING_STRATEGIES.recent;
     qb = sortStrategy(qb);
 
-    // Paginación
+    // Paso 3: Paginación aplicada sobre el universo ya filtrado por validIds
     const fromIndex = (query.page - 1) * query.pageSize;
     const toIndex = fromIndex + query.pageSize - 1;
     qb = qb.range(fromIndex, toIndex);
@@ -386,16 +449,20 @@ export class SupabaseExploreRepository implements ExploreRepository {
       const cRaw = contributionInput as unknown as Record<string, unknown>;
       cRaw.contribution_type = contributionType;
 
-      return toPublicContribution(contributionInput);
+      // Resolver slug canónico desde el mapa pre-cargado. Si falta (no debería ocurrir
+      // dado el filtro por validIds), usar cadena vacía como señal de anomalía.
+      const canonicalSlug = slugMap.get(contributionInput.id || "") || "";
+      return toPublicContribution(contributionInput, canonicalSlug);
     });
 
-    // Calcular el conteo total aplicando los mismos filtros
+    // Paso 4: Calcular conteo total con los mismos filtros (incluyendo validIds)
     let countQb = this.supabase
       .from("contributions")
       .select("id", { count: "exact", head: true })
       .eq("consent_verified", true)
       .eq("authorization_level", "A")
-      .eq("publication_status_option_id", publishedOptId);
+      .eq("publication_status_option_id", publishedOptId)
+      .in("id", validIds);
 
     if (query.q) {
       const escapedQ = query.q.trim().normalize("NFC").replace(/\s+/g, " ").replace(/[%_]/g, "\\$&");

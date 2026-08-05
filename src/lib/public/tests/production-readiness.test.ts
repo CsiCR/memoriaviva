@@ -5,6 +5,7 @@ import { clientEnv } from "../../config/env";
 import { buildRobotsDirectives } from "../seo/publishers/robots";
 import { buildPublicCanonicalUrl } from "../url/canonical-url";
 import { toPublicContribution } from "../mappers/to-public-contribution";
+import { buildContributionCanonicalSlug } from "../slugs/canonical-slug";
 import { unsafeContribution } from "./fixtures";
 import { z } from "zod";
 
@@ -106,7 +107,13 @@ export async function runProductionReadinessTests(assert: (cond: boolean, msg: s
   );
 
   // 6. Protección de Secretos en DTO Públicos (Mapeo Seguro)
-  const mappedPublic = toPublicContribution(unsafeContribution);
+  const unsafeRaw = unsafeContribution as unknown as Record<string, unknown>;
+  const unsafeSlug = buildContributionCanonicalSlug({
+    publicTitle: (unsafeContribution.publication_title || unsafeContribution.editorial_title || unsafeContribution.title || "Aporte sin título") as string,
+    catalogCode: (unsafeRaw.catalog_code as string | null) || null,
+    contributionId: unsafeContribution.id || "",
+  });
+  const mappedPublic = toPublicContribution(unsafeContribution, unsafeSlug);
   
   // Validaciones del DTO Whitelist contra leaks
   const rawPublicObj = mappedPublic as unknown as Record<string, unknown>;

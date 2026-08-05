@@ -3,6 +3,7 @@
 
 import "server-only";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { SupabasePublicApiRepository } from "../api/repository";
 import { PublicApiService } from "../api/service";
 import { SupabasePublicIdentityRepository } from "../slugs/repository";
@@ -16,6 +17,10 @@ export interface SeoContainer {
 
 /**
  * Crea e inyecta las dependencias necesarias para los publicadores y constructores de SEO.
+ *
+ * El cliente administrativo se inyecta en SupabasePublicApiRepository para que
+ * getPublicSitemapEntries() pueda consultar public_slugs/public_identities
+ * sin que el RLS restrictivo del rol anon bloquee la operación.
  */
 export function createSeoContainer(supabase: SupabaseClient): SeoContainer {
   const siteUrl = validatePublicSiteUrl(process.env.PUBLIC_SITE_URL);
@@ -23,7 +28,8 @@ export function createSeoContainer(supabase: SupabaseClient): SeoContainer {
   const identityRepo = new SupabasePublicIdentityRepository(supabase);
   const identityService = new PublicIdentityService(identityRepo);
 
-  const apiRepo = new SupabasePublicApiRepository(supabase);
+  const adminClient = createAdminClient();
+  const apiRepo = new SupabasePublicApiRepository(supabase, adminClient);
   const apiService = new PublicApiService(apiRepo, identityService);
 
   return {

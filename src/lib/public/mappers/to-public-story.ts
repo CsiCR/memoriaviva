@@ -3,6 +3,7 @@
 
 import { PublicStoryInput, PublicStory, PublicContributionReference } from "../types/story";
 import { toPublicContribution } from "./to-public-contribution";
+import { buildContributionCanonicalSlug } from "../slugs/canonical-slug";
 import { publicStorySchema } from "../validation/story.schema";
 
 /**
@@ -15,7 +16,13 @@ import { publicStorySchema } from "../validation/story.schema";
 export function toPublicStory(input: PublicStoryInput): PublicStory {
   const contributions: PublicContributionReference[] = input.contributionInputs.map((c) => {
     // Validar y mapear aporte completo primero para asegurar elegibilidad
-    const pubC = toPublicContribution(c);
+    const cRaw = c as unknown as Record<string, unknown>;
+    const slug = buildContributionCanonicalSlug({
+      publicTitle: (c.publication_title || c.editorial_title || c.title || "Aporte sin título") as string,
+      catalogCode: (cRaw.catalog_code as string | null) || null,
+      contributionId: c.id || "",
+    });
+    const pubC = toPublicContribution(c, slug);
 
     // Obtener imagen de portada o miniatura disponible
     const coverMedia = pubC.media.find((m) => m.role === "cover") || 

@@ -14,6 +14,7 @@ import { generatePublicMetadata, generateNotFoundMetadata } from "../url/metadat
 import { cleanContribution, contributionNoConsent } from "./fixtures";
 import { ContributionInput } from "../../editorial/types";
 import { toPublicContribution } from "../mappers/to-public-contribution";
+import { buildContributionCanonicalSlug, buildContributionSlugSource } from "../slugs/canonical-slug";
 
 export async function runPublicUrlResolutionTests(assert: (cond: boolean, msg: string) => void) {
   console.log("-> [TESTS] Iniciando pruebas de resolución HTTP de URLs públicas (v4.2.2)...");
@@ -189,9 +190,13 @@ export async function runPublicUrlResolutionTests(assert: (cond: boolean, msg: s
   }
 
   // 15. Metadatos contienen alternates.canonical absoluta
-  if (res1.kind === "canonical") {
-    const meta = generatePublicMetadata({ contribution: res1.data, siteUrl: "https://memoriavivapicotruncado.org" });
-    assert(meta.alternates?.canonical === "https://memoriavivapicotruncado.org/contributions/historia-de-la-estacion-mv-con-001", "Metadata contiene alternates.canonical absoluto.");
+  // Nota: después de updateTitle, el slug canónico de A es "historia-de-la-estacion-central".
+  // res1 fue resuelto ANTES del updateTitle, así que para obtener la metadata actual
+  // debemos re-resolver con el slug canónico actual.
+  const res1Updated = await pageService.resolvePageData("historia-de-la-estacion-central");
+  if (res1Updated.kind === "canonical") {
+    const meta = generatePublicMetadata({ contribution: res1Updated.data, siteUrl: "https://memoriavivapicotruncado.org" });
+    assert(meta.alternates?.canonical === "https://memoriavivapicotruncado.org/contributions/historia-de-la-estacion-central", "Metadata contiene alternates.canonical absoluto.");
   }
 
   // 16. Página canónica usa index, follow
@@ -274,6 +279,73 @@ export async function runPublicUrlResolutionTests(assert: (cond: boolean, msg: s
   assert(simulateProxyMatch("/contributions//") === false, "Path '/contributions//' no ejecuta proxy.");
   assert(simulateProxyMatch("/contributions/%2F") === false, "Path '/contributions/%2F' no ejecuta proxy.");
 
+  // =========================================================================
+  // PRUEBA ADICIONAL (INC-005): Renombrar nuevamente Don Argel
+  // =========================================================================
+  const uuidDonArgel = crypto.randomUUID();
+  const catalogCodeDonArgel = "MV-FOT-2026-0004";
+  
+  // A. Aporte publicado con su título inicial
+  const originalTitle = "El pionero de la Avenida Rivadavia: El legado de esfuerzo y solidaridad de Don Argel";
+  const slugTitleOriginal = buildContributionSlugSource(originalTitle, catalogCodeDonArgel, uuidDonArgel);
+  
+  // Registrar la identidad inicial
+  await identityService.registerIdentity(uuidDonArgel, "contribution", slugTitleOriginal, "published");
+  
+  const contributionDonArgel: ContributionInput = {
+    ...cleanContribution,
+    id: uuidDonArgel,
+    title: "Don Argel Manuel Santiago",
+    publication_title: originalTitle,
+    catalog_code: catalogCodeDonArgel,
+    description: "Una descripción de Don Argel.",
+  };
+  apiRepo.contributions.push(contributionDonArgel);
+
+  // Obtener el slug canónico original generado
+  const expectedSlugOriginal = buildContributionCanonicalSlug({
+    publicTitle: originalTitle,
+    catalogCode: catalogCodeDonArgel,
+    contributionId: uuidDonArgel,
+  });
+
+  // Verificar que la URL original resuelve a 200 (canonical)
+  const resDonArgelOriginal = await pageService.resolvePageData(expectedSlugOriginal);
+  assert(resDonArgelOriginal.kind === "canonical", "URL original de Don Argel resuelve a canonical.");
+
+  // B. Renombrar el aporte (cambiar publication_title)
+  const newTitle = "Don Argel: El legado pionero";
+  const slugTitleNew = buildContributionSlugSource(newTitle, catalogCodeDonArgel, uuidDonArgel);
+  
+  // Guardar cambio: Actualizar la identidad
+  await identityService.updateTitle(uuidDonArgel, "contribution", slugTitleNew);
+  
+  // Actualizar el aporte en el repositorio mock para simular el guardado en BD
+  const updatedDonArgel = {
+    ...contributionDonArgel,
+    publication_title: newTitle,
+  };
+  apiRepo.contributions = apiRepo.contributions.map(c => c.id === uuidDonArgel ? updatedDonArgel : c);
+
+  // Obtener el nuevo slug canónico esperado
+  const expectedSlugNew = buildContributionCanonicalSlug({
+    publicTitle: newTitle,
+    catalogCode: catalogCodeDonArgel,
+    contributionId: uuidDonArgel,
+  });
+
+  // Verificar que:
+  // a) El slug nuevo resuelve a canonical (200)
+  const resDonArgelNew = await pageService.resolvePageData(expectedSlugNew);
+  assert(resDonArgelNew.kind === "canonical", "URL nueva de Don Argel resuelve a canonical.");
+  assert(resDonArgelNew.kind === "canonical" && resDonArgelNew.data.title === "Don Argel: El legado pionero", "La URL nueva retorna los datos con el nuevo título.");
+
+  // b) El slug viejo ahora es un alias que redirige (301) a la URL nueva
+  const resDonArgelOldRedirect = await pageService.resolvePageData(expectedSlugOriginal);
+  assert(resDonArgelOldRedirect.kind === "redirect", "URL vieja de Don Argel ahora es un alias.");
+  assert(resDonArgelOldRedirect.kind === "redirect" && resDonArgelOldRedirect.status === 301, "URL vieja de Don Argel devuelve redirect 301.");
+  assert(resDonArgelOldRedirect.kind === "redirect" && resDonArgelOldRedirect.canonicalSlug === expectedSlugNew, "URL vieja redirige al nuevo slug canónico.");
+
   // Restaurar ambiente
   process.env.PUBLIC_SITE_URL = originalSiteUrl;
   console.log("-> [TESTS] Pruebas de resolución de URLs públicas completadas.");
@@ -294,5 +366,11 @@ function simulateProxyMatch(pathname: string): boolean {
 
 // Helper rápido para simular el mapper
 function toPublic(c: ContributionInput) {
-  return toPublicContribution(c);
+  const cRaw = c as unknown as Record<string, unknown>;
+  const slug = buildContributionCanonicalSlug({
+    publicTitle: (c.publication_title || c.editorial_title || c.title || "Aporte sin título") as string,
+    catalogCode: (cRaw.catalog_code as string | null) || null,
+    contributionId: c.id || "",
+  });
+  return toPublicContribution(c, slug);
 }

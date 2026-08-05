@@ -15,7 +15,6 @@ import {
   toPublicPersonReferences,
   toPublicInstitutionReferences,
   toPublicReferences,
-  slugify,
 } from "./to-public-reference";
 
 /**
@@ -140,6 +139,7 @@ export function cleanString(val: unknown): string | undefined {
  */
 export function toPublicContribution(
   contribution: ContributionInput,
+  canonicalSlug: string,
   overrides?: {
     customDisplayName?: string;
     approvedExternalUrl?: string | null;
@@ -155,7 +155,9 @@ export function toPublicContribution(
   const publicTitle = cleanString(contribution.publication_title) || cleanString(contribution.editorial_title) || title;
   const catalogCode = typeof cRaw.catalog_code === "string" ? cRaw.catalog_code : null;
   const updatedAt = typeof cRaw.updated_at === "string" ? cRaw.updated_at : new Date().toISOString();
-  const slug = `${slugify(publicTitle)}-${slugify(catalogCode || id)}`;
+  // El slug navegable debe provenir del canónico persistido en public_slugs.
+  // Un valor vacío aquí indica una anomalía de datos (aporte publicado sin identidad pública registrada).
+  const slug: string = canonicalSlug;
 
   const exactDate = typeof cRaw.exact_date === "string" ? cRaw.exact_date : null;
   const approximateDecade = typeof cRaw.approximate_decade === "string" ? cRaw.approximate_decade : null;
@@ -203,6 +205,7 @@ export function toPublicContribution(
     media: publicMediaList,
     references: toPublicReferences(contribution, overrides?.approvedExternalUrl),
   };
+
 
   // 3. Validación estricta por Zod
   return publicContributionSchema.parse(publicPayload);

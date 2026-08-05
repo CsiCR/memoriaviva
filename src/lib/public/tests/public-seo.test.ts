@@ -16,6 +16,7 @@ import { InMemoryPublicIdentityRepository } from "../slugs/repository";
 import { cleanContribution } from "./fixtures";
 import { ContributionInput } from "../../editorial/types";
 import { toPublicContribution } from "../mappers/to-public-contribution";
+import { buildContributionCanonicalSlug } from "../slugs/canonical-slug";
 
 export async function runPublicSeoTests(assert: (cond: boolean, msg: string) => void) {
   console.log("-> [TESTS] Iniciando pruebas de SEO y Descubrimiento del Portal (v4.2.3)...");
@@ -110,7 +111,13 @@ export async function runPublicSeoTests(assert: (cond: boolean, msg: string) => 
   // 4. Probar jerarquía de Open Graph Image (3 niveles)
   const mapped = apiRepo.contributions.map((c) => {
     try {
-      return toPublicContribution(c);
+      const cRaw = c as unknown as Record<string, unknown>;
+      const slug = buildContributionCanonicalSlug({
+        publicTitle: (c.publication_title || c.editorial_title || c.title || "Aporte sin título") as string,
+        catalogCode: (cRaw.catalog_code as string | null) || null,
+        contributionId: c.id || "",
+      });
+      return toPublicContribution(c, slug);
     } catch {
       return null;
     }

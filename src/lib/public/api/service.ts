@@ -6,6 +6,7 @@ import { PublicApiRepository, PublicSitemapEntry } from "./repository";
 import { ParsedQueryParams } from "./query-params";
 import { PublicContribution } from "../types/contribution";
 import { toPublicContribution } from "../mappers/to-public-contribution";
+import { buildContributionCanonicalSlug } from "../slugs/canonical-slug";
 import { canPublishContribution } from "../policies/contribution-publication.policy";
 import { PublicApiError } from "./errors";
 
@@ -35,7 +36,13 @@ export class PublicApiService {
         try {
           // Doble línea de defensa: validar políticas en código
           if (!canPublishContribution(raw)) return null;
-          return toPublicContribution(raw);
+          const rawRecord = raw as unknown as Record<string, unknown>;
+          const slug = buildContributionCanonicalSlug({
+            publicTitle: (raw.publication_title || raw.editorial_title || raw.title || "Aporte sin título") as string,
+            catalogCode: (rawRecord.catalog_code as string | null) || null,
+            contributionId: raw.id || "",
+          });
+          return toPublicContribution(raw, slug);
         } catch {
           // Saltar elementos que no cumplan la política (ej. datos incompletos en base)
           return null;
@@ -85,8 +92,9 @@ export class PublicApiService {
       );
     }
 
-    // 4. Mapear al contrato público
-    const data = toPublicContribution(raw);
+    // 4. Mapear al contrato público usando el slug canónico resuelto por la identidad pública.
+    // Este es el camino correcto: el slug viene de la base de datos, no se recalcula en memoria.
+    const data = toPublicContribution(raw, canonicalSlug);
 
     return {
       data,

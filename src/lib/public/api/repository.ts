@@ -236,7 +236,10 @@ export class InMemoryPublicApiRepository implements PublicApiRepository {
 }
 
 export class SupabasePublicApiRepository implements PublicApiRepository {
-  constructor(private supabase: SupabaseClient) {}
+  constructor(
+    private supabase: SupabaseClient,
+    private adminSupabase?: SupabaseClient
+  ) {}
 
   async listContributions(
     query: ParsedQueryParams
@@ -527,7 +530,13 @@ export class SupabasePublicApiRepository implements PublicApiRepository {
   }
 
   async getPublicSitemapEntries(): Promise<PublicSitemapEntry[]> {
-    const { data, error } = await this.supabase
+    // public_slugs/public_identities requieren cliente administrativo para evitar
+    // errores de permiso del rol anon (RLS restrictivo en estas tablas).
+    if (!this.adminSupabase) {
+      throw new Error("Canonical slug resolver is unavailable");
+    }
+
+    const { data, error } = await this.adminSupabase
       .from("public_slugs")
       .select("slug, public_identities!fk_identity_type(updated_at, status)")
       .eq("entity_type", "contribution")

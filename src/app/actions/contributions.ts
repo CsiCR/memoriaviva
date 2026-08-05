@@ -7,6 +7,7 @@ import { mapStatusToCode } from '@/lib/editorial/editorialConstants';
 import { evaluateContribution } from '@/lib/editorial/evaluateContribution';
 import { SupabasePublicIdentityRepository } from '@/lib/public/slugs/repository';
 import { PublicIdentityService } from '@/lib/public/slugs/service';
+import { buildContributionSlugSource } from '@/lib/public/slugs/canonical-slug';
 
 export async function updateContributionStatus(
   id: string,
@@ -62,7 +63,7 @@ export async function updateContributionStatus(
   // 1. Obtener datos actuales del aporte para ver si cambiaron los términos de cesión
   const { data: currentContribution, error: contributionError } = await supabase
     .from('contributions')
-    .select('contributor_id, authorization_level, credit_preference, consent_file_path, publication_status_option_id, title, description, consent_verified, consent_source, published_at')
+    .select('contributor_id, authorization_level, credit_preference, consent_file_path, publication_status_option_id, title, description, consent_verified, consent_source, published_at, catalog_code')
     .eq('id', id)
     .maybeSingle();
 
@@ -254,7 +255,15 @@ export async function updateContributionStatus(
 
   // Sincronizar estado de identidad pública y slugs en portal público
   if (isPublishing) {
-    const slugTitle = publicationTitle || editorialTitle || currentContribution?.title || 'Aporte';
+    const rawTitle = publicationTitle || editorialTitle || currentContribution?.title || 'Aporte';
+    // buildContributionSlugSource construye la cadena "<título>-<código|id>" que el servicio
+    // de identidad recibirá como rawValue para normalizar. Es la ÚNICA fuente de generación
+    // de slugs de contribuciones en todo el sistema (ver canonical-slug.ts).
+    const slugTitle = buildContributionSlugSource(
+      rawTitle,
+      currentContribution?.catalog_code ?? null,
+      id
+    );
     try {
       const identity = await identityService.findByEntity('contribution', id);
       if (!identity) {
@@ -270,7 +279,7 @@ export async function updateContributionStatus(
         await identityService.updateTitle(id, 'contribution', slugTitle, {
           userId: user.id,
           source: 'editor',
-          note: `Título de publicación cambiado a ${slugTitle}`
+          note: `Título de publicación cambiado a ${rawTitle}`
         });
       }
 
